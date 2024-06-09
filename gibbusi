@@ -1,69 +1,78 @@
-**Overview**
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
-Machine learning techniques in portfolio management incorporate utility optimization directly into portfolio rule estimation, significantly advancing the field.
+class CustomMLPRegressor:
+    def __init__(self, hidden_layer_sizes=(100,), activation='relu', solver='adam', learning_rate=0.001, max_iter=200, fit_intercept=True):
+        self.hidden_layer_sizes = hidden_layer_sizes
+        self.activation = activation
+        self.solver = solver
+        self.learning_rate = learning_rate
+        self.max_iter = max_iter
+        self.fit_intercept = fit_intercept
+        self.model = None
 
-**Key Contributions**
-- **Ait-Sahalia and Brandt (2001), Brandt and Santa-Clara (2006), Brandt et al. (2009):**
-  - Developed the "parametric portfolio weight" approach.
-  - Eliminated the need for distributional assumptions on returns.
-  - Defined investor portfolio weight functions using observable covariates.
-  - Parameters estimated by maximizing average in-sample utility.
+    def _build_model(self, input_size):
+        layers = []
+        previous_size = input_size
+        
+        for size in self.hidden_layer_sizes:
+            layers.append(nn.Linear(previous_size, size))
+            if self.activation == 'relu':
+                layers.append(nn.ReLU())
+            elif self.activation == 'tanh':
+                layers.append(nn.Tanh())
+            previous_size = size
+        
+        layers.append(nn.Linear(previous_size, 1))
+        
+        if not self.fit_intercept:
+            for layer in layers:
+                if isinstance(layer, nn.Linear):
+                    layer.bias.requires_grad = False
+        
+        self.model = nn.Sequential(*layers)
+    
+    def fit(self, X, y):
+        X = torch.tensor(X, dtype=torch.float32)
+        y = torch.tensor(y, dtype=torch.float32).view(-1, 1)
+        
+        input_size = X.shape[1]
+        self._build_model(input_size)
+        
+        if self.solver == 'adam':
+            optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        elif self.solver == 'sgd':
+            optimizer = optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        
+        criterion = nn.MSELoss()
+        
+        for epoch in range(self.max_iter):
+            self.model.train()
+            optimizer.zero_grad()
+            outputs = self.model(X)
+            loss = criterion(outputs, y)
+            loss.backward()
+            optimizer.step()
 
-**Britten-Jones (1999): Parametric Portfolio Weight Approach**
-- **Framework**: Builds on Markowitz's mean-variance analysis.
-- **Application**: Translates the "parametric portfolio weight" model to an Ordinary Least Squares (OLS) regression format.
-- **Key Theoretical Input**: Britten-Jones (1999) showed that the OLS regression coefficient is proportional to the Markowitz plugin solution:
-  - **Regression Model**:
-    $$
-    \begin{equation*}
-    1 = w^{\prime} R_{t} + u_{t} \tag{5.8}
-    \end{equation*}
-    $$    
-  - **Coefficient Relationship**:
-    $$
-    w^{\mathrm{OLS}} \propto \widehat{\Sigma}^{-1} \widehat{\mu}
-    $$
-    - $w^{\mathrm{OLS}} = \left(R_t' R_t\right)^{-1} (R_t \mathbf 1) = \Sigma^{-1} \mu$
-  - **Interpretation**
-      - Intuitively, the regression seeks a combination of the risky excess returns $R_t$ that behaves as closely as possible to a positive constant
-    - Equivalent to finding the combination of risky assets with the highest possible in-sample Sharpe ratio
-  
+    def predict(self, X):
+        X = torch.tensor(X, dtype=torch.float32)
+        self.model.eval()
+        with torch.no_grad():
+            predictions = self.model(X).numpy()
+        return predictions
 
-**Dynamic Portfolio Weights**
-- **Brandt et al. (2009) Portfolio Weight Parameterization**:
-  - **Formula**:
-    $$
-    \begin{equation*}
-    w_{i, t} = \bar{w}_{i, t} + s_{i, t}^{\prime} \beta \tag{5.9}
-    \end{equation*}
-    $$    
-  - **Components**:
-    - $ \bar{w}_{i, t} $: Benchmark weight (normalized to zero for simplicity).
-    - $ s_{i, t} $: $ K $ signals influencing the portfolio via a $ K $-dimensional coefficient vector $ \beta $.
-  - **Vector Equation**:
-    $$
-    \begin{equation*}
-    w_{t} = S_{t} \beta \tag{5.10}
-    \end{equation*}
-    $$
-  - **Incorporated into Regression**:
-    $$
-    \begin{equation*}
-    1 = \beta^{\prime}\left(S_{t-1}^{\prime} R_{t}\right) + u_{t} = \beta^{\prime} F_{t} + u_{t} \tag{5.11}
-    \end{equation*}
-    $$
-  - **Interpretation**:
-    - $ w_{t} $: Dynamic weights on $ N $ base assets $ R_{t} $.
-    - $ \beta $: Static weights on $ K $ "factors" $F$ where $F_{t} = S_{t-1}^{\prime} R_{t}$
+# Example usage
+if __name__ == "__main__":
+    # Generating some sample data
+    import numpy as np
+    X = np.random.rand(100, 3)
+    y = np.random.rand(100)
 
-- **Trading Strategy**: Forms cross-sectional portfolios by correlating returns with signals.
-- **Coefficient Estimation**:
-  $$
-  \widehat{\beta} = \widehat{\operatorname{Cov}}(F)^{-1} \widehat{\mathrm{E}}(F)
-  $$
-- **Benefits**:
-  - Enhances asset space from base returns to factor space.
-  - Applies simple OLS test statistics for signal evaluation.
-  - Brandt (1999) critiques the traditional econometric approach to return modeling, highlighting the susceptibility to errors in model specification and estimation.
-      - He advocates for focusing directly on optimal portfolio weights, which considerably reduces the potential for errors by simplifying the parameter dimensions involved.
-  - **Reduction in Estimation Errors**: By narrowing down the parameter dimensions compared to the traditional approach of estimating all asset means and covariances, the likelihood of model mispecification is significantly reduced.
+    # Training the custom MLP regressor
+    mlp = CustomMLPRegressor(hidden_layer_sizes=(50, 30), max_iter=500, fit_intercept=False)
+    mlp.fit(X, y)
+
+    # Making predictions
+    predictions = mlp.predict(X)
+    print(predictions)
