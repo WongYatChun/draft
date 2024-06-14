@@ -1,78 +1,173 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
+!pip install -q yfinance
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-class CustomMLPRegressor:
-    def __init__(self, hidden_layer_sizes=(100,), activation='relu', solver='adam', learning_rate=0.001, max_iter=200, fit_intercept=True):
-        self.hidden_layer_sizes = hidden_layer_sizes
-        self.activation = activation
-        self.solver = solver
-        self.learning_rate = learning_rate
-        self.max_iter = max_iter
-        self.fit_intercept = fit_intercept
-        self.model = None
+# Lists of Treasury Refunding Announcement (TRA) dates
+tra_dates = pd.to_datetime([
+    "1991-10-28", "1992-02-03", "1992-04-27", "1992-08-03", "1992-10-30",
+    "1993-02-01", "1993-05-03", "1993-08-02", "1993-11-01", "1994-01-31",
+    "1994-05-02", "1994-08-01", "1994-10-31", "1995-01-30", "1995-05-01",
+    "1995-07-31", "1995-10-30", "1996-01-29", "1996-04-29", "1996-07-29",
+    "1996-10-28", "1997-02-03", "1997-04-28", "1997-07-28", "1997-10-27",
+    "1998-02-02", "1998-05-04", "1998-08-03", "1998-10-26", "1999-02-01",
+    "1999-05-03", "1999-08-02", "1999-11-01", "2000-01-31", "2000-05-01",
+    "2000-07-31", "2000-10-30", "2001-01-29", "2001-04-30", "2001-07-30",
+    "2001-10-29", "2002-01-28", "2002-04-29", "2002-07-29", "2002-10-28",
+    "2003-02-03", "2003-04-28", "2003-07-28", "2003-11-03", "2004-02-02",
+    "2004-05-03", "2004-08-02", "2004-11-01", "2005-01-31", "2005-05-02",
+    "2005-08-01", "2005-10-31", "2006-01-30", "2006-05-01", "2006-07-31",
+    "2006-10-30", "2007-01-29", "2007-04-30", "2007-07-30", "2007-10-29",
+    "2008-01-28", "2008-04-28", "2008-07-28", "2008-11-03", "2009-02-02",
+    "2009-04-27", "2009-08-03", "2009-11-02", "2010-02-01", "2010-05-03",
+    "2010-08-02", "2010-11-01", "2011-01-31", "2011-05-02", "2011-08-01",
+    "2011-10-31", "2012-01-30", "2012-04-30", "2012-07-30", "2012-10-29",
+    "2013-02-04", "2013-04-29", "2013-07-29", "2013-11-04", "2014-02-03",
+    "2014-04-28", "2014-08-04", "2014-11-03", "2015-02-02", "2015-05-04",
+    "2015-08-03", "2015-11-02", "2016-02-01", "2016-05-02", "2016-08-01",
+    "2016-10-31", "2017-01-30", "2017-05-01", "2017-07-31", "2017-10-30",
+    "2018-01-29", "2018-04-30", "2018-07-30", "2018-10-29", "2019-01-28",
+    "2019-04-29", "2019-07-29", "2019-10-28", "2020-02-03", "2020-05-04",
+    "2020-08-03", "2020-11-02", "2021-02-01", "2021-05-03", "2021-08-02",
+    "2021-11-01", "2022-01-31", "2022-05-02", "2022-08-01", "2022-10-31",
+    "2023-01-30", "2023-05-01", "2023-07-31", "2023-10-30", "2024-01-29",
+    "2024-04-29",
+])
 
-    def _build_model(self, input_size):
-        layers = []
-        previous_size = input_size
-        
-        for size in self.hidden_layer_sizes:
-            layers.append(nn.Linear(previous_size, size))
-            if self.activation == 'relu':
-                layers.append(nn.ReLU())
-            elif self.activation == 'tanh':
-                layers.append(nn.Tanh())
-            previous_size = size
-        
-        layers.append(nn.Linear(previous_size, 1))
-        
-        if not self.fit_intercept:
-            for layer in layers:
-                if isinstance(layer, nn.Linear):
-                    layer.bias.requires_grad = False
-        
-        self.model = nn.Sequential(*layers)
-    
-    def fit(self, X, y):
-        X = torch.tensor(X, dtype=torch.float32)
-        y = torch.tensor(y, dtype=torch.float32).view(-1, 1)
-        
-        input_size = X.shape[1]
-        self._build_model(input_size)
-        
-        if self.solver == 'adam':
-            optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        elif self.solver == 'sgd':
-            optimizer = optim.SGD(self.model.parameters(), lr=self.learning_rate)
-        
-        criterion = nn.MSELoss()
-        
-        for epoch in range(self.max_iter):
-            self.model.train()
-            optimizer.zero_grad()
-            outputs = self.model(X)
-            loss = criterion(outputs, y)
-            loss.backward()
-            optimizer.step()
+pre_fomc_dates = pd.to_datetime([
+    "1992-02-03", "1993-02-01", "1994-01-31", "1995-01-30",
+    "1996-01-29", "1997-02-03", "1998-02-02", "1999-02-01",
+    "2000-01-31", "2001-01-29", "2002-01-28", "2003-02-03",
+    "2005-01-31", "2005-05-02", "2005-10-31", "2006-01-30",
+    "2007-01-29", "2008-04-28", "2009-04-27", "2010-11-01",
+    "2011-10-31", "2012-07-30", "2013-04-29", "2013-07-29",
+    "2017-01-30", "2017-05-01", "2018-01-29", "2018-04-30",
+    "2018-07-30", "2019-01-28", "2019-04-29", "2019-07-29",
+    "2019-10-28", "2020-11-02", "2021-11-01", "2022-05-02",
+    "2022-10-31", "2023-01-30", "2023-05-01", "2024-01-29",
+    "2024-04-29",
+])
 
-    def predict(self, X):
-        X = torch.tensor(X, dtype=torch.float32)
-        self.model.eval()
-        with torch.no_grad():
-            predictions = self.model(X).numpy()
-        return predictions
+post_fomc_dates = pd.to_datetime([
+    "2003-11-03", "2004-02-02", "2006-10-30", "2008-01-28",
+    "2009-02-02", "2010-02-01", "2010-05-03", "2011-01-31",
+    "2011-05-02", "2012-01-30", "2012-04-30", "2012-10-29",
+    "2013-02-04", "2014-02-03", "2014-08-04", "2014-11-03",
+    "2015-02-02", "2015-05-04", "2015-08-03", "2015-11-02",
+    "2016-02-01", "2016-05-02", "2016-08-01", "2017-07-31",
+    "2017-10-30", "2018-10-29", "2020-02-03", "2020-05-04",
+    "2020-08-03", "2021-02-01", "2021-05-03", "2021-08-02",
+    "2022-01-31", "2022-08-01", "2023-07-31"
+])
 
-# Example usage
-if __name__ == "__main__":
-    # Generating some sample data
-    import numpy as np
-    X = np.random.rand(100, 3)
-    y = np.random.rand(100)
+# Fetch historical data for TLT
+tlt = yf.download('TLT', start='1990-01-01', end='2024-01-01')
 
-    # Training the custom MLP regressor
-    mlp = CustomMLPRegressor(hidden_layer_sizes=(50, 30), max_iter=500, fit_intercept=False)
-    mlp.fit(X, y)
+# Calculate adjusted returns
+tlt['adj_ret'] = tlt['Adj Close'].pct_change()
 
-    # Making predictions
-    predictions = mlp.predict(X)
-    print(predictions)
+# Creating the DataFrame
+df = pd.DataFrame({'tra_date': tra_dates})
+df['category'] = 'other'
+df.loc[df['tra_date'].isin(pre_fomc_dates), 'category'] = 'pre_fomc'
+df.loc[df['tra_date'].isin(post_fomc_dates), 'category'] = 'post_fomc'
+
+# Function to generate backward and forward window dates
+def generate_window_dates(date, back_window, forward_window):
+    return {f'b{i}': date - pd.offsets.BDay(i) for i in range(back_window, 0, -1)} | \
+           {f'f{i}': date + pd.offsets.BDay(i) for i in range(forward_window + 1)}
+
+# Set backward and forward windows
+back_window = 5
+forward_window = 5
+
+# Generate window dates for each TRA date
+window_dates = df['tra_date'].apply(lambda x: generate_window_dates(x, back_window, forward_window))
+
+# Flatten the window dates into the DataFrame
+for key in window_dates.iloc[0].keys():
+    df[key] = window_dates.apply(lambda x: x[key])
+
+# Calculate adjusted returns for each TRA date
+columns = [f'b{i}' for i in range(back_window, 0, -1)] + [f'f{i}' for i in range(forward_window + 1)]
+results = pd.DataFrame(index=df['tra_date'], columns=columns)
+
+for index, row in df.iterrows():
+    for col in columns:
+        date = row[col]
+        results.at[row['tra_date'], col] = tlt['adj_ret'].get(date, np.nan)
+
+# Display the results DataFrame
+print(results)
+
+# Calculate the average daily return
+average_daily_returns = results.mean()
+
+# Plot the average daily returns
+plt.figure(figsize=(12, 6))
+average_daily_returns.plot(kind='bar', color='blue')
+plt.title('Average Daily Returns Around TRA Dates')
+plt.xlabel('Event Window')
+plt.ylabel('Average Daily Return')
+plt.axhline(0, color='black', linewidth=0.8)
+plt.grid(True)
+plt.show()
+
+# Merge results with df to get the categories
+compare_results = pd.merge(results.reset_index(), df[['tra_date', 'category']], on='tra_date')
+compare_results['year'] = compare_results['tra_date'].dt.year
+
+# Calculate the average daily return for each category
+def calculate_average_returns(df, category, columns):
+    return df[df['category'] == category][columns].mean()
+
+average_returns_pre_fomc = calculate_average_returns(compare_results, 'pre_fomc', columns)
+average_returns_post_fomc = calculate_average_returns(compare_results, 'post_fomc', columns)
+average_returns_other = calculate_average_returns(compare_results, 'other', columns)
+
+# Combine the results into a single DataFrame for comparison
+fomc_df = pd.DataFrame({
+    'pre_fomc': average_returns_pre_fomc,
+    'post_fomc': average_returns_post_fomc,
+    'other': average_returns_other
+})
+
+# Plot the average daily returns
+fomc_df.plot(kind='bar', figsize=(14, 8))
+plt.title('Average Daily Returns Around TRA Dates by Category')
+plt.xlabel('Event Window')
+plt.ylabel('Average Daily Return')
+plt.axhline(0, color='black', linewidth=0.8)
+plt.grid(True)
+plt.show()
+
+# Filter and plot average returns for periods after 2018
+post_2018_results = compare_results[compare_results['year'] > 2018]
+average_returns_post_2018 = pd.DataFrame({
+    'pre_fomc': calculate_average_returns(post_2018_results, 'pre_fomc', columns),
+    'post_fomc': calculate_average_returns(post_2018_results, 'post_fomc', columns),
+    'other': calculate_average_returns(post_2018_results, 'other', columns)
+})
+average_returns_post_2018.plot(kind='bar', figsize=(14, 8))
+plt.title('Average Daily Returns Around TRA Dates by Category after 2018')
+plt.xlabel('Event Window')
+plt.ylabel('Average Daily Return')
+plt.axhline(0, color='black', linewidth=0.8)
+plt.grid(True)
+plt.show()
+
+# Filter and plot average returns for periods before 2019
+pre_2019_results = compare_results[compare_results['year'] < 2019]
+average_returns_pre_2019 = pd.DataFrame({
+    'pre_fomc': calculate_average_returns(pre_2019_results, 'pre_fomc', columns),
+    'post_fomc': calculate_average_returns(pre_2019_results, 'post_fomc', columns),
+    'other': calculate_average_returns(pre_2019_results, 'other', columns)
+})
+average_returns_pre_2019.plot(kind='bar', figsize=(14, 8))
+plt.title('Average Daily Returns Around TRA Dates by Category before 2018')
+plt.xlabel('Event Window')
+plt.ylabel('Average Daily Return')
+plt.axhline(0, color='black', linewidth=0.8)
+plt.grid(True)
+plt.show()
