@@ -73,10 +73,18 @@ df['category'] = 'other'
 df.loc[df['tra_date'].isin(pre_fomc_dates), 'category'] = 'pre_fomc'
 df.loc[df['tra_date'].isin(post_fomc_dates), 'category'] = 'post_fomc'
 
+
 # Function to generate backward and forward window dates
 def generate_window_dates(date, back_window, forward_window):
-    return {f'b{i}': date - pd.offsets.BDay(i) for i in range(back_window, 0, -1)} | \
-           {f'f{i}': date + pd.offsets.BDay(i) for i in range(forward_window + 1)}
+    # Generate dates for the backward window
+    backward_dates = {f'b{i}': date - pd.offsets.BDay(i) for i in range(back_window, 0, -1)}
+    
+    # Generate dates for the forward window
+    forward_dates = {f'f{i}': date + pd.offsets.BDay(i) for i in range(forward_window + 1)}
+    
+    # Combine the backward and forward dates into a single dictionary
+    combined_dates = {**backward_dates, **forward_dates}
+    return combined_dates
 
 # Set backward and forward windows
 back_window = 5
