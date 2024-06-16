@@ -1,181 +1,84 @@
-!pip install -q yfinance
-import yfinance as yf
-import pandas as pd
+import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Lists of Treasury Refunding Announcement (TRA) dates
-tra_dates = pd.to_datetime([
-    "1991-10-28", "1992-02-03", "1992-04-27", "1992-08-03", "1992-10-30",
-    "1993-02-01", "1993-05-03", "1993-08-02", "1993-11-01", "1994-01-31",
-    "1994-05-02", "1994-08-01", "1994-10-31", "1995-01-30", "1995-05-01",
-    "1995-07-31", "1995-10-30", "1996-01-29", "1996-04-29", "1996-07-29",
-    "1996-10-28", "1997-02-03", "1997-04-28", "1997-07-28", "1997-10-27",
-    "1998-02-02", "1998-05-04", "1998-08-03", "1998-10-26", "1999-02-01",
-    "1999-05-03", "1999-08-02", "1999-11-01", "2000-01-31", "2000-05-01",
-    "2000-07-31", "2000-10-30", "2001-01-29", "2001-04-30", "2001-07-30",
-    "2001-10-29", "2002-01-28", "2002-04-29", "2002-07-29", "2002-10-28",
-    "2003-02-03", "2003-04-28", "2003-07-28", "2003-11-03", "2004-02-02",
-    "2004-05-03", "2004-08-02", "2004-11-01", "2005-01-31", "2005-05-02",
-    "2005-08-01", "2005-10-31", "2006-01-30", "2006-05-01", "2006-07-31",
-    "2006-10-30", "2007-01-29", "2007-04-30", "2007-07-30", "2007-10-29",
-    "2008-01-28", "2008-04-28", "2008-07-28", "2008-11-03", "2009-02-02",
-    "2009-04-27", "2009-08-03", "2009-11-02", "2010-02-01", "2010-05-03",
-    "2010-08-02", "2010-11-01", "2011-01-31", "2011-05-02", "2011-08-01",
-    "2011-10-31", "2012-01-30", "2012-04-30", "2012-07-30", "2012-10-29",
-    "2013-02-04", "2013-04-29", "2013-07-29", "2013-11-04", "2014-02-03",
-    "2014-04-28", "2014-08-04", "2014-11-03", "2015-02-02", "2015-05-04",
-    "2015-08-03", "2015-11-02", "2016-02-01", "2016-05-02", "2016-08-01",
-    "2016-10-31", "2017-01-30", "2017-05-01", "2017-07-31", "2017-10-30",
-    "2018-01-29", "2018-04-30", "2018-07-30", "2018-10-29", "2019-01-28",
-    "2019-04-29", "2019-07-29", "2019-10-28", "2020-02-03", "2020-05-04",
-    "2020-08-03", "2020-11-02", "2021-02-01", "2021-05-03", "2021-08-02",
-    "2021-11-01", "2022-01-31", "2022-05-02", "2022-08-01", "2022-10-31",
-    "2023-01-30", "2023-05-01", "2023-07-31", "2023-10-30", "2024-01-29",
-    "2024-04-29",
-])
+class WeightPredictorModel:
+    def __init__(self, input_shape, hidden_units=10, patience=10, batch_size=32, epochs=1000):
+        self.input_shape = input_shape
+        self.hidden_units = hidden_units
+        self.patience = patience
+        self.batch_size = batch_size
+        self.epochs = epochs
+        self.model = self.build_model()
+        self.optimizer = tf.optimizers.Adam()
 
-pre_fomc_dates = pd.to_datetime([
-    "1992-02-03", "1993-02-01", "1994-01-31", "1995-01-30",
-    "1996-01-29", "1997-02-03", "1998-02-02", "1999-02-01",
-    "2000-01-31", "2001-01-29", "2002-01-28", "2003-02-03",
-    "2005-01-31", "2005-05-02", "2005-10-31", "2006-01-30",
-    "2007-01-29", "2008-04-28", "2009-04-27", "2010-11-01",
-    "2011-10-31", "2012-07-30", "2013-04-29", "2013-07-29",
-    "2017-01-30", "2017-05-01", "2018-01-29", "2018-04-30",
-    "2018-07-30", "2019-01-28", "2019-04-29", "2019-07-29",
-    "2019-10-28", "2020-11-02", "2021-11-01", "2022-05-02",
-    "2022-10-31", "2023-01-30", "2023-05-01", "2024-01-29",
-    "2024-04-29",
-])
+    def build_model(self):
+        input_features = tf.keras.Input(shape=(self.input_shape,))
+        hidden_layer = tf.keras.layers.Dense(self.hidden_units, activation='relu')(input_features)
+        predicted_weights = tf.keras.layers.Dense(self.input_shape, activation='linear')(hidden_layer)
+        model = tf.keras.Model(inputs=input_features, outputs=predicted_weights)
+        model.summary()  # Print model summary
+        return model
 
-post_fomc_dates = pd.to_datetime([
-    "2003-11-03", "2004-02-02", "2006-10-30", "2008-01-28",
-    "2009-02-02", "2010-02-01", "2010-05-03", "2011-01-31",
-    "2011-05-02", "2012-01-30", "2012-04-30", "2012-10-29",
-    "2013-02-04", "2014-02-03", "2014-08-04", "2014-11-03",
-    "2015-02-02", "2015-05-04", "2015-08-03", "2015-11-02",
-    "2016-02-01", "2016-05-02", "2016-08-01", "2017-07-31",
-    "2017-10-30", "2018-10-29", "2020-02-03", "2020-05-04",
-    "2020-08-03", "2021-02-01", "2021-05-03", "2021-08-02",
-    "2022-01-31", "2022-08-01", "2023-07-31"
-])
+    def custom_loss(self, y_true, y_pred, X_batch):
+        predictions = tf.reduce_sum(X_batch * y_pred, axis=1)
+        loss = tf.reduce_mean(tf.square(predictions - y_true))
+        return loss
 
-# Fetch historical data for TLT
-tlt = yf.download('TLT', start='1990-01-01', end='2024-01-01')
+    @tf.function
+    def train_step(self, X_batch, Y_batch):
+        with tf.GradientTape() as tape:
+            weights_batch = self.model(X_batch, training=True)
+            loss = self.custom_loss(Y_batch, weights_batch, X_batch)
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        return loss
 
-# Calculate adjusted returns
-tlt['adj_ret'] = tlt['Adj Close'].pct_change()
+    def train(self, X, Y):
+        best_loss = float('inf')
+        wait = 0
 
-# Creating the DataFrame
-df = pd.DataFrame({'tra_date': tra_dates})
-df['category'] = 'other'
-df.loc[df['tra_date'].isin(pre_fomc_dates), 'category'] = 'pre_fomc'
-df.loc[df['tra_date'].isin(post_fomc_dates), 'category'] = 'post_fomc'
+        dataset = tf.data.Dataset.from_tensor_slices((X, Y)).batch(self.batch_size)
 
+        for epoch in range(self.epochs):
+            epoch_loss = 0
+            for X_batch, Y_batch in dataset:
+                batch_loss = self.train_step(X_batch, Y_batch)
+                epoch_loss += batch_loss.numpy()
 
-# Function to generate backward and forward window dates
-def generate_window_dates(date, back_window, forward_window):
-    # Generate dates for the backward window
-    backward_dates = {f'b{i}': date - pd.offsets.BDay(i) for i in range(back_window, 0, -1)}
-    
-    # Generate dates for the forward window
-    forward_dates = {f'f{i}': date + pd.offsets.BDay(i) for i in range(forward_window + 1)}
-    
-    # Combine the backward and forward dates into a single dictionary
-    combined_dates = {**backward_dates, **forward_dates}
-    return combined_dates
+            epoch_loss /= len(dataset)
 
-# Set backward and forward windows
-back_window = 5
-forward_window = 5
+            if epoch % 100 == 0:
+                print(f"Epoch {epoch}, Loss: {epoch_loss}")
 
-# Generate window dates for each TRA date
-window_dates = df['tra_date'].apply(lambda x: generate_window_dates(x, back_window, forward_window))
+            # Early stopping check
+            if epoch_loss < best_loss:
+                best_loss = epoch_loss
+                wait = 0
+            else:
+                wait += 1
+                if wait >= self.patience:
+                    print(f"Early stopping at epoch {epoch}")
+                    break
 
-# Flatten the window dates into the DataFrame
-for key in window_dates.iloc[0].keys():
-    df[key] = window_dates.apply(lambda x: x[key])
+    def predict_weights(self, X):
+        return self.model.predict(X)
 
-# Calculate adjusted returns for each TRA date
-columns = [f'b{i}' for i in range(back_window, 0, -1)] + [f'f{i}' for i in range(forward_window + 1)]
-results = pd.DataFrame(index=df['tra_date'], columns=columns)
+    def evaluate(self, X, Y):
+        predicted_weights = self.predict_weights(X)
+        predictions = np.sum(X * predicted_weights, axis=1)
+        print("Predicted Y:", predictions[:5])
+        print("Actual Y:", Y[:5])
+        return predicted_weights, predictions
 
-for index, row in df.iterrows():
-    for col in columns:
-        date = row[col]
-        results.at[row['tra_date'], col] = tlt['adj_ret'].get(date, np.nan)
+# Example usage
+np.random.seed(0)
+X = np.random.rand(100, 3).astype(np.float32)  # 100 samples, 3 features
+true_weights = np.array([1.5, -2.0, 1.0], dtype=np.float32)
+Y = (X @ true_weights + np.random.normal(0, 0.1, 100)).astype(np.float32)  # Adding some noise
 
-# Display the results DataFrame
-print(results)
+model = WeightPredictorModel(input_shape=X.shape[1])
+model.train(X, Y)
+predicted_weights, predictions = model.evaluate(X, Y)
 
-# Calculate the average daily return
-average_daily_returns = results.mean()
-
-# Plot the average daily returns
-plt.figure(figsize=(12, 6))
-average_daily_returns.plot(kind='bar', color='blue')
-plt.title('Average Daily Returns Around TRA Dates')
-plt.xlabel('Event Window')
-plt.ylabel('Average Daily Return')
-plt.axhline(0, color='black', linewidth=0.8)
-plt.grid(True)
-plt.show()
-
-# Merge results with df to get the categories
-compare_results = pd.merge(results.reset_index(), df[['tra_date', 'category']], on='tra_date')
-compare_results['year'] = compare_results['tra_date'].dt.year
-
-# Calculate the average daily return for each category
-def calculate_average_returns(df, category, columns):
-    return df[df['category'] == category][columns].mean()
-
-average_returns_pre_fomc = calculate_average_returns(compare_results, 'pre_fomc', columns)
-average_returns_post_fomc = calculate_average_returns(compare_results, 'post_fomc', columns)
-average_returns_other = calculate_average_returns(compare_results, 'other', columns)
-
-# Combine the results into a single DataFrame for comparison
-fomc_df = pd.DataFrame({
-    'pre_fomc': average_returns_pre_fomc,
-    'post_fomc': average_returns_post_fomc,
-    'other': average_returns_other
-})
-
-# Plot the average daily returns
-fomc_df.plot(kind='bar', figsize=(14, 8))
-plt.title('Average Daily Returns Around TRA Dates by Category')
-plt.xlabel('Event Window')
-plt.ylabel('Average Daily Return')
-plt.axhline(0, color='black', linewidth=0.8)
-plt.grid(True)
-plt.show()
-
-# Filter and plot average returns for periods after 2018
-post_2018_results = compare_results[compare_results['year'] > 2018]
-average_returns_post_2018 = pd.DataFrame({
-    'pre_fomc': calculate_average_returns(post_2018_results, 'pre_fomc', columns),
-    'post_fomc': calculate_average_returns(post_2018_results, 'post_fomc', columns),
-    'other': calculate_average_returns(post_2018_results, 'other', columns)
-})
-average_returns_post_2018.plot(kind='bar', figsize=(14, 8))
-plt.title('Average Daily Returns Around TRA Dates by Category after 2018')
-plt.xlabel('Event Window')
-plt.ylabel('Average Daily Return')
-plt.axhline(0, color='black', linewidth=0.8)
-plt.grid(True)
-plt.show()
-
-# Filter and plot average returns for periods before 2019
-pre_2019_results = compare_results[compare_results['year'] < 2019]
-average_returns_pre_2019 = pd.DataFrame({
-    'pre_fomc': calculate_average_returns(pre_2019_results, 'pre_fomc', columns),
-    'post_fomc': calculate_average_returns(pre_2019_results, 'post_fomc', columns),
-    'other': calculate_average_returns(pre_2019_results, 'other', columns)
-})
-average_returns_pre_2019.plot(kind='bar', figsize=(14, 8))
-plt.title('Average Daily Returns Around TRA Dates by Category before 2018')
-plt.xlabel('Event Window')
-plt.ylabel('Average Daily Return')
-plt.axhline(0, color='black', linewidth=0.8)
-plt.grid(True)
-plt.show()
+print("Predicted weights for the first 5 samples:")
+print(predicted_weights[:5])
