@@ -4,28 +4,36 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
 class WeightPredictorModel(nn.Module):
-    def __init__(self, input_dim, hidden_units=10):
+    def __init__(self, input_dim, hidden_units=10, dropout_rate=0.5):
         super(WeightPredictorModel, self).__init__()
         self.hidden = nn.Linear(input_dim, hidden_units)
+        self.dropout = nn.Dropout(dropout_rate)
         self.output = nn.Linear(hidden_units, input_dim)
     
     def forward(self, x):
         x = torch.relu(self.hidden(x))
+        x = self.dropout(x)
         x = self.output(x)
         return x
 
 class WeightPredictor:
-    def __init__(self, input_dim, hidden_units=10, lr=0.01, batch_size=32, epochs=1000, patience=10):
-        self.model = WeightPredictorModel(input_dim, hidden_units)
+    def __init__(self, input_dim, hidden_units=10, lr=0.01, batch_size=32, epochs=1000, patience=10, reg_lambda=0.01, dropout_rate=0.5):
+        self.model = WeightPredictorModel(input_dim, hidden_units, dropout_rate)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.batch_size = batch_size
         self.epochs = epochs
         self.patience = patience
-        self.criterion = custom_loss
+        self.reg_lambda = reg_lambda  # Regularization factor
+        self.criterion = self.custom_loss  # Correctly assigning the custom loss function
 
     def custom_loss(self, y_true, y_pred, X):
         predictions = torch.sum(X * y_pred, axis=1)
-        loss = torch.mean((predictions - y_true) ** 2)
+        mse_loss = torch.mean((predictions - y_true) ** 2)
+        
+        # L2 regularization
+        l2_reg = sum(param.pow(2.0).sum() for param in self.model.parameters())
+        loss = mse_loss + self.reg_lambda * l2_reg
+        
         return loss
 
     def fit(self, X, Y):
@@ -36,10 +44,11 @@ class WeightPredictor:
 
         for epoch in range(self.epochs):
             epoch_loss = 0.0
+            self.model.train()  # Set model to training mode
             for X_batch, Y_batch in dataloader:
                 self.optimizer.zero_grad()
                 weights_batch = self.model(X_batch)
-                loss = self.custom_loss(Y_batch, weights_batch, X_batch)
+                loss = self.criterion(Y_batch, weights_batch, X_batch)  # Using self.criterion
                 loss.backward()
                 self.optimizer.step()
                 epoch_loss += loss.item()
@@ -60,7 +69,7 @@ class WeightPredictor:
                     break
 
     def predict(self, X):
-        self.model.eval()
+        self.model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             predicted_weights = self.model(X).numpy()
         return predicted_weights
