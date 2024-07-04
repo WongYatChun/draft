@@ -41,6 +41,7 @@ class PurgedKFold(BaseCrossValidator):
             test_indices = indices[test_start:test_end]
             yield train_indices, test_indices
 
+
 class TorchElasticNetModel(nn.Module):
     def __init__(self, n_inputs=None, alpha=1.0, l1_ratio=0.5, positive=False):
         super(TorchElasticNetModel, self).__init__()
@@ -125,18 +126,19 @@ def plot_convergence(train_losses, val_losses):
     plt.show()
 
 class TorchCrossValidator:
-    def __init__(self, model_class, model_kwargs, lr=0.01, epochs=1000, patience=100):
+    def __init__(self, model_class, model_kwargs, cv_instance, lr=0.01, epochs=1000, patience=100):
         self.model_class = model_class
         self.model_kwargs = model_kwargs
+        self.cv_instance = cv_instance
         self.lr = lr
         self.epochs = epochs
         self.patience = patience
 
-    def _cross_validation_loop(self, params, X, y, cv_instance):
+    def _cross_validation_loop(self, params, X, y):
         cv_losses = []
         n_inputs = X.shape[1]
         model_params = {**self.model_kwargs, **params}
-        for train_index, val_index in cv_instance.split(X):
+        for train_index, val_index in self.cv_instance.split(X):
             x_train, x_val = X[train_index], X[val_index]
             y_train, y_val = y[train_index], y[val_index]
 
@@ -159,11 +161,11 @@ class TorchCrossValidator:
         plot_convergence(model.train_losses, model.val_losses)
         return model
 
-    def randomized_search_cv(self, X, y, cv_instance, param_distributions, n_iter=50):
+    def randomized_search_cv(self, X, y, param_distributions, n_iter=50):
         best_params, best_loss, best_model = None, float('inf'), None
 
         for params in tqdm(ParameterSampler(param_distributions, n_iter=n_iter)):
-            avg_loss = self._cross_validation_loop(params, X, y, cv_instance)
+            avg_loss = self._cross_validation_loop(params, X, y)
             if avg_loss < best_loss:
                 best_loss = avg_loss
                 best_params = params
@@ -172,10 +174,10 @@ class TorchCrossValidator:
         best_model = self._train_and_evaluate(best_model, X, y)
         return best_model, best_params, best_loss
 
-    def bayesian_optimization_cv(self, X, y, cv_instance, param_space, n_iter=50):
+    def bayesian_optimization_cv(self, X, y, param_space, n_iter=50):
         def objective(params):
             params_dict = {key: value for key, value in zip(param_space.keys(), params)}
-            return self._cross_validation_loop(params_dict, X, y, cv_instance)
+            return self._cross_validation_loop(params_dict, X, y)
 
         res = gp_minimize(objective, list(param_space.values()), n_calls=n_iter, random_state=0, verbose=True)
 
@@ -186,7 +188,7 @@ class TorchCrossValidator:
         return best_model, best_params, res.fun
 
 class TorchElasticNetCV(BaseEstimator, RegressorMixin):
-    def __init__(self, alpha=1.0, l1_ratio=0.5, param_distributions=None, param_space=None, n_iter=50, lr=0.01, epochs=1000, patience=100, positive=False, search_type='random'):
+    def __init__(self, alpha=1.0, l1_ratio=0.5, param_distributions=None, param_space=None, n_iter=50, lr=0.01, epochs=1000, patience=100, positive=False, search_type='random', cv_instance=None):
         self.alpha = alpha
         self.l1_ratio = l1_ratio
         self.param_distributions = param_distributions
@@ -197,21 +199,22 @@ class TorchElasticNetCV(BaseEstimator, RegressorMixin):
         self.patience = patience
         self.positive = positive
         self.search_type = search_type
+        self.cv_instance = cv_instance
         self.best_model_ = None
         self.best_params_ = None
         self.coef_ = None
 
-    def fit(self, X, y, cv_instance):
+    def fit(self, X, y):
         X_tensor = torch.tensor(X, dtype=torch.float32)
         y_tensor = torch.tensor(y, dtype=torch.float32)
 
         model_kwargs = {'alpha': self.alpha, 'l1_ratio': self.l1_ratio, 'positive': self.positive}
-        cross_validator = TorchCrossValidator(TorchElasticNetModel, model_kwargs, lr=self.lr, epochs=self.epochs, patience=self.patience)
+        cross_validator = TorchCrossValidator(TorchElasticNetModel, model_kwargs, cv_instance=self.cv_instance, lr=self.lr, epochs=self.epochs, patience=self.patience)
 
         if self.search_type == 'random':
-            self.best_model_, self.best_params_, _ = cross_validator.randomized_search_cv(X_tensor, y_tensor, cv_instance, self.param_distributions, n_iter=self.n_iter)
+            self.best_model_, self.best_params_, _ = cross_validator.randomized_search_cv(X_tensor, y_tensor, self.param_distributions, n_iter=self.n_iter)
         elif self.search_type == 'bayesian':
-            self.best_model_, self.best_params_, _ = cross_validator.bayesian_optimization_cv(X_tensor, y_tensor, cv_instance, self.param_space, n_iter=self.n_iter)
+            self.best_model_, self.best_params_, _ = cross_validator.bayesian_optimization_cv(X_tensor, y_tensor, self.param_space, n_iter=self.n_iter)
         else:
             raise ValueError("search_type must be 'random' or 'bayesian'")
 
@@ -238,6 +241,7 @@ def generate_data(n=3000, m=20, seed=10):
 
 X, y, true_w = generate_data()
 
+
 # param_distributions = {
 #     'alpha': loguniform(0.01, 1.0),
 #     'l1_ratio': uniform(0.1, 1.0)
@@ -248,20 +252,6 @@ X, y, true_w = generate_data()
 #     'l1_ratio': Real(0.01, 1.0, prior='uniform')
 # }
 
-# # Create a cross-validation instance
-# purged_kf = PurgedKFold(n_splits=5, purge_length=10, embargo=0.0)
-
-# # Instantiate TorchElasticNetCV with randomized search
-# torch_elasticnet_cv_random = TorchElasticNetCV(param_distributions=param_distributions, search_type='random', lr=0.1, epochs=1000, patience=100)
-# torch_elasticnet_cv_random.fit(X, y, cv_instance=purged_kf)
-# print("Best Parameters (Randomized Search):", torch_elasticnet_cv_random.best_params_)
-# print("Model Coefficients (Randomized Search):", torch_elasticnet_cv_random.coef_)
-
-# # Instantiate TorchElasticNetCV with bayesian optimization
-# torch_elasticnet_cv_bayes = TorchElasticNetCV(param_space=param_space, search_type='bayesian', lr=0.1, epochs=1000, patience=100)
-# torch_elasticnet_cv_bayes.fit(X, y, cv_instance=purged_kf)
-# print("Best Parameters (Bayesian Optimization):", torch_elasticnet_cv_bayes.best_params_)
-# print("Model Coefficients (Bayesian Optimization):", torch_elasticnet_cv_bayes.coef_)
 
 # Parameter distributions for randomized search (alpha only since l1_ratio is fixed to 1 for Lasso)
 param_distributions = {
@@ -273,22 +263,21 @@ param_space = {
     'alpha': Real(0.01, 1.0, prior='log-uniform')
 }
 
-positive = False
-
 # Create a cross-validation instance
 purged_kf = PurgedKFold(n_splits=5, purge_length=10, embargo=0.0)
 
 # Instantiate TorchElasticNetCV for Lasso with randomized search
-torch_lasso_cv_random = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_distributions=param_distributions, search_type='random', lr=1, epochs=1000, patience=100, positive=positive)
-torch_lasso_cv_random.fit(X, y, cv_instance=purged_kf)
+torch_lasso_cv_random = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_distributions=param_distributions, search_type='random', lr=0.1, epochs=1000, patience=100, positive=True, cv_instance=purged_kf)
+torch_lasso_cv_random.fit(X, y)
 print("Best Parameters (Randomized Search - Lasso):", torch_lasso_cv_random.best_params_)
 print("Model Coefficients (Randomized Search - Lasso):", torch_lasso_cv_random.coef_)
 
 # Instantiate TorchElasticNetCV for Lasso with Bayesian optimization
-torch_lasso_cv_bayes = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_space=param_space, search_type='bayesian', lr=1, epochs=1000, patience=100, positive=positive)
-torch_lasso_cv_bayes.fit(X, y, cv_instance=purged_kf)
+torch_lasso_cv_bayes = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_space=param_space, search_type='bayesian', lr=0.1, epochs=1000, patience=100, positive=True, cv_instance=purged_kf)
+torch_lasso_cv_bayes.fit(X, y)
 print("Best Parameters (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.best_params_)
 print("Model Coefficients (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.coef_)
+
 
 
 # Get the learned coefficients for RandomizedSearchCV
@@ -307,3 +296,5 @@ ax.plot(learned_coefficients_bayes, ".", label="ElasticNet (Bayesian Optimizatio
 ax.set_title("Coefficient Comparison (ElasticNet without Bias)")
 fig.legend()
 plt.show()
+
+
