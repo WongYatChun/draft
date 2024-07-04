@@ -271,3 +271,21 @@ torch_lasso_cv_bayes = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_space=pa
 torch_lasso_cv_bayes.fit(X, y)
 print("Best Parameters (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.best_params_)
 print("Model Coefficients (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.coef_)
+
+
+# Get the learned coefficients for RandomizedSearchCV
+# learned_coefficients_random = torch_elasticnet_cv_random.coef_
+learned_coefficients_random = torch_lasso_cv_random.coef_
+
+# Get the learned coefficients for BayesSearchCV
+# learned_coefficients_bayes = torch_elasticnet_cv_bayes.coef_
+learned_coefficients_bayes = torch_lasso_cv_bayes.coef_
+
+# Plot the final model coefficients
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(true_w, "x", label="True")
+ax.plot(learned_coefficients_random, ".", label="ElasticNet (Randomized Search)")
+ax.plot(learned_coefficients_bayes, ".", label="ElasticNet (Bayesian Optimization)")
+ax.set_title("Coefficient Comparison (ElasticNet without Bias)")
+fig.legend()
+plt.show()
