@@ -1,16 +1,20 @@
+
+
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.model_selection import BaseCrossValidator, ParameterSampler
+from sklearn.model_selection import ParameterSampler
 from sklearn.metrics import r2_score
 from tqdm import tqdm
 from skopt import gp_minimize
 from skopt.space import Real
 from scipy.stats import loguniform, uniform
 
+from sklearn.model_selection import BaseCrossValidator
 class PurgedKFold(BaseCrossValidator):
     def __init__(self, n_splits=5, purge_length=10, embargo=0.0):
         self.n_splits = n_splits
@@ -41,17 +45,15 @@ class PurgedKFold(BaseCrossValidator):
             test_indices = indices[test_start:test_end]
             yield train_indices, test_indices
 
-
 class TorchElasticNetModel(nn.Module):
-    def __init__(self, n_inputs=None, alpha=1.0, l1_ratio=0.5, positive=False):
+    def __init__(self, alpha=1.0, l1_ratio=0.5, positive=False, lr=0.01, epochs=1000, patience=100):
         super(TorchElasticNetModel, self).__init__()
-        if n_inputs is not None:
-            self.output_layer = nn.Linear(n_inputs, 1, bias=False)
-        else:
-            self.output_layer = None
         self.alpha = alpha
         self.l1_ratio = l1_ratio
         self.positive = positive
+        self.lr = lr
+        self.epochs = epochs
+        self.patience = patience
 
     def forward(self, x):
         return self.output_layer(x)
@@ -69,14 +71,19 @@ class TorchElasticNetModel(nn.Module):
             with torch.no_grad():
                 self.output_layer.weight.clamp_(min=0)
     
-    def fit(self, X, y, optimizer, scheduler, epochs=1000, patience=100):
+    def fit(self, X, y):
+        n_inputs = X.shape[1]
+        self.output_layer = nn.Linear(n_inputs, 1, bias=False)
+        
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
         self.train_losses = []
         self.val_losses = []
         best_loss = float('inf')
         patience_counter = 0
         best_model_state = self.state_dict()
 
-        for epoch in range(epochs):
+        for epoch in range(self.epochs):
             self.train()
             optimizer.zero_grad()
             outputs = self(X)
@@ -99,7 +106,7 @@ class TorchElasticNetModel(nn.Module):
                 else:
                     patience_counter += 1
 
-            if patience_counter >= patience:
+            if patience_counter >= self.patience:
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
@@ -126,26 +133,20 @@ def plot_convergence(train_losses, val_losses):
     plt.show()
 
 class TorchCrossValidator:
-    def __init__(self, model_class, model_kwargs, cv_instance, lr=0.01, epochs=1000, patience=100):
+    def __init__(self, model_class, model_kwargs, cv_instance):
         self.model_class = model_class
         self.model_kwargs = model_kwargs
         self.cv_instance = cv_instance
-        self.lr = lr
-        self.epochs = epochs
-        self.patience = patience
 
     def _cross_validation_loop(self, params, X, y):
         cv_losses = []
-        n_inputs = X.shape[1]
         model_params = {**self.model_kwargs, **params}
         for train_index, val_index in self.cv_instance.split(X):
             x_train, x_val = X[train_index], X[val_index]
             y_train, y_val = y[train_index], y[val_index]
 
-            model = self.model_class(n_inputs, **model_params)
-            optimizer = optim.Adam(model.parameters(), lr=self.lr)
-            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-            model.fit(x_train, y_train, optimizer, scheduler, epochs=self.epochs, patience=self.patience)
+            model = self.model_class(**model_params)
+            model.fit(x_train, y_train)
 
             model.eval()
             with torch.no_grad():
@@ -155,9 +156,7 @@ class TorchCrossValidator:
         return np.mean(cv_losses)
 
     def _train_and_evaluate(self, model, X, y):
-        optimizer = optim.Adam(model.parameters(), lr=self.lr)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-        model.fit(X, y, optimizer, scheduler, epochs=self.epochs, patience=self.patience)
+        model.fit(X, y)
         plot_convergence(model.train_losses, model.val_losses)
         return model
 
@@ -169,7 +168,7 @@ class TorchCrossValidator:
             if avg_loss < best_loss:
                 best_loss = avg_loss
                 best_params = params
-                best_model = self.model_class(X.shape[1], **{**self.model_kwargs, **params})
+                best_model = self.model_class(**{**self.model_kwargs, **params})
 
         best_model = self._train_and_evaluate(best_model, X, y)
         return best_model, best_params, best_loss
@@ -182,7 +181,7 @@ class TorchCrossValidator:
         res = gp_minimize(objective, list(param_space.values()), n_calls=n_iter, random_state=0, verbose=True)
 
         best_params = {key: value for key, value in zip(param_space.keys(), res.x)}
-        best_model = self.model_class(X.shape[1], **{**self.model_kwargs, **best_params})
+        best_model = self.model_class(**{**self.model_kwargs, **best_params})
 
         best_model = self._train_and_evaluate(best_model, X, y)
         return best_model, best_params, res.fun
@@ -208,8 +207,15 @@ class TorchElasticNetCV(BaseEstimator, RegressorMixin):
         X_tensor = torch.tensor(X, dtype=torch.float32)
         y_tensor = torch.tensor(y, dtype=torch.float32)
 
-        model_kwargs = {'alpha': self.alpha, 'l1_ratio': self.l1_ratio, 'positive': self.positive}
-        cross_validator = TorchCrossValidator(TorchElasticNetModel, model_kwargs, cv_instance=self.cv_instance, lr=self.lr, epochs=self.epochs, patience=self.patience)
+        model_kwargs = {
+            'alpha': self.alpha, 
+            'l1_ratio': self.l1_ratio, 
+            'positive': self.positive,
+            'lr': self.lr,
+            'epochs': self.epochs,
+            'patience': self.patience
+        }
+        cross_validator = TorchCrossValidator(TorchElasticNetModel, model_kwargs, cv_instance=self.cv_instance)
 
         if self.search_type == 'random':
             self.best_model_, self.best_params_, _ = cross_validator.randomized_search_cv(X_tensor, y_tensor, self.param_distributions, n_iter=self.n_iter)
@@ -241,18 +247,6 @@ def generate_data(n=3000, m=20, seed=10):
 
 X, y, true_w = generate_data()
 
-
-# param_distributions = {
-#     'alpha': loguniform(0.01, 1.0),
-#     'l1_ratio': uniform(0.1, 1.0)
-# }
-
-# param_space = {
-#     'alpha': Real(0.01, 1.0, prior='log-uniform'),
-#     'l1_ratio': Real(0.01, 1.0, prior='uniform')
-# }
-
-
 # Parameter distributions for randomized search (alpha only since l1_ratio is fixed to 1 for Lasso)
 param_distributions = {
     'alpha': loguniform(0.01, 1.0)
@@ -277,24 +271,3 @@ torch_lasso_cv_bayes = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_space=pa
 torch_lasso_cv_bayes.fit(X, y)
 print("Best Parameters (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.best_params_)
 print("Model Coefficients (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.coef_)
-
-
-
-# Get the learned coefficients for RandomizedSearchCV
-# learned_coefficients_random = torch_elasticnet_cv_random.coef_
-learned_coefficients_random = torch_lasso_cv_random.coef_
-
-# Get the learned coefficients for BayesSearchCV
-# learned_coefficients_bayes = torch_elasticnet_cv_bayes.coef_
-learned_coefficients_bayes = torch_lasso_cv_bayes.coef_
-
-# Plot the final model coefficients
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(true_w, "x", label="True")
-ax.plot(learned_coefficients_random, ".", label="ElasticNet (Randomized Search)")
-ax.plot(learned_coefficients_bayes, ".", label="ElasticNet (Bayesian Optimization)")
-ax.set_title("Coefficient Comparison (ElasticNet without Bias)")
-fig.legend()
-plt.show()
-
-
