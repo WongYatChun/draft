@@ -1,291 +1,92 @@
-
-
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
 import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.model_selection import ParameterSampler
-from sklearn.metrics import r2_score
-from tqdm import tqdm
+from sklearn.datasets import make_regression
 from skopt import gp_minimize
 from skopt.space import Real
-from scipy.stats import loguniform, uniform
+from skopt.utils import use_named_args
 
-from sklearn.model_selection import BaseCrossValidator
-class PurgedKFold(BaseCrossValidator):
-    def __init__(self, n_splits=5, purge_length=10, embargo=0.0):
-        self.n_splits = n_splits
-        self.purge_length = purge_length
-        self.embargo = embargo
+# Assume PurgedKFold is defined externally and is imported
+from external_module import PurgedKFold  # Replace with actual import
 
-    def get_n_splits(self, X=None, y=None, groups=None):
-        return self.n_splits
+class BayesianLassoCV(BaseEstimator, RegressorMixin):
+    def __init__(self, search_space=None, n_calls=50, cv=None, random_state=42):
+        self.search_space = search_space
+        self.n_calls = n_calls
+        self.cv = cv
+        self.random_state = random_state
+        self.best_alpha_ = None
+        self.model_ = None
+        self.cv_results_ = []
 
-    def split(self, X, y=None, groups=None):
-        n_samples = len(X)
-        indices = np.arange(n_samples)
-        test_size = n_samples // self.n_splits
-        embargo_size = int(self.embargo * test_size)
-
-        for i in range(self.n_splits):
-            test_start = i * test_size
-            test_end = test_start + test_size
-
-            train_start = max(0, test_start - self.purge_length)
-            train_end = min(n_samples, test_end + embargo_size)
-
-            train_indices = np.concatenate([
-                indices[:train_start],
-                indices[train_end:]
-            ])
-
-            test_indices = indices[test_start:test_end]
-            yield train_indices, test_indices
-
-class TorchElasticNetModel(nn.Module):
-    def __init__(self, alpha=1.0, l1_ratio=0.5, positive=False, lr=0.01, epochs=1000, patience=100):
-        super(TorchElasticNetModel, self).__init__()
-        self.alpha = alpha
-        self.l1_ratio = l1_ratio
-        self.positive = positive
-        self.lr = lr
-        self.epochs = epochs
-        self.patience = patience
-
-    def forward(self, x):
-        return self.output_layer(x)
-
-    def elasticnet_loss(self, outputs, targets):
-        mse_loss = torch.mean((outputs - targets) ** 2)
-        l1_loss = torch.sum(torch.abs(self.output_layer.weight))
-        l2_loss = torch.sum(self.output_layer.weight ** 2)
-        return (0.5 * mse_loss + 
-                self.alpha * self.l1_ratio * l1_loss + 
-                0.5 * self.alpha * (1 - self.l1_ratio) * l2_loss)
-
-    def clamp_weights(self):
-        if self.positive:
-            with torch.no_grad():
-                self.output_layer.weight.clamp_(min=0)
-    
     def fit(self, X, y):
-        n_inputs = X.shape[1]
-        self.output_layer = nn.Linear(n_inputs, 1, bias=False)
-        
-        optimizer = optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-        self.train_losses = []
-        self.val_losses = []
-        best_loss = float('inf')
-        patience_counter = 0
-        best_model_state = self.state_dict()
+        @use_named_args(self.search_space)
+        def objective(**params):
+            model = Lasso(**params)
+            scores = cross_val_score(model, X, y, cv=self.cv, scoring='neg_mean_squared_error')
+            self.cv_results_.append({
+                'params': params,
+                'mean_score': np.mean(scores),
+                'std_score': np.std(scores)
+            })
+            return -np.mean(scores)
 
-        for epoch in range(self.epochs):
-            self.train()
-            optimizer.zero_grad()
-            outputs = self(X)
-            loss = self.elasticnet_loss(outputs, y)
-            loss.backward()
-            optimizer.step()
-            self.clamp_weights()
-            self.train_losses.append(loss.item())
+        result = gp_minimize(objective, self.search_space, n_calls=self.n_calls, random_state=self.random_state, verbose=1)
 
-            self.eval()
-            with torch.no_grad():
-                val_outputs = self(X)
-                val_loss = self.elasticnet_loss(val_outputs, y)
-                self.val_losses.append(val_loss.item())
-                scheduler.step(val_loss)
-                if val_loss < best_loss:
-                    best_loss = val_loss
-                    patience_counter = 0
-                    best_model_state = self.state_dict()
-                else:
-                    patience_counter += 1
-
-            if patience_counter >= self.patience:
-                print(f"Early stopping at epoch {epoch + 1}")
-                break
-
-        self.load_state_dict(best_model_state)
-        self.coef_ = self.output_layer.weight.data.cpu().numpy().flatten()
+        self.best_alpha_ = result.x[0]
+        self.model_ = Lasso(alpha=self.best_alpha_)
+        self.model_.fit(X, y)
         return self
 
     def predict(self, X):
-        self.eval()
-        with torch.no_grad():
-            return self(X).cpu().numpy().flatten()
+        return self.model_.predict(X)
 
     def score(self, X, y):
-        y_pred = self.predict(X)
-        return r2_score(y.cpu().numpy().flatten(), y_pred)
+        return self.model_.score(X, y)
 
-def plot_convergence(train_losses, val_losses):
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.plot(train_losses, label='Train Loss')
-    ax.plot(val_losses, label='Validation Loss')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.legend()
-    plt.show()
+    def get_best_params(self):
+        return {'alpha': self.best_alpha_}
 
-class TorchCrossValidator:
-    def __init__(self, model_class, model_kwargs, cv_instance):
-        self.model_class = model_class
-        self.model_kwargs = model_kwargs
-        self.cv_instance = cv_instance
+    def get_cv_results(self):
+        return self.cv_results_
 
-    def _cross_validation_loop(self, params, X, y):
-        cv_losses = []
-        model_params = {**self.model_kwargs, **params}
-        for train_index, val_index in self.cv_instance.split(X):
-            x_train, x_val = X[train_index], X[val_index]
-            y_train, y_val = y[train_index], y[val_index]
+# Generate synthetic data
+X, y = make_regression(n_samples=1000, n_features=20, noise=0.1)
 
-            model = self.model_class(**model_params)
-            model.fit(x_train, y_train)
+# Split the data into training and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            model.eval()
-            with torch.no_grad():
-                val_outputs = model(x_val)
-                val_loss = model.elasticnet_loss(val_outputs, y_val)
-                cv_losses.append(val_loss.item())
-        return np.mean(cv_losses)
+# Define the search space for alpha
+search_space = [
+    Real(1e-3, 10, prior='log-uniform', name='alpha')
+]
 
-    def _train_and_evaluate(self, model, X, y):
-        model.fit(X, y)
-        plot_convergence(model.train_losses, model.val_losses)
-        return model
-
-    def randomized_search_cv(self, X, y, param_distributions, n_iter=50):
-        best_params, best_loss, best_model = None, float('inf'), None
-
-        for params in tqdm(ParameterSampler(param_distributions, n_iter=n_iter)):
-            avg_loss = self._cross_validation_loop(params, X, y)
-            if avg_loss < best_loss:
-                best_loss = avg_loss
-                best_params = params
-                best_model = self.model_class(**{**self.model_kwargs, **params})
-
-        best_model = self._train_and_evaluate(best_model, X, y)
-        return best_model, best_params, best_loss
-
-    def bayesian_optimization_cv(self, X, y, param_space, n_iter=50):
-        def objective(params):
-            params_dict = {key: value for key, value in zip(param_space.keys(), params)}
-            return self._cross_validation_loop(params_dict, X, y)
-
-        res = gp_minimize(objective, list(param_space.values()), n_calls=n_iter, random_state=0, verbose=True)
-
-        best_params = {key: value for key, value in zip(param_space.keys(), res.x)}
-        best_model = self.model_class(**{**self.model_kwargs, **best_params})
-
-        best_model = self._train_and_evaluate(best_model, X, y)
-        return best_model, best_params, res.fun
-
-class TorchElasticNetCV(BaseEstimator, RegressorMixin):
-    def __init__(self, alpha=1.0, l1_ratio=0.5, param_distributions=None, param_space=None, n_iter=50, lr=0.01, epochs=1000, patience=100, positive=False, search_type='random', cv_instance=None):
-        self.alpha = alpha
-        self.l1_ratio = l1_ratio
-        self.param_distributions = param_distributions
-        self.param_space = param_space
-        self.n_iter = n_iter
-        self.lr = lr
-        self.epochs = epochs
-        self.patience = patience
-        self.positive = positive
-        self.search_type = search_type
-        self.cv_instance = cv_instance
-        self.best_model_ = None
-        self.best_params_ = None
-        self.coef_ = None
-
-    def fit(self, X, y):
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        y_tensor = torch.tensor(y, dtype=torch.float32)
-
-        model_kwargs = {
-            'alpha': self.alpha, 
-            'l1_ratio': self.l1_ratio, 
-            'positive': self.positive,
-            'lr': self.lr,
-            'epochs': self.epochs,
-            'patience': self.patience
-        }
-        cross_validator = TorchCrossValidator(TorchElasticNetModel, model_kwargs, cv_instance=self.cv_instance)
-
-        if self.search_type == 'random':
-            self.best_model_, self.best_params_, _ = cross_validator.randomized_search_cv(X_tensor, y_tensor, self.param_distributions, n_iter=self.n_iter)
-        elif self.search_type == 'bayesian':
-            self.best_model_, self.best_params_, _ = cross_validator.bayesian_optimization_cv(X_tensor, y_tensor, self.param_space, n_iter=self.n_iter)
-        else:
-            raise ValueError("search_type must be 'random' or 'bayesian'")
-
-        self.coef_ = self.best_model_.coef_
-        return self
-
-    def predict(self, X):
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        return self.best_model_.predict(X_tensor)
-
-    def score(self, X, y):
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        y_tensor = torch.tensor(y, dtype=torch.float32)
-        return self.best_model_.score(X_tensor, y_tensor)
-
-# Example usage
-def generate_data(n=3000, m=20, seed=10):
-    np.random.seed(seed)
-    x = np.random.uniform(-1, 1, size=(n, m))
-    w = np.random.uniform(-1, 1, size=(m, 1)) * (np.random.uniform(size=(m, 1)) > 0.5)
-    y_true = x @ w
-    y = y_true + np.random.normal(loc=0, scale=2, size=(n, 1))
-    return x, y, w
-
-X, y, true_w = generate_data()
-
-# Parameter distributions for randomized search (alpha only since l1_ratio is fixed to 1 for Lasso)
-param_distributions = {
-    'alpha': loguniform(0.01, 1.0)
-}
-
-# Parameter space for Bayesian optimization (alpha only since l1_ratio is fixed to 1 for Lasso)
-param_space = {
-    'alpha': Real(0.01, 1.0, prior='log-uniform')
-}
-
-# Create a cross-validation instance
+# Create a custom cross-validation instance
 purged_kf = PurgedKFold(n_splits=5, purge_length=10, embargo=0.0)
 
-# Instantiate TorchElasticNetCV for Lasso with randomized search
-torch_lasso_cv_random = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_distributions=param_distributions, search_type='random', lr=0.1, epochs=1000, patience=100, positive=True, cv_instance=purged_kf)
-torch_lasso_cv_random.fit(X, y)
-print("Best Parameters (Randomized Search - Lasso):", torch_lasso_cv_random.best_params_)
-print("Model Coefficients (Randomized Search - Lasso):", torch_lasso_cv_random.coef_)
+# Instantiate the custom BayesianLassoCV model
+bayesian_lasso_cv = BayesianLassoCV(search_space=search_space, n_calls=50, cv=purged_kf, random_state=42)
 
-# Instantiate TorchElasticNetCV for Lasso with Bayesian optimization
-torch_lasso_cv_bayes = TorchElasticNetCV(alpha=1.0, l1_ratio=1.0, param_space=param_space, search_type='bayesian', lr=0.1, epochs=1000, patience=100, positive=True, cv_instance=purged_kf)
-torch_lasso_cv_bayes.fit(X, y)
-print("Best Parameters (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.best_params_)
-print("Model Coefficients (Bayesian Optimization - Lasso):", torch_lasso_cv_bayes.coef_)
+# Fit the model
+bayesian_lasso_cv.fit(X_train, y_train)
 
+# Evaluate on the validation set
+val_score = bayesian_lasso_cv.score(X_val, y_val)
+print(f"Validation R^2 Score: {val_score}")
+print(f"Best Alpha: {bayesian_lasso_cv.best_alpha_}")
 
-# Get the learned coefficients for RandomizedSearchCV
-# learned_coefficients_random = torch_elasticnet_cv_random.coef_
-learned_coefficients_random = torch_lasso_cv_random.coef_
+# Retrieve and print cross-validation results
+cv_results = bayesian_lasso_cv.get_cv_results()
+for i, result in enumerate(cv_results):
+    print(f"Run {i + 1}: Params: {result['params']}, Mean Score: {result['mean_score']}, Std Score: {result['std_score']}")
 
-# Get the learned coefficients for BayesSearchCV
-# learned_coefficients_bayes = torch_elasticnet_cv_bayes.coef_
-learned_coefficients_bayes = torch_lasso_cv_bayes.coef_
+# Optional: Plot convergence
+import matplotlib.pyplot as plt
 
-# Plot the final model coefficients
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(true_w, "x", label="True")
-ax.plot(learned_coefficients_random, ".", label="ElasticNet (Randomized Search)")
-ax.plot(learned_coefficients_bayes, ".", label="ElasticNet (Bayesian Optimization)")
-ax.set_title("Coefficient Comparison (ElasticNet without Bias)")
-fig.legend()
+mean_scores = [-res['mean_score'] for res in cv_results]
+plt.plot(mean_scores)
+plt.xlabel('Iteration')
+plt.ylabel('Negative MSE')
+plt.title('Convergence Plot')
 plt.show()
