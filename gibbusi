@@ -11,19 +11,22 @@ from skopt.utils import use_named_args
 from external_module import PurgedKFold  # Replace with actual import
 
 class BayesianLassoCV(BaseEstimator, RegressorMixin):
-    def __init__(self, search_space=None, n_calls=50, cv=None, random_state=42):
+    def __init__(self, search_space=None, n_calls=50, cv=None, random_state=42, positive=True, fit_intercept=False):
         self.search_space = search_space
         self.n_calls = n_calls
         self.cv = cv
         self.random_state = random_state
+        self.positive = positive
+        self.fit_intercept = fit_intercept
         self.best_alpha_ = None
         self.model_ = None
         self.cv_results_ = []
+        self.coef_ = None
 
     def fit(self, X, y):
         @use_named_args(self.search_space)
         def objective(**params):
-            model = Lasso(**params)
+            model = Lasso(**params, positive=self.positive, fit_intercept=self.fit_intercept)
             scores = cross_val_score(model, X, y, cv=self.cv, scoring='neg_mean_squared_error')
             self.cv_results_.append({
                 'params': params,
@@ -35,8 +38,9 @@ class BayesianLassoCV(BaseEstimator, RegressorMixin):
         result = gp_minimize(objective, self.search_space, n_calls=self.n_calls, random_state=self.random_state, verbose=1)
 
         self.best_alpha_ = result.x[0]
-        self.model_ = Lasso(alpha=self.best_alpha_)
+        self.model_ = Lasso(alpha=self.best_alpha_, positive=self.positive, fit_intercept=self.fit_intercept)
         self.model_.fit(X, y)
+        self.coef_ = self.model_.coef_
         return self
 
     def predict(self, X):
@@ -50,6 +54,7 @@ class BayesianLassoCV(BaseEstimator, RegressorMixin):
 
     def get_cv_results(self):
         return self.cv_results_
+
 
 # Generate synthetic data
 X, y = make_regression(n_samples=1000, n_features=20, noise=0.1)
