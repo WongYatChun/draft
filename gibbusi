@@ -1,97 +1,197 @@
-import numpy as np
-from sklearn.linear_model import Lasso
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.datasets import make_regression
-from skopt import gp_minimize
-from skopt.space import Real
-from skopt.utils import use_named_args
-
-# Assume PurgedKFold is defined externally and is imported
-from external_module import PurgedKFold  # Replace with actual import
-
-class BayesianLassoCV(BaseEstimator, RegressorMixin):
-    def __init__(self, search_space=None, n_calls=50, cv=None, random_state=42, positive=True, fit_intercept=False):
-        self.search_space = search_space
-        self.n_calls = n_calls
-        self.cv = cv
-        self.random_state = random_state
-        self.positive = positive
-        self.fit_intercept = fit_intercept
-        self.best_alpha_ = None
-        self.model_ = None
-        self.cv_results_ = []
-        self.coef_ = None
-
-    def fit(self, X, y):
-        @use_named_args(self.search_space)
-        def objective(**params):
-            model = Lasso(**params, positive=self.positive, fit_intercept=self.fit_intercept)
-            scores = cross_val_score(model, X, y, cv=self.cv, scoring='neg_mean_squared_error')
-            self.cv_results_.append({
-                'params': params,
-                'mean_score': np.mean(scores),
-                'std_score': np.std(scores)
-            })
-            return -np.mean(scores)
-
-        result = gp_minimize(objective, self.search_space, n_calls=self.n_calls, random_state=self.random_state, verbose=1)
-
-        self.best_alpha_ = result.x[0]
-        self.model_ = Lasso(alpha=self.best_alpha_, positive=self.positive, fit_intercept=self.fit_intercept)
-        self.model_.fit(X, y)
-        self.coef_ = self.model_.coef_
-        return self
-
-    def predict(self, X):
-        return self.model_.predict(X)
-
-    def score(self, X, y):
-        return self.model_.score(X, y)
-
-    def get_best_params(self):
-        return {'alpha': self.best_alpha_}
-
-    def get_cv_results(self):
-        return self.cv_results_
-
-
-# Generate synthetic data
-X, y = make_regression(n_samples=1000, n_features=20, noise=0.1)
-
-# Split the data into training and validation sets
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Define the search space for alpha
-search_space = [
-    Real(1e-3, 10, prior='log-uniform', name='alpha')
-]
-
-# Create a custom cross-validation instance
-purged_kf = PurgedKFold(n_splits=5, purge_length=10, embargo=0.0)
-
-# Instantiate the custom BayesianLassoCV model
-bayesian_lasso_cv = BayesianLassoCV(search_space=search_space, n_calls=50, cv=purged_kf, random_state=42)
-
-# Fit the model
-bayesian_lasso_cv.fit(X_train, y_train)
-
-# Evaluate on the validation set
-val_score = bayesian_lasso_cv.score(X_val, y_val)
-print(f"Validation R^2 Score: {val_score}")
-print(f"Best Alpha: {bayesian_lasso_cv.best_alpha_}")
-
-# Retrieve and print cross-validation results
-cv_results = bayesian_lasso_cv.get_cv_results()
-for i, result in enumerate(cv_results):
-    print(f"Run {i + 1}: Params: {result['params']}, Mean Score: {result['mean_score']}, Std Score: {result['std_score']}")
-
-# Optional: Plot convergence
+# Import necessary libraries
+import yfinance as yf
+import pandas as pd
+import datetime
 import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
 
-mean_scores = [-res['mean_score'] for res in cv_results]
-plt.plot(mean_scores)
-plt.xlabel('Iteration')
-plt.ylabel('Negative MSE')
-plt.title('Convergence Plot')
+# Function to calculate the probability of positive returns
+def prob_positive(x):
+    return (x > 0).sum() / x.count()
+
+# Function to get the Wednesday before Thanksgiving for a given year
+def get_wednesday_before_thanksgiving(year):
+    """
+    Returns the date of the Wednesday before Thanksgiving for a given year.
+    Thanksgiving is the fourth Thursday in November.
+    """
+    november_first = datetime.date(year, 11, 1)
+    first_thursday_offset = (3 - november_first.weekday()) % 7
+    first_thursday = november_first + datetime.timedelta(days=first_thursday_offset)
+    thanksgiving = first_thursday + datetime.timedelta(weeks=3)
+    return thanksgiving - datetime.timedelta(days=1)
+
+# Generate list of Wednesdays before Thanksgiving from 2000 to 2023
+wednesdays_before_thanksgiving = pd.to_datetime(
+    [get_wednesday_before_thanksgiving(year) for year in range(2000, 2024)]
+).date
+
+# Define ETF categories
+etfs = {
+    "broad_market": ['SPY', 'VOO', 'IVV', 'VTI', 'ITOT'],
+    "mid_cap_small_cap": ['MDY', 'IJH', 'IJR', 'IWM'],
+    "technology": ['XLK', 'VGT', 'QQQ'],
+    "healthcare": ['XLV', 'VHT'],
+    "financials": ['XLF', 'VFH'],
+    "energy": ['XLE', 'VDE'],
+    "industrials": ['XLI', 'VIS'],
+    "consumer_discretionary": ['XLY', 'VCR'],
+    "consumer_staples": ['XLP', 'VDC'],
+    "materials": ['XLB', 'VAW'],
+    "utilities": ['XLU', 'VPU'],
+    "real_estate": ['XLRE', 'VNQ'],
+    "international_markets": ['EFA', 'EEM'],
+    "commodities": ['GLD', 'SLV'],
+    "high_yield_bonds": ['HYG', 'JNK'],
+    "leveraged_specialized": ['UWM', 'URTY', 'TQQQ'],
+    "other": ['DIA']
+}
+
+# Convert ETFs dictionary into a DataFrame
+etf_df = pd.DataFrame(
+    [(etf, category) for category, etf_list in etfs.items() for etf in etf_list],
+    columns=['etf_name', 'category']
+)
+
+# Download adjusted close price data for all ETFs
+print("Downloading ETF data...")
+data = yf.download(etf_df.etf_name.tolist(), period='max', progress=False)
+
+# Process data for analysis
+data_adjclose = data['Adj Close']
+data_pct_change = data_adjclose.pct_change()
+data_pct_change.index = data_pct_change.index.date
+
+# Filter broad market ETFs
+broad_market_etfs = etfs["broad_market"]
+broad_data = data_pct_change[broad_market_etfs]
+
+# Returns on Wednesdays before Thanksgiving
+before_thanksgiving_returns = broad_data.loc[wednesdays_before_thanksgiving]
+
+# Returns on the rest of the year
+rest_of_year_returns = broad_data.drop(index=wednesdays_before_thanksgiving, errors='ignore')
+
+# Melt data for plotting
+def prepare_melted_data(df, period_name):
+    melted = df.melt(var_name='ETF', value_name='Return')
+    melted['Period'] = period_name
+    return melted
+
+before_thanksgiving_melted = prepare_melted_data(before_thanksgiving_returns, 'Before Thanksgiving')
+rest_of_year_melted = prepare_melted_data(rest_of_year_returns, 'Rest of Year')
+
+# Perform statistical tests
+test_results = []
+for etf in broad_market_etfs:
+    before = before_thanksgiving_returns[etf].dropna()
+    rest = rest_of_year_returns[etf].dropna()
+    t_stat, p_value = stats.ttest_ind(before, rest, equal_var=False)
+    test_results.append({
+        'ETF': etf,
+        'Mean Before Thanksgiving': before.mean(),
+        'Median Before Thanksgiving': before.median(),
+        'Mean Rest of Year': rest.mean(),
+        'Median Rest of Year': rest.median(),
+        't-Statistic': round(t_stat, 4),
+        'p-Value': round(p_value, 4)
+    })
+
+# Create DataFrame for statistical results
+test_results_df = pd.DataFrame(test_results)
+test_results_df['Significant'] = test_results_df['p-Value'] < 0.05
+
+# Plotting functions
+def plot_bar(data, value_col, y_label, title):
+    plt.figure(figsize=(12, 6))
+    sns.barplot(
+        x='ETF',
+        y=value_col,
+        hue='Period',
+        data=data,
+        palette=['skyblue', 'salmon']
+    )
+    plt.title(title)
+    plt.xlabel('ETF')
+    plt.ylabel(y_label)
+    plt.legend(title='Period')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+# Plot mean returns
+mean_returns_melted = pd.melt(
+    test_results_df,
+    id_vars=['ETF', 't-Statistic', 'p-Value', 'Significant'],
+    value_vars=['Mean Before Thanksgiving', 'Mean Rest of Year'],
+    var_name='Period',
+    value_name='Mean Daily Return'
+)
+mean_returns_melted['Period'] = mean_returns_melted['Period'].str.replace('Mean ', '')
+plot_bar(mean_returns_melted, 'Mean Daily Return', 'Mean Daily Return',
+         'Mean Returns: Before Thanksgiving vs. Rest of Year for Broad Market ETFs')
+
+# Plot median returns
+median_returns_melted = pd.melt(
+    test_results_df,
+    id_vars=['ETF', 't-Statistic', 'p-Value', 'Significant'],
+    value_vars=['Median Before Thanksgiving', 'Median Rest of Year'],
+    var_name='Period',
+    value_name='Median Daily Return'
+)
+median_returns_melted['Period'] = median_returns_melted['Period'].str.replace('Median ', '')
+plot_bar(median_returns_melted, 'Median Daily Return', 'Median Daily Return',
+         'Median Returns: Before Thanksgiving vs. Rest of Year for Broad Market ETFs')
+
+# Analyze returns by ETF categories
+filtered_data = data_pct_change.loc[wednesdays_before_thanksgiving]
+filtered_returns_reset = filtered_data.reset_index().melt(id_vars='index', var_name='etf_name', value_name='return')
+merged_df = pd.merge(filtered_returns_reset, etf_df, on='etf_name', how='left')
+merged_df = merged_df.rename({'index': 'date'}, axis=1)
+merged_df = merged_df.groupby(['date', 'category'])[['return']].mean()
+
+average_returns = merged_df.groupby('category')['return'].agg(
+    ['mean', 'median', 'min', 'max', 'count', prob_positive]
+).reset_index()
+
+# Display top-performing categories
+print("Top categories by probability of positive returns:")
+display(average_returns[average_returns.category != 'leveraged_specialized'].sort_values("prob_positive", ascending=False))
+
+
+# Statistics for all ETFs
+all_stats = filtered_data.agg(['mean', 'median', 'min', 'max', 'count', prob_positive]).T
+all_stats.index.name = 'etf_name'
+all_stats = pd.merge(all_stats, etf_df, on='etf_name')
+all_stats[all_stats.category != 'leveraged_specialized'].sort_values('prob_positive', ascending=False)
+print("Top 10 ETFs by positive return probability:")
+display(all_stats[all_stats.category != 'leveraged_specialized'].sort_values('prob_positive', ascending=False).head(10))
+
+print("Bottom 10 ETFs by positive return probability:")
+display(all_stats[all_stats.category != 'leveraged_specialized'].sort_values('prob_positive', ascending=True).head(10))
+
+
+# Selected ETFs analysis
+selected_etfs = ['XLY', 'VCR', 'IWM', 'QQQ', 'TQQQ']
+selected_stats = filtered_data[selected_etfs].dropna().agg(
+    ['mean', 'median', 'min', 'max', 'count', prob_positive]
+).T.sort_values('prob_positive', ascending=False)
+print("Statistics for selected ETFs:")
+display(selected_stats)
+
+
+# Plot cumulative returns for SPY, IWM, VCR, QQQ, TQQQ
+print("Plotting cumulative returns for SPY, IWM, VCR, QQQ, TQQQ...")
+cumulative_returns = filtered_data[selected_etfs].dropna().cumsum()
+
+plt.figure(figsize=(8, 6))
+for etf in selected_etfs:
+    plt.plot(cumulative_returns.index, cumulative_returns[etf], label=etf)
+
+plt.title('Cumulative Returns of Selected ETFs on Wednesdays Before Thanksgiving')
+plt.xlabel('Date')
+plt.ylabel('Cumulative Returns')
+plt.legend()
+plt.tight_layout()
 plt.show()
