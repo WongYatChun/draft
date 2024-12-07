@@ -1,163 +1,210 @@
-Certainly! Many of the signals and factors you've encountered are based on similar underlying rationales or themes in finance and investment theory. Here's a summary grouping these signals according to their foundational concepts:
+\section*{3 Factor Models}
 
----
+A popular method - at least in the case of equities - for constructing a nonsingular replacement $\Gamma_{i j}$ for $C_{i j}$ is via a factor model: ${ }^{12}$
+$$
+\begin{equation*}
+\Gamma_{i j}=\xi_{i}^{2} \delta_{i j}+\sum_{A, B=1}^{K} \Omega_{i A} \Phi_{A B} \Omega_{j B} \tag{5}
+\end{equation*}
+$$
 
-### **1. Intangible Assets and Innovation**
+Here: $\xi_{i}$ is the specific (a.k.a. idiosyncratic) risk for each return; $\Omega_{i A}$ is an $N \times K$ factor loadings matrix; and $\Phi_{A B}$ is a $K \times K$ factor covariance matrix (FCM), $A, B=$ $1, \ldots, K$. The number of factors $K \ll N$ to have FCM more stable than SCM.
 
-- **R&D and Advertising Investments**:
-  - **Rdm (R&D Expense-to-Market)**: Reflects the firm's investment in innovation relative to its market value.
-  - **Rds (R&D Expense-to-Sales)**: Measures how much of sales revenue is reinvested into R&D.
-  - **Rca (R&D Capital-to-Assets)**: Captures accumulated R&D investments as a proportion of total assets.
-  - **Adm (Advertising Expense-to-Market)**: Indicates investment in brand building relative to market equity.
-  - **Bca (Brand Capital-to-Assets)**: Represents the value of brand capital accumulated from advertising expenditures.
+The nice thing about $\Gamma_{i j}$ is that it is positive-definite (and therefore invertible) if FCM is positive-definite and all $\xi_{i}^{2}>0$. For our purposes here it is convenient to rewrite $\Gamma_{i j}$ via $\Gamma_{i j}=\xi_{i} \xi_{j} \gamma_{i j}$, where
+$$
+\begin{equation*}
+\gamma_{i j}=\delta_{i j}+\sum_{A=1}^{K} \beta_{i A} \beta_{j A} \tag{6}
+\end{equation*}
+$$
 
-**Rationale**: These factors assess how much a firm invests in intangible assets like innovation and brand equity, which can drive future growth and competitive advantage.
+\footnotetext{
+${ }^{11}$ The overall normalization of $C_{i j}$ does not affect the weights $w_{i}$ in (1), so the difference between the unbiased estimate with $M$ in the denominator vs. the maximum likelihood estimate with $M+1$ in the denominator is immaterial for our purposes here. Also, in most applications $M \gg 1$.
+${ }^{12}$ For equity multifactor models, see, e.g., [Grinold and Kahn, 2000] and references therein. A multifactor model approach for alphas was set forth and discussed in detail in [Kakushadze, 2014].
+}
+and $\beta_{i A}=\widetilde{\beta}_{i A} / \xi_{i}$. Here (in matrix notations) $\widetilde{\beta}=\Omega \widetilde{\Phi}$, and $\widetilde{\Phi}$ is the Cholesky decomposition of $\Phi$, so $\widetilde{\Phi} \widetilde{\Phi}^{T}=\Phi$. The weights (1) (with $C_{i j}$ replaced by $\Gamma_{i j}$ ) are given by
+$$
+\begin{equation*}
+w_{i}=\frac{\eta}{\xi_{i}} \sum_{j=1}^{N} \gamma_{i j}^{-1} \frac{E_{j}}{\xi_{j}}=\frac{\eta}{\xi_{i}}\left[\frac{E_{i}}{\xi_{i}}-\sum_{j=1}^{N} \sum_{A, B=1}^{K} \beta_{i A} Q_{A B}^{-1} \beta_{j B} \frac{E_{j}}{\xi_{j}}\right] \tag{7}
+\end{equation*}
+$$
+where $Q_{A B}=\delta_{A B}+q_{A B}$, and $q_{A B}=\sum_{i=1}^{N} \beta_{i A} \beta_{i B}$. The diagonal elements of this matrix are $Q_{A A}=1+\sum_{i=1}^{N} \beta_{i A}^{2}$. It then follows that, if all $q_{A A}=\sum_{i=1}^{N} \beta_{i A}^{2} \gg 1$, which we will argue to be the case momentarily, then $Q_{A B} \approx q_{A B}=\sum_{i=1}^{N} z_{i} \widetilde{\beta}_{i A} \widetilde{\beta}_{i B}$ and
+$$
+\begin{equation*}
+w_{i} \approx \eta z_{i}\left[E_{i}-\sum_{j=1}^{N} \sum_{A, B=1}^{K} \widetilde{\beta}_{i A} q_{A B}^{-1} \widetilde{\beta}_{j B} z_{j} E_{j}\right]=\eta z_{i} \varepsilon_{i} \tag{8}
+\end{equation*}
+$$
+where $\varepsilon_{i}$ are the residuals of the cross-sectional weighted regression ${ }^{13}$ of $E_{i}$ over $\widetilde{\beta}_{i A}$ with the weights $z_{i}=1 / \xi_{i}^{2}$, or, equivalently, $\widetilde{\varepsilon}_{i}=\varepsilon_{i} / \xi_{i}$ are the residuals of the unit-weighted regression of $\widetilde{E}_{i}=E_{i} / \xi_{i}$ over $\beta_{i A}$. So, (1) reduces to a regression.
 
----
+The question is why - or, more precisely, when - all $q_{A A} \gg 1$. This is the case when: i) $N$ is large, and ii) there is no "clustering" in the vectors $\beta_{i A}$. That is, we do not have vanishing or small values of $\beta_{i A}^{2}$ for most values of the index $i$ with only a small subset thereof having $\beta_{i A}^{2} \gtrsim 1$. Without "clustering", to have $q_{A A} \lesssim 1$, we would have to have $\beta_{i A}^{2} \ll 1$, i.e., $\gamma_{i j}$ and consequently $\Gamma_{i j}$ would be almost diagonal.
+E.g., consider a 1 -factor model $(K=1)$ with uniform $\beta_{i} \equiv \beta$. In this model we have uniform pair-wise correlations $\rho=\beta^{2} /\left(1+\beta^{2}\right)$. For these correlations not to be small, we must have $\beta^{2} \gtrsim 1$. Now, $Q=1+q$, where $q=N \beta^{2}$. For large $N$ we have $q \gg 1, Q \approx q$, and in this case we have a weighted regression over the intercept.
 
-### **2. Analyst Expectations and Forecasts**
+So, absent "clustering", when $N$ is large, the factor model is only useful to the extent of defining the regression weights $z_{i}$ via the specific risks $\xi_{i}$. Thus, FCM does not affect the regression residuals: they are invariant under linear transformations of $\beta_{i A}$, (in matrix notations) $\beta \rightarrow \beta U$, where $U_{A B}$ is a general nonsingular matrix.
 
-- **Aop (Analysts Optimism)**: The difference between analysts' forecast-based intrinsic value and historical value.
-- **Pafe (Predicted Analysts Forecast Error)**: Estimates potential errors in analysts' forecasts based on firm characteristics.
-- **Dis (Dispersion in Analyst Forecasts)**: Measures disagreement among analysts regarding future earnings.
-- **Dlg (Dispersion in Analyst Long-term Growth Forecasts)**: Captures uncertainty in long-term growth expectations.
+What about "clustering"? For a large number of alphas trading largely overlapping universes (e.g., top 2,500 most liquid U.S. stocks) there is no "clustering" so long as they cannot be classified in a binary fashion as in industry classifications for stocks, and such a classification of alphas usually is not possible. Any risk factors then lack "clustering" and are analogous to style factors or principal components.
 
-**Rationale**: These signals leverage analysts' insights and the consensus or dispersion among their forecasts to gauge market sentiment and potential mispricing.
+\section*{4 Deformed Sample Covariance Matrix}
 
----
+Let us now discuss deforming - or regularizing - SCM such that it is nonsingular. One method often used in this regard is the so-called shrinkage [Ledoit and Wolf,
 
-### **3. Operating Efficiency and Leverage**
+\footnotetext{
+${ }^{13}$ Without the intercept unless it is subsumed in a linear combination of the columns of $\widetilde{\beta}_{i A}$.
+}
 
-- **Ol (Operating Leverage)**: The ratio of operating costs to total assets, indicating fixed cost structure.
-- **Ol^q (Quarterly Operating Leverage)**: Same as Ol but calculated quarterly.
-- **Lfe (Labor Force Efficiency)**: Assesses productivity by measuring changes in sales per employee.
+2004]. It is often regarded as an "alternative" to multifactor risk models. However, as was recently discussed in [Kakushadze, 2016], shrunk SCM is also a factor model.
 
-**Rationale**: These factors evaluate a firm's cost structure and operational efficiency, which affect profitability and sensitivity to changes in sales.
+In fact, shrinkage is a special case of more general deformations, where instead of SCM $C_{i j}$ given by (4), one uses
+$$
+\begin{equation*}
+\widetilde{C}_{i j}=\Delta_{i j}+\sum_{s, s^{\prime}=1}^{M} X_{i s} \widetilde{\phi}_{s s^{\prime}} X_{j s^{\prime}} \tag{9}
+\end{equation*}
+$$
 
----
+Here the matrix $\Delta_{i j}$ is assumed to be positive-definite and (relatively) stable out-of-sample. We must have $\widetilde{C}_{i i}=C_{i i}$, so this imposes $N$ conditions on $\Delta_{i i}$. A priori $\Delta_{i j}$ can be otherwise arbitrary. The matrix $\widetilde{\phi}_{s s^{\prime}}$ is some deformation of $\phi_{s s^{\prime}}$ in (4). ${ }^{14}$
 
-### **4. Financial Constraints and Risk Measures**
+The issue with (9) is that: i) in practice $\Delta_{i j}$ must have some relevance to the underlying returns whose covariance matrix we are attempting to model; and ii) a priori it is unclear what the deformed matrix $\widetilde{\phi}_{s s^{\prime}}$ should be. The available data is limited to the $N \times M$ matrix $X_{i s}$, and the matrix $\phi_{s s^{\prime}}$, which is fixed. To go beyond this data, we invariably must introduce some additional input. As a 12th century Georgian poet Shota Rustaveli put it, "What's in the jar is what will flow out." 15
 
-- **Kz (Kaplan-Zingales Index)**: Quantifies financial constraints based on cash flows, debt, dividends, etc.
-- **Ww (Whited-Wu Index)**: Another measure of financial constraints considering cash flows, dividends, debt ratios, and firm size.
-- **Tail (Tail Risk)**: Assesses a firm's sensitivity to extreme negative market movements.
-- **β^- (Downside Beta)**: Measures a stock's beta during market downturns.
+However, not all is lost. The fact that we have large $N$ (and no "clustering") simplifies things. In practice, the matrix $\Delta_{i j}$ cannot be arbitrary. It must be somehow - be it directly or indirectly - related to the returns whose covariance matrix we are after. The simplest choice is a diagonal matrix $\Delta_{i j}=D_{i} \delta_{i j}$. More generally, we can take $\Delta_{i j}$ to be a $K$-factor model of the form (5), $\Delta_{i j}=\Gamma_{i j}$, with a properly chosen diagonal $\Gamma_{i i}$. In fact, realistically, what else can $\Delta_{i j}$ be in practice? If we knew how to write down a non-factor-model covariance matrix that approximates SCM well and is out-of-sample stable, this paper would have been very different!
 
-**Rationale**: These factors identify firms facing financial constraints or higher risk during adverse market conditions, which can impact expected returns.
+So, assuming $\Delta_{i j}$ is a $K$-factor model (with $K=0$ corresponding to a diagonal $\Delta_{i j}$ ) given by (5), the deformed matrix $\widetilde{C}_{i j}$ is also a factor model. Indeed,
+$$
+\begin{equation*}
+\widetilde{C}_{i j}=\xi_{i}^{2} \delta_{i j}+\sum_{\alpha, \beta=1}^{K+M} \widehat{\Omega}_{i \alpha} \widehat{\Phi}_{\alpha \beta} \widehat{\Omega}_{j \beta} \tag{10}
+\end{equation*}
+$$
 
----
+Here: the index $\alpha=(A, s)$ takes $K+M$ values; $\widehat{\Omega}_{i A}=\Omega_{i A} ; \widehat{\Omega}_{i s}=X_{i s}, s=1, \ldots, M$; $\widehat{\Phi}_{A B}=\Phi_{A B}, A, B=1, \ldots, K ; \widehat{\Phi}_{s s^{\prime}}=\widetilde{\phi}_{s s^{\prime}}, s, s^{\prime}=1, \ldots, M ;$ and $\widehat{\Phi}_{A s} \equiv 0$.
+${ }^{14}$ In shrinkage, when translated into our language here, one simply takes $\widetilde{\phi}_{s s^{\prime}}=(1-\zeta) \phi_{s s^{\prime}}$ and ("shrinkage target") $\Delta_{i j}=\zeta \Gamma_{i j}$, where the weight ("shrinkage constant") $0 \leq \zeta \leq 1$, and $\Gamma_{i j}$ (usually chosen as a diagonal matrix or a $K$-factor model with low $K$ ) is such that $\Gamma_{i i}=C_{i i}$.
 
-### **5. Liquidity and Trading Frictions**
+15 This is ZK's own translation of an aphorism from a stanza in Rustaveli's sole known epic poem whose title is erroneously translated as "The Knight in the Panther's Skin" (or similar). In ZK's humble opinion, not only is it the greatest masterpiece of the Georgian literature, but one of the greatest literary writings of all time. It consists of over 1,600 perfectly rhymed shairi or Rustavelian quatrains all containing $16=8+8$ syllables per line with a caesura between the 8 th and 9 th syllables. How a human brain can come up with such perfection is mind-boggling, especially considering that this poem tells an extremely complex story complete with dialogs, aphorisms, etc.
 
-- **Ami (Amihud Illiquidity Measure)**: Evaluates price impact per unit of trading volume.
-- **Tur (Share Turnover)**: Measures trading activity relative to shares outstanding.
-- **Sba (Bid-ask Spread)** and **Shl (High-Low Spread Estimator)**: Estimate transaction costs and market liquidity.
-- **Lm^x (Turnover-adjusted Number of Zero Daily Volume)**: Indicates liquidity by counting days with zero trading volume adjusted for turnover.
-- **Liquidity Betas (β^ret, β^lcc, etc.)**: Capture sensitivity to liquidity shocks.
+Now we are in good shape. Indeed, assuming large $N$ and no "clustering", we know that optimization using $\widetilde{C}_{i j}\left(\right.$ instead of $\left.C_{i j}\right)$ in (1) - a factor model - reduces to a weighted regression of the expected returns over the $N \times(K+M)$ factor loadings matrix $\widehat{\Omega}_{i \alpha}$, irrespective of FCM $\Phi_{A B}$ or the deformed matrix $\widetilde{\phi}_{s s^{\prime}}$, and the latter we do not even have a (constrained enough) guiding principle for computing. All we need is to somehow compute the regression weights $z_{i}=1 / \xi_{i}^{2}$, i.e., the specific risks.
 
-**Rationale**: Liquidity factors assess the ease of trading a stock without affecting its price, with illiquid stocks potentially offering higher expected returns due to liquidity premiums.
+\subsection*{4.1 What about Regression Weights?}
 
----
+The specific risks follow from (10). However, to compute them, we do need to know $\Phi_{A B}$ and $\widetilde{\phi}_{s s^{\prime}}$. Indeed, recalling that $\widetilde{C}_{i i}=C_{i i}$, we have ${ }^{16}$
+$$
+\begin{equation*}
+\xi_{i}^{2}=C_{i i}-\sum_{A=1}^{K} \Omega_{i A} \Phi_{A B} \Omega_{i B}-\sum_{s=1}^{M} X_{i s} \widetilde{\phi}_{s s^{\prime}} X_{i s^{\prime}} \tag{11}
+\end{equation*}
+$$
 
-### **6. Volatility and Skewness**
+So, as far as the deformed matrix $\widetilde{\phi}_{s s^{\prime}}$ is concerned, a priori we have $M(M+1) / 2$ parameters to play with and not much guidance to play the game. In fact, there is no magic bullet here. Simplicity is essentially the only beacon we can follow...
 
-- **Iv (Idiosyncratic Volatility)**: Stock-specific volatility unexplained by market movements.
-- **Tv (Total Volatility)**: Overall volatility of a stock's returns.
-- **Is (Idiosyncratic Skewness)**: Asymmetry in the distribution of a stock's returns after accounting for market factors.
-- **Cs (Coskewness)**: Measures how a stock's returns co-vary with the market's squared returns.
+Since at the end we have a weighted regression, which in itself does not require knowing $\Phi_{A B}$ or $\widetilde{\phi}_{s s^{\prime}}$ provided we know the weights, we can simply take $\xi_{i}^{2}=C_{i i}$. This might appear to contradict (11), but it does not. This is because the residuals $\varepsilon_{i}$ are invariant under the rescalings of the weights $z_{i} \rightarrow \lambda z_{i}$, where $\lambda>0$. So, setting $\xi_{i}^{2}=C_{i i}$ is equivalent to setting $\xi_{i}^{2}=\zeta C_{i i}$, where $0<\zeta<1$, which simply puts $N$ conditions on $K(K+1) / 2$ (from $\left.\Phi_{A B}\right)$ plus $M(M+1) / 2$ (from $\left.\widetilde{\phi}_{s s^{\prime}}\right)$ a priori unknowns. This system may appear to be overconstrained for large enough $N$, but there always exists a "solution": ${ }^{17}$ we can simply take $K=0$ and $\widetilde{\phi}_{s s^{\prime}}=(1-\zeta) \phi_{s s^{\prime}}$.
 
-**Rationale**: These factors relate to risk characteristics of stocks, where higher volatility or skewness may be associated with higher expected returns or investor preferences for certain risk profiles.
+So, can we have weights other than the inverse sample variances? A priori the answer is yes. Here is a simple prescription. As above we can set $\widetilde{\phi}_{s s^{\prime}}=(1-\zeta) \phi_{s s^{\prime}}$, but take $\Gamma_{i j}$ to be a nontrivial factor model $(K>0)$. We must have $\Gamma_{i i}=\zeta C_{i i}$. Generally, $\xi_{i}^{2}$ need not equal rescaled $C_{i i}$. There is a notable exception: if we take ${ }^{18}$ $\Gamma_{i j}$ to have a uniform correlation matrix. Let the correlation be $\rho$. Then we have $\Gamma_{i j}=\zeta \sigma_{i} \sigma_{j}\left[(1-\rho) \delta_{i j}+\rho u_{i} u_{j}\right]$, where $u_{i} \equiv 1$ is the unit $N$-vector. In this case we have $\xi_{i}^{2}=\zeta(1-\rho) C_{i i}$. So, in this 1-factor model the weights are the same as the inverse sample variances, albeit the regression is over $M+1$ columns. ${ }^{19}$ If we take a different factor model (even a 1-factor model with nonuniform correlations), generally $\xi_{i}^{2}$ do not equal rescaled $C_{i i}$. So, what should/can the risk factor(s) be?
 
----
+\footnotetext{
+${ }^{16}$ Nontrivial algorithms are required to ensure that all $\xi_{i}^{2}$ so computed are positive and consistent with FCM. Such algorithms and source code are given in [Kakushadze and Yu, 2016a] (see below).
 
-### **7. Firm Age and Growth Opportunities**
+17 This is shrinkage with a diagonal "shrinkage target" (see footnote 14).
+18 As in [Ledoit and Wolf, 2004].
+19 To wit, the $M$ columns in $X_{i s}, s=1, \ldots, M$, plus a single column equal $\sigma_{i}$. Usually, there is a high correlation between the latter and a linear combination of the former (see below). In fact, we will argue below that the factor proportional to $\sigma_{i}$ should be taken out altogether, i.e., removed from the factor loadings matrix $\widehat{\Omega}_{i \alpha}$, irrespective of how the latter is constructed (see Section 5).
+}
+components (which are different from the inverse sample variances) and then run a weighted regression of $E_{i}$ over $X_{i s}$. Note, however, that for $N \gg 1$ the 1st principal component typically has a large cross-sectional correlation with the intercept, i.e., $\theta=\frac{1}{\sqrt{N}} \sum_{i=1}^{N} V_{i}^{(1)}$ is close to 1 , so if we take $K=1, \xi_{i}^{2}$ are close to rescaled $C_{i i}$. Furthermore, higher principal component terms are subleading (see footnote 22). ${ }^{25}$
 
-- **Age (Firm Age)**: Time since a firm's first appearance in databases like CRSP or Compustat.
-- **Hn (Hiring Rate)**: Growth in the number of employees, indicating expansion.
 
-**Rationale**: Younger firms or those rapidly expanding their workforce may have higher growth potential but also higher risk.
+\section*{4.2 Candidates for Additional Risk Factors}
 
----
+Since we are assuming no "clustering", i.e., there is no binary classification we can construct for our returns, ${ }^{20}$ a priori there are two evident choices for what the additional $K$ risk factors can be: i) principal components and ii) style factors (analogous to those in equity risk models). Below we will discuss a 3rd possibility.
 
-### **8. Asset Structure and Tangibility**
+\subsection*{4.2.1 Principal Components}
 
-- **Tan (Tangibility)**: Proportion of physical assets in a firm's total assets.
-- **Rer (Real Estate Ratio)**: Extent of investment in real estate assets.
-- **Ala and Alm (Asset Liquidity Ratios)**: Measure the liquidity of a firm's assets relative to total assets or market value.
+The idea is to take the first $K<M$ principal components of SCM $C_{i j}$ as $\Omega_{i A}$. More precisely, there is another choice, to wit, to take $\Omega_{i A}=\sigma_i V_i^{(A)}, A=1, \ldots, K$, where $V_i^{(a)}, a=1, \ldots, N$, are the principal components of the sample correlation $\operatorname{matrix} \Psi_{i j}=C_{i j} / \sigma_i \sigma_j$. Typically, the difference between the two choices is not make-it-or-break-it, with the latter preferred (and usually producing better results) as it factors out the (skewed, quasi-log-normally distributed) volatility $\sigma_i$ and deals with the principal components of $\Psi_{i j}$, whose off diagonal elements take values in the interval $(-1,1)$ and have a tight distribution. So, we will adapt this approach here. As above, $\widetilde{\phi}_{s s^{\prime}}=(1-\zeta) \phi_{s s^{\prime}}$, we take $\Phi_{A B}=\zeta \lambda^{(A)} \delta_{A B}$, so our deformed $\mathrm{SCM}^{21}$
+$$
+\widetilde{C}_{i j}=\xi_i^2 \delta_{i j}+\sigma_i \sigma_j \sum_{a=1}^K \lambda^{(a)} V_i^{(a)} V_j^{(a)}+\sigma_i \sigma_j(1-\zeta) \sum_{a=K+1}^M \lambda^{(a)} V_i^{(a)} V_j^{(a)}
+$$
 
-**Rationale**: Asset tangibility affects collateral value, financing options, and recovery rates in distress, influencing risk and return.
+Here: $\lambda^{(a)}$ are the eigenvalues corresponding to the principal components $V_i^{(a)}\left(\lambda^{(1)} \geq\right.$ $\lambda^{(2)} \geq \cdots \geq \lambda^{(M)}$, and $\lambda^{(a)} \equiv 0$ for $\left.a>M\right)$; and $\xi_i^2=\zeta \sigma_i^2 \sum_{a=K+1}^M \lambda^{(a)}\left[V_i^{(a)}\right]^2$. In terms of the regression, this construction only affects the regression weights $z_i=1 / \xi_i^2$. Indeed, the regression over the first $M$ principal components $V_i^{(a)}$, $a=1, \ldots, M$, is the same as the regression over $X_{i s}, s=1, \ldots, M$, as these two matrices are related to each other via a linear transformation $V_i^{(a)}=\sum_{s=1}^M X_{i s} U_{s a}$, where $U_{s a}$ is a nonsingular $M \times M$ matrix. As to $\xi_i^2$, calculating it requires computing the first $K$ principal components. ${ }^{22}$ For sufficiently low $K \ll M$ we can use the power iterations method [Mises and Pollaczek-Geiringer, 1929] (see Subsection 4.1 for the algorithm and Appendix B for R source code in [Kakushadze and Yu, 2016b]). ${ }^{23}$ If $K \sim M$, then we can use a no-iterations method (see Subsection 4.2 for the algorithm and Appendix C for R source code in [Kakushadze and $\mathrm{Yu}, 2016 \mathrm{~b}$ ]). ${ }^{24}$ E.g., we can calculate the regression weights by computing the first few principal components (which are different from the inverse sample variances) and then run a weighted regression of $E_i$ over $X_{i s}$. Note, however, that for $N \gg 1$ the 1st principal component typically has a large cross-sectional correlation with the intercept, i.e., $\theta=\frac{1}{\sqrt{N}} \sum_{i=1}^N V_i^{(1)}$ is close to 1 , so if we take $K=1, \xi_i^2$ are close to rescaled $C_{i i}$. Furthermore, higher principal component terms are subleading (see footnote 22). ${ }^{25}$
 
----
+\footnotetext{
+${ }^{20}$ Such a classification has a factor loadings matrix (or a subset of its columns) of the form $\Omega_{i A}=\omega_i \delta_{G(i), A}$, where $G:\{1, \ldots, N\} \rightarrow\{1, \ldots, K\}$ maps our $N$ returns to $K$ "clusters". Note, however, that the "weights" $\omega_i$ (not to be confused with the portfolio weights $w_i$ in (1)) can be arbitrary (including negative) and need not be proportional to the unit $N$-vector $u_i \equiv 1$.
+${ }^{21}$ Recall that $\widetilde{C}_{i i}=C_{i i}$, and $C_{i j}=\sigma_i \sigma_j \sum_{a=1}^M \lambda^{(a)} V_i^{(a)} V_j^{(a)}$.
+${ }^{22}$ Note that $\xi_i^2 / \zeta \sigma_i^2=1-\sum_{a=1}^K \lambda^{(a)}\left[V_i^{(a)}\right]^2$; the $a>1$ terms are weighted by smaller eigenvalues.
+${ }^{23}$ This costs $\mathcal{O}\left(n_{\text {iter }} M N\right)$ operations, where the number of iterations $n_{\text {iter }} \gg K$. As $K$ increases, at some point $n_{\text {tot }} \gtrsim M$ and it makes more sense to use the next method.
+${ }^{24}$ This costs $\mathcal{O}\left(M^2 N\right)$ operations.
+}
 
-### **9. Earnings Quality and Accruals**
 
-- **Acq (Accrual Quality)**: Evaluates the reliability of earnings based on accruals.
-- **Eper (Earnings Persistence)**: Consistency of earnings over time.
-- **Esm (Earnings Smoothness)**: Degree to which firms smooth earnings, possibly indicating earnings management.
-- **Etl and Ecs (Earnings Timeliness and Conservatism)**: Assess how quickly and conservatively earnings reflect economic events.
+\subsection*{4.2.2 Style Factors}
 
-**Rationale**: High-quality earnings provide better information for valuation, and firms with more predictable earnings may be less risky.
+Style factors are based on measured or estimated properties of our returns. Even in the case of stocks, their number is at most of order 10. In the case of alphas the a priori possible style factors are logs of volatility, turnover, momentum ${ }^{26}$ and, possibly, capacity ${ }^{27}$ [Kakushadze, 2014]. We will discuss the first three below.
 
----
+There are two parts to the story here. First and foremost, if $M \gg 1$, then on general grounds it is clear that adding a few style factors to the regression cannot make a big difference provided that we keep the regression weights fixed. Second, the 3 style factors above turn out to be poor predictors for pair-wise correlations. For turnover this was argued based on empirical evidence in [Kakushadze, 2015d]. A similar analysis for volatility yields the same conclusion, that log of volatility is not a good predictor for pair-wise correlations. ${ }^{28}$ Momentum is defined as an average realized return over some period of time. The expected return is also defined as an average realized return over some - possibly other - period of time. Allocating capital into alphas inherently is a "momentum" strategy: usually one does not bet against alphas that have performed well in the past. ${ }^{29}$ Including momentum in the factor loadings matrix in the regression (partly) "kills" alpha. ${ }^{30}$
 
-### **10. Market Reactions and Behavioral Factors**
+One place where the style factors can make a difference is in computing the regression weights. I.e., we do not include them in the regression, but take the weights to be $z_{i}=1 / \xi_{i}^{2}$, where the specific risks $\xi_{i}$ are for a factor model based on the style factors only. That is, we model the correlation matrix $\Psi_{i j}$ via a factor
 
-- **Srev (Short-term Reversal)**: Tendency of stocks with recent poor performance to outperform in the short term, and vice versa.
-- **Seasonality Measures**: Exploit patterns in stock returns related to specific times of the year or past performance cycles.
-- **Mdr (Maximum Daily Return)**: Stocks with extreme daily returns may exhibit certain behavioral biases.
+\footnotetext{
+${ }^{25}$ I.e., in the 0th approximation $\xi_{i}^{2}$ based on principal components are still close to rescaled $C_{i i}$.
+26 Assuming momentum is positive; otherwise, we can use momentum over volatility, so its distribution is not too skewed. If momentum equals realized return, then this is the Sharpe ratio.
+${ }^{27}$ However, capacity is difficult to implement and it is unclear if it adds value.
+28 Following [Kakushadze, 2015d], we define $\nu_{i}=\ln \left(\sigma_{i} / \mu\right)$, where $\mu$ is such that $\nu_{i}$ has zero mean. We define three symmetric tensor combinations $x_{i j}=u_{i} u_{j}, y_{i j}=u_{i} \nu_{j}+u_{j} \nu_{i}$, and $z_{i j}=\nu_{i} \nu_{j}$ ( $u_{i} \equiv 1$ is the unit $N$-vector). We further define a composite index $\{a\}=\{(i, j) \mid i>j\}$, which takes $L=N(N-1) / 2$ values, i.e., we pull the off-diagonal lower-triangular elements of a general symmetric matrix $G_{i j}$ into a vector $G_{a}$. This way we can construct four $L$-vectors $\Psi_{a}, x_{a}, y_{a}$ and $z_{a}$. Now we can run a linear regression of $\Psi_{a}$ over $x_{a}, y_{a}$ and $z_{a}$. Note that $x_{a} \equiv 1$ is simply the intercept (the unit $L$-vector), so this is a regression of $\Psi_{a}$ over $y_{a}$ and $z_{a}$ with the intercept. The results based on the same data as in [Kakushadze, 2015d] are summarized in Table 1 and Figure 1 confirming our conclusion above.
 
-**Rationale**: These factors often rely on investor behavior and market inefficiencies, such as overreaction or underreaction to information.
+29 This does not necessarily mean that "hockey-stick" alphas (i.e., those that have performed well in the past but have "flat-lined") are not used in constructing a portfolio of alphas.
+${ }^{30}$ If we replace volatility by momentum defined as the realized return over the entire period of the data sample in [Kakushadze, 2015d], log of momentum too turns out a poor predictor for pair-wise correlations. Table 2 and Figure 2 summarize the regression results.
+}
+model based on all or some of the four factors, the intercept, log of volatility, log of turnover, and log of momentum. As mentioned above, the intercept by itself yields rescaled sample variances, but makes a difference in combination with other factors.
 
----
+We can always simply take the inverse sample variances as the regression weights and not bother with computing the specific risks based on the style factors. Without a detailed analysis using real-life alphas it is unclear if style factor based regression weights add value. Regardless, we need not include the style factors in the regression.
 
-### **11. Financial Reporting and Pension Accounting**
+\subsection*{4.2.3 How to Compute Specific Risk?}
 
-- **Frm and Fra (Pension Funding Ratios)**: Assess pension plan funding status relative to market equity or total assets.
-- **Etr (Effective Tax Rate)**: Changes in tax rates impacting earnings.
-- **Evr (Value Relevance of Earnings)**: How well earnings explain stock returns.
+Here we discuss the simplest - albeit neither the only nor necessarily the best way to compute the specific risks. As above, instead of modeling SCM $C_{i j}$ via a factor model, it is convenient to model the sample correlation matrix $\Psi_{i j}$. Let the corresponding factor model be
+$$
+\begin{equation*}
+\widetilde{\Gamma}_{i j}=\widetilde{\xi}_{i}^{2} \delta_{i j}+\sum_{A, B=1}^{K} \widetilde{\Omega}_{i A} \Phi_{A B} \widetilde{\Omega}_{j B} \tag{13}
+\end{equation*}
+$$
+where $\widetilde{\Gamma}_{i j}=\Gamma_{i j} / \sigma_{i} \sigma_{j}, \widetilde{\xi}_{i}=\xi_{i} / \sigma_{i}$, and $\widetilde{\Omega}_{i A}=\Omega_{i A} / \sigma_{i}$. First, without loss of generality we can assume that the columns of $\widetilde{\Omega}_{i A}$ are linearly independent. Second, we can assume that they form an orthonormal basis, i.e., the matrix $H_{A B}=\sum_{i=1}^{N} \widetilde{\Omega}_{i A} \widetilde{\Omega}_{i B}$ is the $K \times K$ identity matrix: $H_{A B}=\delta_{A B}$. Indeed, we can always ensure orthonormality via the transformation (in matrix notations) $\widetilde{\Omega} \rightarrow \widetilde{\Omega}\left(\widetilde{H}^{T}\right)^{-1}$, where $\widetilde{H}$ is the Cholesky decomposition of $H$, so $\widetilde{H} \widetilde{H}^{T}=H$. Furthermore, we have $\widetilde{\Gamma}_{i i}=\Psi_{i i} \equiv 1$.
 
-**Rationale**: Accounting measures can provide insights into a firm's financial health and potential hidden liabilities or assets.
+With orthonormal $\widetilde{\Omega}_{i A}$, FCM $\Phi_{A B}$ is simply a projection of the sample correlation matrix onto the $K$-dimensional hyperplane defined by the columns of $\widetilde{\Omega}_{i A}$ in the $N$ dimensional space: ${ }^{31}$
+$$
+\begin{equation*}
+\Phi_{A B}=\sum_{i, j=1}^{N} \widetilde{\Omega}_{i A} \Psi_{i j} \widetilde{\Omega}_{j B} \tag{14}
+\end{equation*}
+$$
 
----
+The specific risks then follow from (13):
+$$
+\begin{equation*}
+\widetilde{\xi}_{i}^{2}=\widetilde{\Gamma}_{i i}-\sum_{A, B=1}^{K} \widetilde{\Omega}_{i A} \Phi_{A B} \widetilde{\Omega}_{i B}=1-\sum_{A, B=1}^{K} \widetilde{\Omega}_{i A} \Phi_{A B} \widetilde{\Omega}_{i B} \tag{15}
+\end{equation*}
+$$
 
-### **12. Leverage and Capital Structure**
+However, there is a caveat in this approach. For a generic matrix $\widetilde{\Omega}_{i A}$ there is no guarantee that the so-defined $\widetilde{\xi}_{i}^{2}$ are positive, which they should be. This imposes nontrivial restrictions on $\widetilde{\Omega}_{i A}$. As an illustration, let us discuss the $K=1$ case.
 
-- **β^Lev (Intermediary Leverage Beta)**: Sensitivity to changes in financial intermediaries' leverage.
-- **Sdd (Secured Debt-to-Total Debt)** and **Cdd (Convertible Debt-to-Total Debt)**: Debt structure details affecting default risk and financial flexibility.
+For $K=1$ things simplify. Let us denote the sole column of $\widetilde{\Omega}_{i A}$ via $\beta_{i}$. Then $\sum_{i=1}^{N} \beta_{i}^{2}=1$ and
+$$
+\begin{equation*}
+\widetilde{\xi}_{i}^{2}=1-\kappa \beta_{i}^{2} \tag{16}
+\end{equation*}
+$$
 
-**Rationale**: Leverage impacts a firm's risk profile, cost of capital, and susceptibility to financial distress.
+\footnotetext{
+${ }^{31}$ See, e.g., [Kakushadze, 2015c] or [Kakushadze and Yu, 2016a] for a more detailed discussion.
+}
+where $\kappa=\sum_{i, j=1}^{N} \beta_{i} \Psi_{i j} \beta_{j} \leq \lambda^{(1)}$, and $\lambda^{(1)}$ is the largest eigenvalue of $\Psi_{i j}$. So, a sufficient condition for having all $\widetilde{\xi}_{i}^{2}>0$ is that all $\beta_{i}^{2}<1 / \lambda^{(1)}$. We can replace this condition with a stronger one that avoids computing the largest eigenvalue: a sufficient condition is that all $\beta_{i}^{2} \leq 1 / \lambda_{*}$, where $\lambda_{*}=\frac{1}{N} \sum_{i, j=1}^{N} \Psi_{i j}$. Note that $\beta_{i} \equiv 1 / \sqrt{N}$, which corresponds to the intercept as the sole risk factor, satisfies this condition. Violations of this condition usually occur for $\beta_{i}$ with a skewed distribution, e.g., if $\beta_{i} \propto \sigma_{i}$; however, for, e.g., $\beta_{i} \propto \ln \left(\sigma_{i}\right)$ such violations are either absent altogether or rarer and can be dealt with by "reigning" in the few violating elements. See the R function qrm.fr() in Appendix A of [Kakushadze and Yu, 2016a] for such an algorithm, which is built for a general $K$-factor model (not just $K=1$ ).
 
----
+When we have multiple factors, however, things get trickier. Even if $\widetilde{\xi}_{i}^{2}>0$ in all $K$ 1-factor models based on the individual columns of a multifactor $\widetilde{\Omega}_{i A}$, in the $K$-factor model we can still have some $\widetilde{\xi}_{i}^{2}<0$. See Section 4 for the algorithm and Appendix B for R source code in [Kakushadze and Yu, 2016a] for circumventing this issue (even for $K=1$ ). However, let us note one issue associated with computing the specific risks even if they all come out to be positive. Computing $\widetilde{\xi}_{i}^{2}$ via (15) involves FCM $\Phi_{A B}$, which in turn involves the sample correlation matrix $\Psi_{i j}$ via (14). While $\Phi_{A B}$ is expected to be more out-of-stable than $\Psi_{i j}$ as we have $K \ll N$, using FCM in (15) still adds some noise to the regression weights. This is to be contrasted with using the inverse sample variances (i.e., $\widetilde{\xi}_{i}^{2} \equiv 1$ ), which are relatively stable out-ofsample, as the regression weights. This remark equally applies to all $K$ values.
 
-### **13. Growth Disparities and Expectations**
+\subsection*{4.3 Can We Increase the Number of Factors?}
 
-- **Dls (Disparity between Long- and Short-term Earnings Growth Forecasts)**: Difference between analysts' long-term and implied short-term growth forecasts.
-- **Hn (Hiring Rate)**: A proxy for expected growth based on employment trends.
+So, while we can try to play with the regression weights, it is not all that clear that this would make it or break it, especially that we are still limited to the $M$ risk factors, which are equivalent to the first $M$ principal components - albeit we never have to compute the principal components in the first instance. The question is, can we increase the number of columns in the factor loadings matrix in the regression as this presumably would cover more directions in the risk space and improve the out-of-sample performance. Prosaically, the answer is that we need more information, i.e., additional input, to achieve this. Here is one approach [Kakushadze, 2014].
 
-**Rationale**: Disparities in growth expectations can signal mispricing or varying investor beliefs about future performance.
+The idea here is that, assuming all alphas have essentially overlapping trading universes, we can treat exposure to each underlying tradable - for the sake of definiteness let us assume we are dealing with the U.S. equities as the underlying tradables - as a risk factor. This makes sense, but the question is what should the factor loadings matrix $\widetilde{\Omega}_{i A}$ be? In this case $A$ simply labels stocks in the trading universe, which is, say, top 2,500 most liquid tickers, so $K$ is large, much larger than the typical value of $M$, which for a (generous) ${ }^{32} 1$-year lookback is only about 250 .
 
----
+Historical stock position data for each alpha must be available to us if we are to backtest them. Let this position data be $P_{i A s}$, which is the dollar holding of the
 
-### **14. Earnings Forecast Dispersion**
+\footnotetext{
+32 Many alphas can be more ephemeral than that.
+}
+alpha labeled by $i$ in the stock labeled by $A$ at time labeled by $t_{s}$, normalized such that $\sum_{A}\left|P_{i A s}\right|=1$ for each given pair $i, s$. We can try to construct $\widetilde{\Omega}_{i A}$ from $P_{i A s}$ by getting rid of the time series index $s$. The most obvious choice $\widetilde{\Omega}_{i A}=\frac{1}{M+1} \sum_{s=1}^{M+1} P_{i A s}$ does not work as the sign of $P_{i A s}$ flips over time frequently assuming alphas have reasonably short holding periods. We need an unsigned quantity to define $\widetilde{\Omega}_{i A}$. We can use ${ }^{33}$
+$$
+\begin{equation*}
+\widetilde{\Omega}_{i A}=\frac{1}{M+1} \sum_{s=1}^{M+1}\left|P_{i A s}\right| \tag{17}
+\end{equation*}
+$$
 
-- **Dis (Dispersion in Analyst Forecasts)**: Variation among analysts' earnings estimates.
-- **Dlg (Dispersion in Analyst Long-term Growth Forecasts)**: Variation in long-term growth expectations.
+This is simply average relative exposure of the $i$-th alpha to the stock labeled by $A$.
+One potential "shortcoming" of this definition is that, if the position bounds call them $B_{i A}$ - are imposed at the level of individual alphas, for some, mostly less liquid, stocks $\left|P_{i A s}\right|$ could be saturating these bounds. On general risk management grounds, these bounds can very well be uniform across all alphas. E.g., one may wish to cap the positions as the smaller of: i) a small percentile of the total dollar investment - this is a diversification bound; and ii) a (generally, different) small percentile of ADDV (average daily dollar volume) - this is a liquidity bound (in case positions need to be liquidated). If the bounds are saturated most of the time, this can effectively reduce the number of independent risk factors, and the definition of $\widetilde{\Omega}_{i A}$ may have to be modified for such stocks (see [Kakushadze, 2014]). However, if the bounds are imposed at the level of the combined alpha, then this is a non-issue.
 
-**Rationale**: High dispersion indicates uncertainty or differing opinions about a firm's prospects, potentially leading to higher risk premiums.
-
----
-
-### **15. Skewness Preferences and Lottery-like Stocks**
-
-- **Ts (Total Skewness)** and **Is (Idiosyncratic Skewness)**: Stocks with positive skewness may be preferred by investors seeking "lottery-like" payoffs.
-- **Mdr (Maximum Daily Return)**: Stocks with extreme positive returns may attract investors despite poor average performance.
-
-**Rationale**: Some investors may overpay for stocks with a small chance of very high returns, affecting pricing.
-
----
-
-By grouping the signals based on their underlying themes, we can see that many factors are interrelated and often stem from common financial theories or observed market behaviors. Understanding these groupings can help in analyzing and selecting factors relevant to specific investment strategies.
-
----
-
-**If you have questions about any specific group or factor, or need further clarification on how they relate to each other, feel free to ask!**
+Assuming $N \gg K$, even with the larger number of risk factors (17), our optimization reduces to a weighted regression. We can simply choose the weights as the inverse sample variances. Alternatively, we can attempt to compute specific risks. For this we need FCM $\Phi_{A B}$. With appropriately normalized $\widetilde{\Omega}_{i A}, \mathrm{FCM} \Phi_{A B}$ is simply the covariance matrix for the stocks. In the zeroth approximation we can set it to $\Phi_{A B} \approx \sigma_{A}^{2} \delta_{A B}$, where $\sigma_{A}^{2}$ are sample variances for stocks. Alternatively, we can either use commercial risk models or construct them organically, as, e.g., in [Kakushadze, 2015c] and [Kakushadze and Yu, 2016a]. Also see Section 6 hereof.
