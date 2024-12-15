@@ -1,821 +1,250 @@
-\title{Chapter 7 Statistical Factor Models}
-
-In the statistical model framework we assume that we know neither the factor returns nor the exposures; we estimate both. The estimation relies on Principal Component Analysis. Starting with Chamberlain [1983], this approach has been motivated using an asymptotic argument: if the number of factors is finite, say $m$, and if the specific risk stays bounded over bounded portfolios, then when the number of assets is large, there is a clear separation between the $m$ largest eigenvalues and the remaining eigenvalues. The PCA solution constitutes then a good approximation and, in the limit, converges to the true model. In applications, one may question the merit of an approach that, unlike the fundamental and macroeconomic ones, ignores additional information about the firm characteristics or the macroeconomic environment. Developing a statistical model is useful for several reasons:
-- Complementarity. Using several models helps understand the shortcomings of each individual model. We can project an existing model on the statistical model, or augment it with statistical factors.
-- Optimization. In a portfolio optimization problem, it is often beneficial to compare solutions in which we have bounded the total factor variance using different models; or, we could include both variances as constraints;
-- Data. In certain asset classes, firm characteristics or relevant macroeconomic
-factors may not be available. When only returns are available, statistical models are the only option;
-- Availability at Short Time Scales. At certain time scales, such as one- or-fiveminute intervals, fundamental factors may not be as relevant;
-- Performance. A statistical model may just outperform the alternatives.
-
-The main disadvantage of statistical models is that its loadings are less interpretable than in the case of alternatives estimation methods. The first factor is usually easy to interpret as the market. The second and third ones can find an interpretation. For example, Litterman and Scheinkman [1991] interpret the first three statistical factors as level, steepness and curvature of the bond yield curve. The situation is not helpless; in Section 7.4 I describe approaches to interpret statistical models. In the words of Johnson and Wichern [2007]: "Analyses of principal components are more of a means to an end rather than an end in themselves because they frequently serve as intermediate steps in much larger investigations". This is perhaps true of all factor models, but is certainly more true with regards to statistical models, because of the possible challenges in interpretation.
-
-This chapter starts with a minimal description of the approach. Then, we take a detour in the real world.
-
-\section*{7.1. Statistical Models: The Basics}
-
-\subsection*{7.1.1. Best Low-Rank Approximation and PCA}
-
-Let $\mathbf{R} \in \mathbb{R}^{n \times T}$ the matrix of observed returns, whose $t$ th column is the vector of returns in period $t$; the matrices $\mathbf{B} \in \mathbb{R}^{n \times m}$ and $\mathbf{F} \in \mathbb{R}^{m \times T}$ denote a matrix
-of loadings and of factor returns respectively. If we wanted to find the loadings and factor returns that minimized the total "unexplained" variation of returns, summed across periods and assets, then we would solve the problem
-$$
-\begin{align*}
-& \min \|\mathbf{R}-\mathbf{B F}\|_{F}^{2}  \tag{7.1}\\
-& \text { s.t. } \mathbf{B} \in \mathbb{R}^{n \times m} \\
-& \quad \mathbf{F} \in \mathbb{R}^{m \times T}
-\end{align*}
-$$
-where $\|\cdot\|_{F}$ is the Frobenius norm. A matrix of the form BF above has rank less than or equal to $m$. Conversely, every matrix with rank less or equal than $m$ can be decomposed as BF (Exercise 7.1). The problem can be restated as
-$$
-\begin{equation*}
-\min _{\operatorname{rank}(\hat{\mathbf{R}}) \leq m}\|\mathbf{R}-\hat{\mathbf{R}}\|^{2} \tag{7.2}
-\end{equation*}
-$$
-
-Here, we have not specified whether the norm is Frobenius. It could be Frobenius, but it could be also any unitarily invariant norm ${ }^{1}$.
-
-We use ${ }^{2}$ the Singular Value Decomposition ${ }^{3}$ of $\mathbf{R}=\mathbf{U S V}^{\top}$, with $\mathbf{U}, \mathbf{V}$ square orthonormal matrices of size $n$ and $T$ respectively, and $\mathbf{S}$ a matrix of size $n \times T$, which has positive values (called Singular Values) on the main diagonal (i.e., $[\mathbf{S}]_{i, i}$ ) and zero values elsewhere. The solution to Problem (7.2) is given by $\hat{\mathbf{R}}=\mathbf{U S}_{m} \mathbf{V}^{\boldsymbol{\top}}$ where $\mathbf{S}_{m}$ has the singular values in descending order, with singular values after the $m$ th one set to zero. The solution can also be written [Golub and Van Loan, 2012] in compact form as $\hat{\mathbf{R}}=\mathbf{U}_{m} \mathbf{S}_{m} \mathbf{V}_{m}^{\top}$, where $\mathbf{U}_{m}$ and $\mathbf{V}_{m}$ are the matrices obtained taking the first $m$ columns of $\mathbf{U}$ and $\mathbf{V}$, and now $\mathbf{S}_{m}$ is the square matrix obtained taking the first $m$ columns and $m$ rows of $\mathbf{S}$. Then, the original Problem (7.1) is solved by setting
-$$
-\begin{align*}
-& \mathbf{B}=\mathbf{U}_{m}  \tag{7.3}\\
-& \mathbf{F}=\mathbf{S}_{m} \mathbf{V}_{m}^{\top} \tag{7.4}
-\end{align*}
-$$
-
-\footnotetext{
-${ }^{1}$ These are matrix norms that are invariant for left- and right-multiplication by orthonormal matrices: $\|\mathbf{A}\|=\left\|\mathbf{U A V}^{\top}\right\|$. Spectral, Frobenius and nuclear norms are unitarily invariant.
-${ }^{2}$ This minimization problem was formulated and solved by Eckart and Young [1936] and generalized by Mirsky [1960]. Standard references for PCA are Jolliffe [2010], Jolliffe and Cadima [2016], Johnson and Wichern [2007], Pourahmadi [2013], Yao et al. [2015]; PCA is also covered in any popular graduate-level textbook on Statistical Learning, e.g. Hastie et al. [2008], Murphy [2012], Bishop [2006]. Skillicorn [2007] is devoted to the interpretation of SVD, PCA, Non-negative Matrix Factorization and its applications.
-${ }^{3}$ This is referred to as the Full SVD, as opposed to the reduced SVD; see Trefethen and Bau [1997].
-}
-
-As noted in earlier chapters, there are equivalent "rotated" solutions, of the form $\tilde{\mathbf{B}}=\mathbf{B C}, \tilde{\mathbf{F}}=\mathbf{C}^{-1} \mathbf{F}$, for some non-singular $\mathbf{C} \in \mathbb{R}^{m \times m}$. For example, this is also a solution:
-$$
-\begin{align*}
-& \mathbf{B}=\mathbf{U}_{m} \mathbf{S}_{m}  \tag{7.5}\\
-& \mathbf{F}=\mathbf{V}_{m}^{\top} \tag{7.6}
-\end{align*}
-$$
-
-A related problem, with which many readers are acquainted, is Principal Component Analysis. In this setting, we start with a covariance matrix $\hat{\boldsymbol{\Sigma}} \in \mathbb{R}^{n \times n}$. Our goal is to generate a linear combination of the original vectors $\mathbf{r}^{1}, \ldots, \mathbf{r}^{T}$, i.e., $\mathbf{w}^{\top} \mathbf{r}^{1}, \ldots, \mathbf{w}^{\top} \mathbf{r}^{T}$; the vector $\mathbf{w} \in \mathbb{R}^{n}$ is a vector of weights, normalized to have unit Euclidean norm. We want these random observations $\mathbf{w}^{\top} \mathbf{r}^{i}$ to have the greatest possible variance. With a little work (which we did in previous chapters; or do Exercise 7.4 , you can show that this variance is equal to $\mathbf{w}^{\top} \hat{\mathbf{\Sigma}} \mathbf{w}$.
-
-The problem then can be stated as
-$$
-\begin{align*}
-& \max \mathbf{w}^{\top} \hat{\boldsymbol{\Sigma}} \mathbf{w}  \tag{7.7}\\
-& \text { s.t. }\|\mathbf{w}\| \leq 1
-\end{align*}
-$$
-
-The vector w is called the first principal component of $\hat{\boldsymbol{\Sigma}}$. You can interpret Problem (7.7) as a financial problem too: find a maximum-variance portfolio, where the sum of the squared net notional positions is less or equal than 1. The connection between PCA and eigenvalue problems is well known, but it is still useful to highlight it. The Lagrangian of Problem (7.7) is $\nabla_{\mathbf{w}}\left(\mathbf{w}^{\top} \hat{\mathbf{\Sigma}} \mathbf{w}\right)+$ $\lambda \nabla_{\mathbf{w}}\left(1-\|\mathbf{w}\|^{2}\right)=2 \hat{\boldsymbol{\Sigma}} \mathbf{w}-2 \lambda \mathbf{w}$; a necessary condition for the maximum is that the Lagrangian be zero. This is equal to the eigenvalue equation $\hat{\Sigma} \mathbf{v}=\lambda \mathbf{v}$. From this equation it follows that $\lambda=\mathbf{v}^{\top} \hat{\mathbf{\Sigma}} \mathbf{v}$. Therefore, the solution is the eigenvector with the highest associated eigenvalue.
-
-Once this maximum-variance portfolio $\mathbf{w}^{(1)}$ has been found, we repeat the process and find another maximum-variance portfolio that is orthogonal to $\mathbf{w}^{(1)}$ :
-$$
-\begin{aligned}
-& \max \mathbf{w}^{\top} \hat{\boldsymbol{\Sigma}} \mathbf{w} \\
-& \text { s.t. }\|\mathbf{w}\| \leq 1 \\
-& \quad \mathbf{w}^{\top} \mathbf{w}^{(1)}=0
-\end{aligned}
-$$
-
-To see the relationship between PCA and SVD, we write the uncentered covariance matrix using the SVD decomposition:
-$$
-\begin{equation*}
-\hat{\boldsymbol{\Sigma}}=\frac{1}{T} \mathbf{R R}^{\boldsymbol{\top}}=\frac{1}{T} \mathbf{U S}^{2} \mathbf{U}^{\boldsymbol{\top}} \tag{7.9}
-\end{equation*}
-$$
-
-Replace this decomposition of $\hat{\boldsymbol{\Sigma}}$ in the optimization problem, Equation (7.7), and notice that $\|\mathbf{U w}\|=\|\mathbf{w}\|$ because the matrix $\mathbf{U}$ is orthonormal. We are left to solve
-$$
-\begin{array}{r}
-\max \mathbf{v}^{\top} \mathbf{S}^{2} \mathbf{v}  \tag{7.10}\\
-\text { s.t. }\|\mathbf{w}\| \leq 1 \\
-\mathbf{w}=\mathbf{U v} \\
-\mathbf{v} \in \mathbb{R}^{n}
-\end{array}
-$$
-
-The solution is straightforward: $\mathbf{v}=(1,0, \ldots, 0)^{\top}$, and $\mathbf{w}$ equal to the first column of $\mathbf{U}$. If we were to find the first $m$ principal components, we would find that the columns of $\mathbf{U}_{m}$ solve our problem. These columns, however, are not uniquely identified when two or more eigenvalues are equal. For example you should verify for yourself that, if $\lambda_{1}=\lambda_{2}$, then any vector $\mathbf{v}=\left(v_{1}, v_{2}, 0, \ldots, 0\right)$, with $v_{1}^{2}+v_{2}^{2}=1$, is indeed a solution. Figure 7.1 gives a geometrical interpretation of this fact.
-
-We call these vectors interchangeably Principal Components, Eigenvectors, and Eigenfactors. The variances of the components are the squared singular values of the SVD.
-
-Finally, we note that the optimization problem (7.7) can be extended to the case of $m$ eigenvectors:
-$$
-\begin{gather*}
-\max \operatorname{trace}\left(\mathbf{W}^{\top} \hat{\boldsymbol{\Sigma}} \mathbf{W}\right)  \tag{7.11}\\
-\text { s.t. } \mathbf{W}^{\top} \mathbf{W}=\mathbf{I}_{m} \\
-\quad \mathbf{W} \in \mathbb{R}^{n \times m}
-\end{gather*}
-$$
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-227.jpg?height=419&width=701&top_left_y=490&top_left_x=666)
-
-Figure 7.1: The eigenvectors associated to identical eigenvalues are not uniquely identified.
-
-\subsection*{7.1.2. Maximum Likelihood Estimation and PCA}
-
-The statistical model was introduced as a norm-minimization problem, but is not directly related to a factor model formulation
-$$
-\begin{equation*}
-\mathbf{r}=\mathbf{B f}+\boldsymbol{\epsilon} \tag{7.12}
-\end{equation*}
-$$
-
-In fact, if we approximated the covariance matrix with a principal component approximation using the top $m$ eigenvalues, we would obtain a singular covariance matrix, which is highly undesirable.
-
-The goal of this section is to establish a first connection between spectral methods and the standard factor model. We consider the model above as a starting point. We assume for simplicity that $\sigma_{1}, \ldots, \sigma_{n}$, the asset idiosyncratic volatilities, are all equal to $\sigma$. Furthermore we assume, without loss of generality, that $\boldsymbol{\Sigma}_{\mathbf{f}}=\mathbf{I}_{m}$. This is allowed, because rotational invariance affords us this choice of covariance matrix. This is the Probability PCA (PPCA) by Bishop [2006].
-
-Under the assumptions $\mathbf{f} \sim N\left(0, \mathbf{I}_{m}\right)$ and $\boldsymbol{\epsilon} \sim N\left(0, \sigma^{2} \mathbf{I}_{n}\right)$ the return covari-
-ance matrix is $\mathbf{B B}^{\top}+\sigma^{2} \mathbf{I}_{n}$. The first $m$ eigenvalues of the covariance matrix are greater than $\sigma^{2}$ (Exercise 7.5). Let $\boldsymbol{\Sigma}_{\mathbf{r}}$ be the empirical covariance matrix. The log-likelihood function for a zero-mean multivariate normal distribution is [Johnson and Wichern, 2007, Bishop, 2006]
-$$
-\begin{equation*}
-\mathcal{L}\left(\hat{\boldsymbol{\Sigma}}_{\mathbf{r}}\right)=-\frac{T}{2}\left[\log \left|\hat{\boldsymbol{\Sigma}}_{\mathbf{r}}\right|+\left\langle\hat{\boldsymbol{\Sigma}}_{\mathbf{r}}^{-1}, \boldsymbol{\Sigma}_{\mathbf{r}}\right\rangle+n \log (2 \pi)\right] \tag{7.13}
-\end{equation*}
-$$
-where we denote the scalar product of two matrices $\langle\mathbf{A}, \mathbf{B}\rangle:=\operatorname{trace}\left(\mathbf{A}^{\top} \mathbf{B}\right)$. The parameters $\mathbf{B}, \sigma$ can be estimated via maximum likelihood:
-$$
-\begin{gather*}
-\max -\log \left|\hat{\boldsymbol{\Sigma}}_{\mathbf{r}}\right|-\left\langle\hat{\boldsymbol{\Sigma}}_{\mathbf{r}}^{-1}, \boldsymbol{\Sigma}_{\mathbf{r}}\right\rangle  \tag{7.14}\\
-\text { s.t. } \hat{\boldsymbol{\Sigma}}_{\mathbf{r}}=\hat{\mathbf{B}} \hat{\mathbf{B}}^{\top}+\hat{\sigma}^{2} \mathbf{I}_{n} \tag{7.15}
-\end{gather*}
-$$
-
-The solution to this problem is especially simple and intuitive [Tipping and Bishop, 1999]. Decompose $\boldsymbol{\Sigma}_{\mathbf{r}}=\mathbf{U S U}^{\boldsymbol{\top}}$. Then
-$$
-\begin{align*}
-\hat{\mathbf{B}} & =\mathbf{U}_{m}\left(\mathbf{S}_{m}^{2}-\hat{\sigma}^{2} \mathbf{I}_{n}\right)^{1 / 2}  \tag{7.16}\\
-\hat{\sigma}^{2} & =\bar{\lambda}
-\end{align*}
-$$
-where $\bar{\lambda}$ is the average of the last $n-m$ eigenvalues of $\boldsymbol{\Sigma}_{\mathbf{r}}$. An alternative rotation of this risk model is:
-$$
-\begin{align*}
-\mathbf{B} & =\mathbf{U}_{m}  \tag{7.17}\\
-\boldsymbol{\Sigma}_{\mathbf{f}} & =\left(\mathbf{S}_{m}^{2}-\bar{\lambda} \mathbf{I}_{n}\right)  \tag{7.18}\\
-\boldsymbol{\Sigma}_{\boldsymbol{\epsilon}} & =\bar{\lambda} \mathbf{I}_{n} \tag{7.19}
-\end{align*}
-$$
-
-The model offers several insights. First, it links a probabilistic model of returns
-to the PCA of the empirical covariance matrix. Second, in the model rotation above, the factor covariance matrix is diagonal and the factor variances are equal to the shrinked empirical variances obtained by PCA. Indeed, the PCA solution can be obtained as an asymptotic result. consider the limit $\hat{\sigma} \downarrow 0$. In this scenario, the idiosyncratic risks are much smaller than the factor risk. In the limit, the formula then simplifies to
-$$
-\begin{align*}
-\mathbf{B} & =\mathbf{U}_{m}  \tag{7.20}\\
-\boldsymbol{\Sigma}_{\mathbf{f}} & =\mathbf{S}_{m}^{2}  \tag{7.21}\\
-\boldsymbol{\Sigma}_{\boldsymbol{\epsilon}} & =0 \tag{7.22}
-\end{align*}
-$$
-which is the Principal Component Analysis solution.
-We show how PPCA works in a simulated instance. We choose $\sigma=1$, $T=250, n$ equal to 1000 and 3000 assets, $m=10$ and factor volatilities equal to $1,2, \ldots, 10$. For each set of parameters, we run 50 simulations.
-
-[WILEY EDITORS: place Figure 7.2 around here.]
-
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-230.jpg?height=695&width=1284&top_left_y=436&top_left_x=369)
-
-Figure 7.2: (a): Probabilistic PCA for a universe of 1000 assets, with 10 factors with volatilities $1,2, \ldots, 10$. Circle-shaped points are the sample factor variances against the true variances; triangle-shaped are the shrinked factor variances against the true variances. (b): All parameters are unchanged, with the exception of the number of assets, here equal to 3000.
-
-Figures 7.2 (a), (b) show the true (population) factor variances on the x -axes. On the y -axes we plot the sample factor variances (circles) and the shrinked factor variances (triangles). You can see that, when the ratio between the number of assets and the number of period is greater, the upward bias of the sample eigenvalues-i.e., of the sample factor variances- is higher. Shrinkage eliminates such bias. However, the shrinked eigenvalues are now biased downwards and, in addition, this downward bias is not constant, which suggests that the optimal shrinkage should not be a constant offset. There are three take-aways from these simulations, which could be confirmed empirically for other choices of the parameters:
-- Sample factor eigenvalues are higher than their population counterparts;
-- Shrinkage helps, but optimal shrinkage may be more complex than a constant offset;
-- Maximum likelihood estimation, which we could solve analytically in this special case, will give in general bias estimates on the factor volatilities.
-
-\subsection*{7.1.3. Cross-Sectional and Time-Series Regressions via SVD}
-
-A popular approach to PCA is to take the first $m$ principal components of the PCA as factors loadings, and then estimate the factor returns via crosssectional regression. What are these factor returns? Start by setting $\mathbf{B}=\mathbf{U}_{m}$.
-
-The estimated factor returns are the result of $T$ cross-sectional regressions. We can write the relation as follows:
-$$
-\begin{equation*}
-\mathbf{R}=\mathbf{U}_{m} \hat{\mathbf{F}}+\mathbf{E} \tag{7.23}
-\end{equation*}
-$$
-
-The least-squares estimate is
-$$
-\begin{equation*}
-\hat{\mathbf{F}}=\left(\mathbf{U}_{m}^{\top} \mathbf{U}_{m}\right)^{-1} \mathbf{U}_{m}^{\top} \mathbf{R} \tag{7.24}
-\end{equation*}
-$$
-or, since $\mathbf{U}$ is orthonormal,
-$$
-\begin{equation*}
-\hat{\mathbf{F}}=\mathbf{U}_{m}^{\top} \mathbf{R}=\mathbf{U}_{m}^{\top} \mathbf{U S V} \mathbf{V}^{\top}=\mathbf{S}_{m} \mathbf{V}_{m}^{\top} \tag{7.25}
-\end{equation*}
-$$
-
-Behold, these are the same factor estimates we computed from the SVD in Equation (7.4). If we throw away the factor returns of an SVD, the loadings of the SVD itself allow us to recover them from cross-sectional regressions. Similarly, you can easily prove that, if we only know the estimated factor returns $\hat{\mathbf{F}}$ from Equation (7.25), then we can estimate the loadings using timeseries regression of asset returns against these factor returns, and obtain as a result $\hat{\mathbf{B}}=\mathbf{U}_{m}$. Indeed, the SVD decomposition is the only factorization of the returns matrix such that the loadings are the time-series betas of the asset returns to the factor returns, and the factor returns are the cross-sectional betas of the asset returns to the loadings ${ }^{4}$. This is a computational simplification, but also has several applications. It is a useful relationship when we estimate factor loadings for assets with incomplete return data; it helps explain discrepancies in time-series and cross-sectional performance attribution in fundamental factor models; and establishes a connection between statistical and fundamental factor models.
-
-\footnotetext{
-${ }^{4}$ You can prove all of this! Solve Exercise 7.9.
-}
-
-\section*{7.2. Beyond the Basics}
-
-It is important to understand the behavior of PCA in finite samples, and in settings that are relevant to practitioners. There are a few parameters that intuitively should matter to the portfolio manager. The first two are trivial: the number of assets $n$ and the number of factors $m$. In addition, we will perform SVD on a rolling window of observations of width $T$ (Figure 7.3). This width is chosen so that the data can be considered broadly homogeneous (i.e., the cross-section of returns are drawn from the same distribution), but also so that the data has a sufficiently high number of observations to estimate the parameters.
-
-[WILEY EDITORS: place Figure 7.3 around here.] 
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-232.jpg?height=178&width=1010&top_left_y=1727&top_left_x=525)
-
-Figure 7.3: We estimate the risk model parameters using data in an interval of width $T$.
-
-Finally, another important quantity is the gap between the $m$ th and the $(m+1)$ th eigenvalues, corresponding to the separation between the smallest variance of a factor and the largest idiosyncratic variance. How do these quantities interact? This question has been at the center of intense research in the past twenty-five years.
-
-PCA, a 120-year old technique, has witnessed a theory renaissance, which is still far from being concluded. This chapter attempts to give some intuition about the analytical approach; to summarize the state-of-the-art results; to compare them to simulated scenarios; and finally to administer some practical advice in using PCA.
-
-\subsection*{7.2.1. The Spiked Covariance Model}
-
-Let $\lambda_{T, i}$, with $i=1, \ldots, n$, be the sorted eigenvalues of the empirical covariance matrix
-$$
-\begin{equation*}
-\tilde{\boldsymbol{\Omega}}_{r}:=T^{-1} \sum_{t=1}^{T} \mathbf{r}_{t} \mathbf{r}_{t}^{\top} \tag{7.26}
-\end{equation*}
-$$
-
-The spiked covariance model posits the following: there is $0<m<n$ and a positive constant $C$ such that as $T \rightarrow \infty$
-$$
-\lambda_{i}:=\lim _{T \rightarrow \infty} \lambda_{T, i} \begin{cases}=1 & \text { for all } i>m  \tag{7.27}\\ \geq C n & \text { for all } i \leq m\end{cases}
-$$
-
-There is a spectral gap between the largest $m$ eigenvalues and the remaining ones. How does this relate to factor models? Consider the original model specified by Equation (7.4) and choose, like we did in Section (7.1.2), and with $\sigma=1$, a formulation
-$$
-\begin{equation*}
-\mathbf{B B}^{\top}+\mathbf{I}_{n} \tag{7.28}
-\end{equation*}
-$$
-
-Why should the eigenvalues $\lambda_{i}$ grow at least linearly in $n$ ? The first $m$ eigenvalues of $\mathbf{B B}^{\boldsymbol{\top}}$ are the same as those of $\mathbf{B}^{\top} \mathbf{B}$. To see this, write the SVD decomposition of $\mathbf{B}=\mathbf{U S V}^{\boldsymbol{\top}}$ and consider the two matrix products $\mathbf{B B}^{\boldsymbol{\top}}=\mathbf{U S}^{2} \mathbf{U}^{\boldsymbol{\top}}$ and $\mathbf{B}^{\boldsymbol{\top}} \mathbf{B}=\mathbf{V} \mathbf{S}^{2} \mathbf{V}^{\boldsymbol{\top}}$. The two products have the same first $m$ eigenvalues and different eigenvectors. Instead of analyzing the properties of $\mathbf{B B}^{\top}$, we will work on $\mathbf{B}^{\top} \mathbf{B}$.
-
-A reasonable assumption for $\mathbf{B}$ is that its rows $\mathbf{b}_{i}$, representing the loadings of a single stock to the factors, are iid samples from a probability distribution $D$, so that $\mathbf{b}_{i} \sim P\left(\mathbb{R}^{m}\right)$. We can then write $\mathbf{B}^{\top} \mathbf{B}=\sum_{i=1}^{n} \mathbf{b}_{i}^{\top} \mathbf{b}_{i}=$ $n\left(n^{-1} \sum_{i=1}^{n} \mathbf{b}_{i}^{\top} \mathbf{b}_{i}\right)$. For large values of $n$ the terms in parentheses converges to an expectation $E_{D}\left(\mathbf{b}^{\top} \mathbf{b}\right)$. We denote $\mu_{i}$ the eigenvalues of this matrix. The eigenvalues of $\mathbf{B}^{\boldsymbol{\top}} \mathbf{B}$ are then in the limit $n \rightarrow \infty$ equal to $n \mu_{i}$, and the eigenvalues of $\mathbf{B B}^{\boldsymbol{\top}}+\mathbf{I}_{n}$ are $n \mu_{i}+1$. This heuristic argument justifies the scaling assumption for the largest eigenvalues eigenvalues: for large stock universes, the pervasive (or spike) eigenvalues separate for the rest (or bulk), and the gap grows linearly in the size of the stock universe.
-
-Let $\nu_{i}$ be the eigenvalues of $\mathbf{B B}^{\top}$. The spectrum of the covariance matrix is then given by $\nu_{1}+1, \ldots, \nu_{m}+1,1, \ldots, 1$, so a factor model, after rescaling (so that $\boldsymbol{\Omega}_{\boldsymbol{\epsilon}}=\mathbf{I}_{n}$ ) and rotation (so that $\boldsymbol{\Omega}_{\mathbf{f}}=\mathbf{I}_{m}$ ), has an associated spiked covariance matrix. We can see how these condition translate into practice. Recall from Section 9.3 that the $i$ th factor-mimicking portfolio $i$ is $\mathbf{w}_{i}=\mathbf{B}\left(\mathbf{B}^{\top} \mathbf{B}\right)^{-1} \mathbf{e}_{i}$. Consider the risk decomposition:
-- The factor variance is $\mathbf{w}_{i}^{\top}\left(\mathbf{B B}^{\top}\right) \mathbf{w}_{i}=\mathbf{e}_{i}^{\top} \mathbf{e}_{i}=1$.
-- The idiosyncratic variance is
-$$
-\begin{aligned}
-\mathbf{w}_{i}^{\top} \mathbf{w}_{i} & =\mathbf{e}_{i}^{\top}\left(\mathbf{B}^{\top} \mathbf{B}\right)^{-1} \mathbf{e}_{i} \\
-& =\mathbf{e}_{i}^{\top} \mathbf{V} \mathbf{S}^{-2} \mathbf{V}^{\top} \mathbf{e}_{i} \\
-& \leq \nu_{m}^{-1}\left\|\mathbf{V}^{\top} \mathbf{e}_{i}\right\|^{2} \\
-& \leq \nu_{m}^{-1}\left\|\mathbf{V}^{\top}\right\|^{2}\left\|\mathbf{e}_{i}\right\|^{2} \\
-& \leq 1 /(C n)
-\end{aligned}
-$$
-since the norm of an orthonormal matrix $\mathbf{V}$ is one.
-
-Therefore for large asset universes, i.e., $n \rightarrow \infty$, factor-mimicking portfolios have a vanishing small percentage idiosyncratic variance. They "mimick" the true factor returns well. A different way to state the approximation property is that the idiosyncratic risk "diversifies away" as the number of assets becomes larger; and that there are "factor portfolios" with factor risk that is well above their idiosyncratic risk.
-
-\subsection*{7.2.2. Spectral Limit Behavior of the Spiked Covariance Model}
-
-The first asymptotic limits for PCA were concerned with large samples: $T \rightarrow \infty$ and $n$ constant. In this case, Anderson [1963] showed that the sample eigenvalues and eigenvectors converge to their population counterparts (see Appendix 7.6.2). For modern applications ${ }^{5}$, the case were both $T$ and $n$ go to infinity is more relevant, with $\gamma:=n / T \in[0, \infty)$. This limit is interesting in applications, because the number of observations is often of the same order of magnitude as the number of variables.
-
-\footnotetext{
-${ }^{5}$ In the statistical literature, the analysis of this model begins with Johnstone [2001]. In a seminal paper, Chamberlain and Rothschild [1983] impose similar conditions, but in an
-}
-
-Here, $\mathbf{r}_{t}$ is a sequence of iid rv taking values in $\mathbb{R}^{n}$. Assume that:
-1. The elements of $\mathbf{r}_{t}$ has finite fourth moments;
-2. There are $m$ constants $c_{i}$, with $0<c_{1}<c_{2}<\ldots<c_{m}$, such that as $n, T \rightarrow \infty$
-$$
-\begin{equation*}
-\frac{\gamma}{\lambda_{i}} \rightarrow c_{i}, \quad i=1, \ldots, m \tag{7.29}
-\end{equation*}
-$$
-3. The remaining $n-m$ eigenvalues are equal to one.
-
-Then the following holds [Shen et al., 2016, Johnstone and Paul, 2018]:
-1. When $\lambda_{i}>1+\sqrt{\gamma}$ :
-- Let $\hat{\lambda}_{i}$ be the $i$ th sample eigenvalue. Then
-$$
-\begin{equation*}
-\hat{\lambda}_{i} \rightarrow \mu_{i}:=\lambda_{i}\left(1+c_{i}\right) \quad \text { a.s. } \tag{7.30}
-\end{equation*}
-$$
-asymptotic setting, by considering an increasing sequence of asset universes (with $n \rightarrow \infty$ ) and risk models in which the diversifiable risk goes to zero.
-We have only touched briefly on the asymptotic limit of the spiked model in Section 7.2.2, to give a taste of what happens and give a basis for heuristics. Several papers have characterized the behavior the model. The first and seminal result is by Baik, Ben Arous and Péché [Baik et al., 2005], and the theorem is named BBP theorem after their initials. Several authors have generalized these results: Baik and Silverstein [2006], Paul [2017], Bai and Yao [2008], Mestre [2008], El Karoui [2008], Benaych-Georges and Nadakuditi [2011], Shen et al. [2016], Wang and Fan [2017]; a survey is Johnstone and Paul [2018]. General surveys on Random Matrix Theory, with a eye toward finance are Bun et al. [2017] and Bouchaud and Potters [2020]. The line of research concerned with properties of the spectrum in the regime " $p / n \gg 1$ " begins ${ }^{6}$ perhaps with Johnstone [2001].
-
-Because of Equation (7.29), in the limit $n, T \rightarrow \infty$, this is the same as
-$$
-\begin{equation*}
-\hat{\lambda}_{i} \rightarrow \lambda_{i}\left(1+\frac{\gamma}{\lambda_{i}}\right), \quad i=1, \ldots, m \tag{7.31}
-\end{equation*}
-$$
-
-The empirical eigenvalues are asymptotically unbiased for large values of $\lambda$; see Figure 7.4.
-- let $\mathbf{u}_{i}$ denote the population (ture) eigenvector and $\hat{\mathbf{U}}_{i}$ the sample eigenvector. Then, almost surely,
-$$
-\left|\left\langle\mathbf{u}_{i}, \hat{\mathbf{U}}_{i}\right\rangle\right| \rightarrow \begin{cases}\frac{1}{\sqrt{1+c_{i}}} & i \leq m  \tag{7.32}\\ O(1 / \sqrt{\gamma}) & i>m\end{cases}
-$$
-2. When $\lambda_{i} \leq 1+\sqrt{\gamma}$ :
-- $\hat{\lambda}_{i} \rightarrow(1+\sqrt{\gamma})^{2}$ in probability;
-- $\left|\left\langle u_{i}, \hat{u}_{i}\right\rangle\right| \rightarrow 0$ a.s.
-[WILEY EDITORS: place Figure 7.4 around here.]
-
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-238.jpg?height=792&width=800&top_left_y=447&top_left_x=611)
-
-Figure 7.4: Inflation of sample eigenvalues, Equation (7.30), for $\gamma=0.2$.
-
-Even if this strong result only applies to a single spiked model, it offers a few insights that can be verified experimentally. In addition, there are similar results that extend to the multiple spiked eigenvalue case, albeit with more assumptions. First, let us review the insights:
-- Under the spiked model assumptions, the spiked empirical eigenvalues are asymptotically upwardly biased. The bias is higher if $\lambda_{1}$ is closer to the ground eigenvalues; it becomes smaller when $\lambda_{1}$ gets bigger. This makes intuitive sense. When $\lambda_{1}$ is close to one, then the probability that the largest empirical eigenvalue is a "noisy" ground eigenvalue becomes non-negligible. This brings us to the second insight.
-
-- There is a critical threshold at $1+\sqrt{\gamma}$. For eigenvalues larger than $1+\sqrt{\gamma}$, it is possible to separate the largest eigenvalue from the spectrum. Indeed, the largest sample eigenvalue is further biased upward. The sample eigenvector is collinear with the population eigenvector. The larger the first eigenvalue, the better the eigenvector's collinearity.
-- Below the threshold, the largest eigenvalue, even if it is larger than 1 , cannot be easily be identified from data. The associated eigenvector contains no information about the population eigenvector.
-
-In practice, for many applications, the number of assets in a model is in the interval $\left(10^{3}, 10^{4}\right)$, and the number of observations ranges between 250 and 1,000 , so that $1+\sqrt{\gamma}$ ranges between 2 and 7 . This is a useful starting point to reason about thresholding eigenvalues, and their associated eigenvector.
-
-\subsection*{7.2.3. Optimal Shrinkage of Eigenvalues}
-
-We know that the empirical eigenvalues are biased. This means that, should we evaluate portfolios in the subspace spanned ${ }^{7}$ by the spike eigenvectors, the predicted variance of the portfolios will be biased upward by $\gamma$. Let $\mathbf{a} \in \mathbb{R}^{m}$ be a unit-norm vector, and let the portfolio be ${ }^{8} \mathbf{w}=\mathbf{U}_{m} \mathbf{a}$. Then $\hat{\sigma}_{\mathbf{w}}^{2}=\mathbf{a}^{\top} \hat{\boldsymbol{\Lambda}} \mathbf{a}=$ $\sum_{i=1}^{m} \hat{\lambda}_{i} a_{i}^{2}=\sum_{i=1}^{m} \lambda_{i} a_{i}^{2}+\gamma=\sigma_{\mathbf{w}}^{2}+\gamma$. If the portfolio is in the subspace orthogonal to the eigenfactors, then the portfolio variance estimate is also biased. We can repeat the calculations and use the BBP theorem to obtain $\hat{\sigma}_{\mathbf{w}}^{2}=\sigma_{\mathbf{w}}^{2}+2 \sqrt{\gamma}+\gamma$. A possible solution to the problem of eigenvalue estimation error is to apply a function to the sample eigenvalues. For example, from Equation (7.30), one could invert $\lambda_{i}$ from $\hat{\lambda}_{i}$ by applying the function
-$$
-\begin{equation*}
-\ell(\lambda)=\lambda-\gamma, \quad \lambda \geq 1+\sqrt{\gamma} \tag{7.33}
-\end{equation*}
-$$
-
-\footnotetext{
-${ }^{7}$ The subspace spanned by vectors $\mathbf{v}_{1}, \ldots, \mathbf{v}_{m}$ is the set of vectors that can be expressed as a linear combination of $\mathbf{v}_{i}$. The column subspace of a matrix $\mathbf{A} \in \mathbb{R}^{n \times m}$ is the subspace spanned by its column vectors, i.e., the set $\left\{\mathbf{A x}: \mathbf{x} \in \mathbb{R}^{m}\right\}$.
-${ }^{8}$ As in Subsection 7.1.1, $\mathbf{U}_{m}$ is the submatrix of $\mathbf{U}$ obtained by taking the first $m$ columns.
-}
-
-For large values of $\lambda$, this shrinkage function is an offset of the empirical eigenvalues, like the one we first saw in PPCA, Equation (7.18). When we apply this to a diagonal matrix $\mathbf{S}$ filled with eigenvalues, we use the notation $\ell(\mathbf{S})$, which returns a diagonal matrix with the corresponding diagonal terms shrinked using Equation (7.33). However, this is not necessarily the best choice. The choice of the loss function matters. Donoho et al. [2018] characterize the optimal shrinking of eigenvalues for a large number of loss types. Based on what we learned in Chapter 6, we focus only on a few: the operator norm $\|\mathbf{A}-\mathbf{B}\|$ and the operator norm on precision matrix $\left\|\mathbf{A}^{-1}-\mathbf{B}^{-1}\right\|$. For these two losses, the shrinkage formula Eq. (7.33) is optimal. For large values of $\lambda$, this formula simplifies to $\ell(\lambda) \simeq \lambda+1-\gamma$. We subtract a constant offset from each eigenvalue. Large eigenvalues are shrunk proportionally less than the small ones. This result is connected to what is perhaps the best-known covariance shrinkage method among practitioners: the Ledoit-Wolf shrinkage ${ }^{9}$. This method starts with finding a matrix of the form $\hat{\boldsymbol{\Sigma}}_{r}$ of the form
-$$
-\begin{equation*}
-\hat{\boldsymbol{\Sigma}}_{r}=\rho_{1} \tilde{\boldsymbol{\Sigma}}_{r}+\rho_{2} \mathbf{I}_{n} \tag{7.34}
-\end{equation*}
-$$
-
-and they identify $\rho_{1}$ and $\rho_{2}$ so that $\hat{\Sigma}_{r}$ minimizes the distance induced by the Frobenius norm from $\Sigma_{r}$ :
-$$
-\begin{align*}
-& \min \left\|\hat{\boldsymbol{\Sigma}}_{r}-\boldsymbol{\Sigma}_{r}\right\|_{F}  \tag{7.35}\\
-& \text { s.t. } \hat{\boldsymbol{\Sigma}}_{r}=\rho_{1} \tilde{\boldsymbol{\Sigma}}_{r}+\rho_{2} \mathbf{I}_{n}
-\end{align*}
-$$
-
-\footnotetext{
-${ }^{9}$ From the very first result on biased asymptotic estimators, a reader may wonder about shrinkage methods. There is an extensive literature on factor model shrinkage. Standard references are Ledoit and Wolf [2003b,a, 2004] on linear shrinkage, and more recent work on nonlinear shrinkage by the same authors [Ledoit and Wolf, 2012, 2015, 2020]. The paper by Donoho et al. [2018] covers optimal shrinkage functions for a large set of loss functions.
-}
-
-The space of $n \times n$ matrices is a Hilbert space with scalar product $\langle\mathbf{A}, \mathbf{B}\rangle:=$ trace $\left(\mathbf{A B}^{\boldsymbol{\top}}\right)$. The induced norm $\sqrt{\langle\mathbf{A}, \mathbf{A}\rangle}$ is the Frobenius norm. This is then just a special case of the well-known problem of minimum distance of a subspace from a point in a Hilbert space (Luenberger [1969], Sec 3.3). They assume iid returns, finite fourth moments, and an asymptotic regime in which $n$ is constant and $T \rightarrow \infty$. They find that the optimal solution is of the form
-$$
-\begin{equation*}
-\hat{\boldsymbol{\Sigma}}_{r}=\left(1-\frac{\kappa}{T}\right) \tilde{\boldsymbol{\Sigma}}_{r}+\frac{\kappa}{T} \mathbf{I}_{n} \tag{7.36}
-\end{equation*}
-$$
-
-This solution has many interpretations, aside from the geometric one that follows from the solution to Problem (7.35). While these interpretations may be of independent interest, I will devote some time to justify why this approach is not recommended to estimate returns with a spiked covariance. A first issue is using the Frobenius-induced distance is generally not helping to identify the structure of the model, as shown in the previous chapter. Secondly, because the regime $n$ fixed, $T$ diverging is not relevant to applications in which $n>T$ or $n \asymp T$. Thirdly, because the condition that the estimate lie in the subspace spanned by $\tilde{\boldsymbol{\Sigma}}_{r}$ and $I_{n}$ may be overly restrictive. Lastly, because the eigenvalues of the target matrix are of the form $\lambda_{i}-\kappa T^{-1}\left(\lambda_{i}-1\right)$. For the leading eigenvalues, this shrinkage does not match the optimal asymptotic shrinkage of the spiked covariance model.
-
-\subsection*{7.2.4. Eigenvalues: Experiments Vs. Theory}
-
-We now compare these theoretical results to simulations. We use the same parameters we used for the Probabilistic PCA in Section 7.1.2: 10 factors with standard deviations ranging between 1 and 10, uniformly spaced; unit idiosyncratic standard deviations; 250 periods, and either 1000 or 3000 assets. In addition to the case of normal returns, I also consider the case of heavytailed returns. Specifically both factor returns and idiosyncratic returns are t-distributed with five degrees of freedom. This choice is meant to simulate returns that have four finite moments, which is a reasonable assumption for
-daily asset returns.
-
-We simulate 50 instances of each factor model. For each model, we compute the first ten empirical top eigenvalues, and we shrink them using Formula (7.33) for $\ell(\hat{\lambda})$. The simulation (Figure 7.5) shows that the shrinkage function $\ell$ works well for normally distributed returns, but not for heavy-tailed returns. 
-
-
-[WILEY EDITORS: place Figure 7.5 around here.]
-
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-242.jpg?height=1134&width=1289&top_left_y=542&top_left_x=364)
-
-Figure 7.5: (a): 1000 assets, normally distributed returns; (b) 1000 assets, t-distributed returns; (c): 3000 assets, normally distributed returns; (d) 3000 assets, t-distributed returns. The $x$-axis denotes the population eigenvalues, while the $y$-axis denotes the shrinked empirical eigenvalues. The dashed line is the line $y=x$.
-
-In this case, it appears that a better shrinkage approach is to scale the eigenvalues by a common factor. This is a different shrinkage than the one of Equations (7.18) and (7.33), which consistent in a constant offsetting term. Combining the empirical observations from simulated data, and theoretical results, it seems at least reasonable to consider a linear shrinkage
-$$
-\begin{aligned}
-\ell(\lambda) & =\kappa_{1} \lambda-\kappa_{2} \\
-\kappa_{2} & \geq \lambda_{\min } \\
-\kappa_{1} & \in(0,1)
-\end{aligned}
-$$
-when identifying a model.
-
-\subsection*{7.2.5. Choosing the Number of Factors}
-
-In the example above, we assumed that the number of factors was known in advance. This is not the case in applications. An important component of the model definition procedure is the determination of the number of factors ${ }^{10}$. There are some criteria motivated by theoretical models, and others that are the outcome of experiments and trial-and-error by generations of practitioners. The theory-based models themselves prescribe different numbers of factors, so we should premise this section with a few considerations. First, finding the right factors matters more than finding their exact right number. By "right", I mean of course the factor loadings with the best "performance", and by performance, I mean one of many metrics introduced in chapter 6 . Because there are many metrics, many of which not even considered in the theoretical treatments on the number of factors, there is no one-size-fits-all criterion. Second consideration: telling the exact number of factor in practice is either very easy or hopelessly hard. Under the assumptions of pervasive factors, you won't need complex criteria: there is a wide gap between the smallest factor eigenvalue and the largest idiosyncratic one. When the assumption does not hold, eigenvalues will decrease gradually, and a hard rule is unlikely to choose the exact threshold. A final consideration, which is both grounded in theory and in practice is that, one should err on the side of selecting more factors, rather then fewer. The cost of selecting too few factors is that, in portfolio optimization, we will choose portfolios that underestimate their true risk, which can result in steep degradation of the Sharpe Ratio. This is covered in depth in Chapter 10. The cost of choosing too many factors is a slight decrease in the Sharpe Ratio.
-
-\footnotetext{
-${ }^{10}$ For a relatively old survey on methods to select the number of factors, see Ferré [1995]; a more recent survey is in Fan et al. [2020]. The scree plot method is due to Cattel [1966], and its logarithmic version by Farmer [1971]. The scree is the debris that form at the base of a cliff.
-}
-
-After these qualifications, let us review the most common methods.
-- Threshold-based methods. For matrices with ground eigenvalues equal to 1 , the results of Section 7.2 .2 suggest that we should select as factor eigenvalues those that exceed the threshold $1+\sqrt{\gamma}$, i.e.
-$$
-\begin{equation*}
-m=\max \left\{k \mid \hat{\lambda}_{k} \geq 1+\sqrt{\gamma}\right\} \tag{7.37}
-\end{equation*}
-$$
-
-An older method is the scree plot. This is the best-known method. It consists of plotting the eigenvalues against their rank. The largest eigenvalues dominate and decrease rapidly, to a value where the eigenvalue are small and decrease gradually, usually almost linearly. The method consists of choosing the last eigenvalue preceding this group. A variant of this method plots the logarithm of the eigenvalues.
-- Maximum Change Points. Associated to these two methods, are two additional ones that select the number of factors based on the largest gap between consecutive factor eigenvalues, or consecutive $\log$ (eigenvalues):
-$$
-\begin{align*}
-& m=\arg \max _{2 \leq k \leq k_{\max }}\left(\hat{\lambda}_{k-1}-\hat{\lambda}_{k}\right)  \tag{7.38}\\
-& m=\arg \max _{2 \leq k \leq k_{\max }}\left(\log \hat{\lambda}_{k-1}-\log \hat{\lambda}_{k}\right)
-\end{align*}
-$$
-
-Where $k_{\text {max }}$ is a threshold chosen iteratively [Onatski, 2010].
-- Penalty-Based Methods. We began the chapter with the problem of minimizing the square residual error, Equation (7.2). We can select the number of factors by adding a penalty term, and by making $m$ a decision variable
-$$
-\begin{gather*}
-\min _{k, \operatorname{rank}(\hat{\mathbf{R}}) \leq k}\|\mathbf{R}-\hat{\mathbf{R}}\|^{2}+k f(n, T)  \tag{7.39}\\
-f(n, T)=\frac{n+T}{n T} \log \left(\frac{n T}{n+T}\right) \tag{7.40}
-\end{gather*}
-$$
-
-\section*{7.3. Real-Life Stylized Behavior of PCA}
-
-We now explore a real-life data set with the goal of comparing the observed behavior of principal components and eigenvalues to the ideal spiked covariance model. We employ daily stock total returns belonging to the Russell 3000 index for the period 2007-2017. Assets that are included in this index must satisfy some essential requirements. As of 2022, on a designated day in May ("rank day"), Russell evaluates eligibility for inclusion in its indices based on several criteria. Among them, the company must be U.S.-based (no ADR/GDRs
-allowed ${ }^{11}$ ); the stock price must exceed $\$ 1$; the market capitalization must exceed $\$ 30 \mathrm{~mm}$; and the percentage of float (shares traded on exchange) must exceed $5 \%$ of the total shares issued. In addition, some governance requirements and corporate structure must be met; for example ETFs, trusts, closed-end funds investment companies and REITs are excluded. Out of this eligible set, Russell assigns to R3000 the first 3,000 assets by market cap, and effectively changes the composition of the index on the fourth Friday of June. These criteria ensure that the asset characteristics are sufficiently homogeneous (based on geography, revenue source and corporate governance) and that the returns can be reliably computed based on daily closing prices (based on stock price and market capitalization ${ }^{12}$ ).
-
-\footnotetext{
-${ }^{11}$ An American Depositary Receipt (ADR) is a foreign company that is listed on a foreign stock exchange, which also offers shares in U.S. exchanges. A Global Depositary Receipt (GDR) is similar to an ADR, but is offered on exchanges in more than one country outside of the primary market.
-${ }^{12}$ Note, however, that Russell does not screen stocks based on trading volume, and that the smaller-capitalization companies in R3000 and R2000 may not be sufficiently liquid to be traded in large sizes.
-}
-
-\subsection*{7.3.1. Concentration of Eigenvalues}
-
-For our exploration we consider Principal Components based on three types of returns. First, stock total returns. This is the simplest approach. Secondly, we normalize returns by dividing them by their predicted idiosyncratic volatilities. The benefit of this approach is that it should make the spectrum closer to the assumptions we made in the previous sections: the idiosyncratic volatilities of the normalized empirical covariance matrix are all equal to one, and the spike volatilities should be greater than one. Lastly, we normalize returns by their predicted total volatilities. The rationale for this choice is that we study the properties of the empirical correlation matrix. It is at least reasonable to hypothesize that the correlation matrix has different properties than the covariance matrix. Correlations may be more stable than covariances; for example, this is the modeling assumption made in Bollerslev [1990], and in Barra's and Axioma's U.S. statistical models. Our procedure is relatively simple. We use one full year of return data, for eight non-overlapping years. When we normalize by idiosyncratic volatilities, we use the data provided by Axioma's US model AXUS Short Horizon. I take this shortcut for one simple reason: I introduce a self-contained idio vol estimation process later in the chapter, but did not wait any further to show some empirical data. I will show later that the statistical model idio vols are indeed quite close to those of a commercial model, so that this illustrative example is in fact quite close to a self-contained analysis. The raw returns are winsorized at daily returns of $(-90 \%,+100 \%)$, and the z -scored returns at returns of $(-10,+10)$, i.e., plus or minus ten standard deviations. Figure 7.6 shows the variances of the first forty factors, normalized by the variance of the first factor (to make them comparable). Two features are conspicuous. The first one is that there is no obvious gap between variances. The second is that there is a consistent ranking between the spectra of the three covariance matrices. The plot shows the ratio of the variance of lower-order factors to that of the first factor, and this value is smallest for the return/idio vol covariance matrix, followed by the return/total vol covariance matrix, and lastly by the covariance matrix of total returns.
-
-[WILEY EDITORS: place Figure 7.6 around here.] 
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-248.jpg?height=513&width=1215&top_left_y=454&top_left_x=409)
-
-Figure 7.6: Variances of the eigenfactors (normalized to the variance of the first eigenfactor) for the first forty factors. Note that the scale of the $y$ axis is logarithmic.
-
-This suggests that the first few eigenfactors explain a larger percentage of total variance of the associated covariance matrix. This is confirmed by Figure 7.7. For example,say that we would like to have a number of factors sufficient to capture $50 \%$ of the variance of asset returns. For the period ending on July 1, 2008, we need 30 factors for the raw covariance matrix, 20 factors for the z -scored returns, using total volatility, and only 10 factors for the z-scored returns, using idiosyncratic volatility. This in itself does not mean that this choice is preferable, because the performance of a risk model has no direct relationship with this metric. Nonetheless, it suggests that, in this specific instance, a model built on a transformed sequence of returns is more parsimonious.
-[WILEY EDITORS: place Figure 7.7 around here.]
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-249.jpg?height=529&width=1218&top_left_y=451&top_left_x=405)
-
-Figure 7.7: Cumulative percentage of variance described by the first $n$ factors, for difference covariance matrices.
-
-\subsection*{7.3.2. Controlling the Turnover of Eigenvectors}
-
-So far, we have focused on the properties of the eigenvalues. Eigenfactors exhibit a distinctive behaviour as well. One important property of eigenfactors is their turnover. The turnover for two consecutive portfolios $\mathbf{v}(t), \mathbf{v}(t+1)$ is usually measured as the gross market value traded, as a percentage of the gross market value of the portfolio: $\operatorname{turnover}_{1}(\mathbf{v}(t)):=\left(\sum_{i}\left|v_{i}(t)-v_{i}(t-1)\right|\right) / \sum_{j}\left|v_{j}(t-1)\right|$. An alternative is to use as definition the square of the gross notional:
-$$
-\begin{equation*}
-\operatorname{turnover}_{2}(\mathbf{v}(t)):=\frac{\sum_{i}\left(v_{i}(t)-v_{i}(t-1)\right)^{2}}{\sum_{j} v_{j}^{2}(t-1)} \tag{7.41}
-\end{equation*}
-$$
-
-There are good reasons for this. The first one is that the squared GMV is a fairly good approximation to the transaction costs associated to trading the factor portfolio. A second one is analytical tractability and an associated geometric intuition. For eigenportfolios, recall that $\|\mathbf{v}(t)\|=1$, and that the numerator $\|\mathbf{v}(t)-\mathbf{v}(t-1)\|^{2}$ can be rewritten as $2\left(1-\mathbf{v}^{\top}(t) \mathbf{v}(t-1)\right)$. The quadratic turnover is therefore related to the cosine similarity. Low-turnover eigenportfolios have high cosine similarity.
-$$
-\begin{equation*}
-\operatorname{turnover}_{2}(\mathbf{v}(t))=2\left[1-\left|S_{C}(\mathbf{v}(t), \mathbf{v}(t-1))\right|\right] \tag{7.42}
-\end{equation*}
-$$
-
-In the equation above we use the absolute value of $S_{C}$ because the eigenfactors are identified modulo the sign of the vector. In other terms, if $S_{C}(\mathbf{v}(t), \mathbf{v}(t-1))< 0$, we can always flip the sign of $\mathbf{v}(t)$ in order to have a lower-turnover pair of eigenfactors.
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-250.jpg?height=1594&width=1256&top_left_y=645&top_left_x=388)
-
-Figure 7.8: Eigenfactor turnover for different covariance matrices. Top: total returns; Middle: total returns/total vol; Bottom: total returns/idio vol.
-[WILEY EDITORS: place Figure 7.8 around here.]
-[WILEY EDITORS: place Figure 7.9 around here.]
-In Figure 7.8 we show the absolute values of the cosine distances over time for the first eight eigenfactors of our three sequences of covariance matrices computed on raw total returns, raw returns normalized by total volatilities, and raw returns normalized by idio volatilities. In Figure 7.9 we show the total distance between subspaces spanned by the first eigenfactors in successive periods; and in Figure 7.10 we show the cumulative returns in the three approaches. The covariance matrix on a given date is computed using the trailing 251 trading days of returns. The number of assets from one day to the next can change slightly as well, because the universe is not fixed. The charts have qualitatively similar behavior. The first eigenfactor, is associated to an eigenvalue that has a large gap from the second largest eigenvalue (see Figure 7.6). As a result, the PCA procedure has no issue in identifying it and its weights are very stable throughout the estimation period. This is essentially a "market" portfolio. The turnover has a more interesting structure for higher-order eigenportfolio. Consider the second eigenportfolio of the (non-normalized) total returns. There are occasional spikes; for example there are large spikes occurring on October 9, 2009 and November 20, 2009. The second one is so big that the eigenfactors on consecutive dates have a turnover of almost $200 \%$. What is even more puzzling is that immediately before and immediately after the portfolio doesn't turn over at all: it changes dramatically on a single day, to stabilize shortly afterwards. And this behavior qualitatively repeats across covariance matrices and eigenfactors: higher-order eigenfactors transition more often and with larger spikes, but transitions are still relatively rare: even eigenfactor 8 has a cosine similarity below $1 / 2$ only in $6 \%$ of the cases. Another qualitative
-phenomenon is that, as for the case of eigenvalues, standardizing returns seems to reduce turnover incidence and severity; more so for idio vol normalization. For example, in the latter case, eigenfactor 8 has a cosine similarity below $1 / 2$ only in $1.5 \%$ of the cases. How to explain this phenomenon? The cause of the jumps is a direct consequence of the lack of eigenvalue separation. When eigenvalues are close, the addition and removal of an observation of cross-sectional returns, as well as the addition or removal of one or two assets in the estimation universe, is sufficient to affect the numerical solution of the PCA. The distance between the eigenvalues (i.e., variances of the eigenfactors) is within the change of these same eigenvalues from one period to the next due to data updates. Even if the eigenfactors change, the subspace spanned by these eigenfactors may be in fact stable. In Figure 7.8, we show the subspace distance for the three cases above ${ }^{13}$ between the column subspaces in consecutive periods. The distances are very small (the largest being just $10^{-5}$, for total return factors), and are smaller for idio vol z-scored returns. This does confirm yet again that statistical models built on normalized returns sequence are more stable, suggesting that the eigenvalues of such models are better separated from each other.
-[WILEY EDITORS: place Figure 7.10 around here.]
-Aside from the quality of the PCA for different choices of covariance matrices, we are faced with an inescapable issue in statistical models. Except for a few high-order factors and variances, most factors in statistical models suffer from a kind of indeterminacy. In consecutive periods, PCA may give us very different loadings, even though the subspaces spanned by these factors are very close to each other. Is this a matter of concern? For most applications, it is not. The reason is that, even if loadings can change a lot from one period to the
-
-\footnotetext{
-${ }^{13}$ For a definition of subspace similarity, see Exercise 7.11.
-}
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-253.jpg?height=353&width=1243&top_left_y=672&top_left_x=395)
-
-Figure 7.9: Distance between column subspaces of the first eight eigenfactors in consecutive periods. The eigenfactors are generated by PCAs on total returns, total returns/total vol, and total return/idio vol.
-![](https://cdn.mathpix.com/cropped/2024_12_08_feaf5e86753e6d77065cg-253.jpg?height=378&width=1245&top_left_y=1676&top_left_x=391)
-
-Figure 7.10: Factor returns for the first four eigenvectors. The eigenfactors are generated by PCAs on total returns, total returns/total vol, and total return/idio vol.
-next, the covariance matrix does not change ${ }^{14}$. This means that a portfolio's volatility prediction does not depend on the orientation of the factor loadings, and therefore that any portfolio optimization problem is also not affected by the choice of loadings, so long as its formulation includes constraints or objectivefunction penalty terms on the portfolio volatility, or combined factor volatility of the degenerate factors (i.e., factors with identical volatilities). In integrated fundamental/statistical models, a topic we will cover in a later chapter, the indeterminacy of loadings is not affecting the final result, namely the volatility predictions and the performance characteristics of the fundamental factors. In Table 7.1 I summarize the relevance to specific applications.
-
-\footnotetext{
-${ }^{14}$ If you are not convinced, or this statement does not seem obvious, this is a good time to solve Exercise 7.13.
-}
-
-Table 7.1: Summary of Impact of High Factor Turnover.
-\begin{tabular}{ll}
-\hline Use & Impact of High Factor Turnover \\
-\hline Volatility Estimation & Not important \\
-Portfolio Optimization/Hedging & Not important \\
-Integrated Stat./Fund. Models & Not Important \\
-Performance Attribution & Very High \\
-\hline
-\end{tabular}
-
-Essentially only single-factor Performance Attribution is made irrelevant by eigenvalue quasi-degeneracy. However, single-factor attribution depends on factor turnover. Since model prediction is unaffected by rotations, we can always perform a rotation that minimize distance between loadings in consecutive periods; this is a zero-cost operation. In other words, if we have a sequence of loading matrices $\mathbf{B}_{t}$, we aim for new "rotated" loadings $\tilde{\mathbf{B}}_{t}$ that have low
-turnover ${ }^{15}$ :
-$$
-\begin{gather*}
-\tilde{\mathbf{B}}_{t+1}=\arg \min \left\|\mathbf{B}_{t}-\mathbf{Y}\right\|_{F}^{2}  \tag{7.43}\\
-\text { s.t. } \mathbf{Y}=\mathbf{B}_{t+1} \mathbf{X} \\
-\mathbf{X}^{\top} \mathbf{X}=\mathbf{I}_{m} \\
-\mathbf{X} \in \mathbb{R}^{m \times m}
-\end{gather*}
-$$
-
-First, we prove that the objective is equivalent to maximizing $\left\langle\mathbf{A}, \mathbf{X}^{\top}\right\rangle$, with $\mathbf{A}:=\mathbf{B}_{t}^{\top} \mathbf{B}_{t+1}$. This follows from the sequence of identities
-$$
-\begin{aligned}
-\left\|\mathbf{B}_{t}-\mathbf{B}_{t+1} \mathbf{X}\right\|_{F}^{2}= & \operatorname{trace}\left(\left(\mathbf{B}_{t}^{\top}-\left(\mathbf{B}_{t+1} \mathbf{X}\right)^{\top}\right)\left(\mathbf{B}_{t}-\mathbf{B}_{t+1} \mathbf{X}\right)\right) \\
-= & \operatorname{trace}\left(\mathbf{B}_{t}^{\top} \mathbf{B}_{t}\right)+\operatorname{trace}\left(\left(\mathbf{B}_{t+1} \mathbf{X}\right)^{\top}\left(\mathbf{B}_{t+1} \mathbf{X}\right)\right) \\
-& -\operatorname{trace}\left(\mathbf{B}_{t}^{\top} \mathbf{B}_{t+1} \mathbf{X}\right)-\operatorname{trace}\left(\mathbf{X}^{\top} \mathbf{B}_{t+1}^{\top} \mathbf{B}_{t}\right) \\
-\equiv & -\operatorname{trace}(\mathbf{A X})
-\end{aligned}
-$$
-
-The last equality follows from the orthonormality of $\mathbf{B}_{t}, \mathbf{B}_{t+1}$. Let the SVD of $\mathbf{A}$ be $\mathbf{A}=\mathbf{U S V}^{\top}$. We prove that a solution is given by $\mathbf{X}^{\star}=\mathbf{V U}^{\top}$. let $\mathbf{A}=\mathbf{U S V}^{\boldsymbol{\top}}$ and $\mathbf{X}=\mathbf{V Y U}^{\top}$ for some $\mathbf{Y}$. From orthonormality of $\mathbf{X}$ follows directly $\mathbf{Y}^{\top} \mathbf{Y}=$ I. We replace these expressions in the objective function: max trace $(\mathbf{A X})=$ max trace (SY). Now for the last step: unitary matrices have all eigenvalues equal to ones and orthogonal eigenvectors $\mathbf{a}_{i}$. The eigendecomposition of $\mathbf{Y}$ is $\mathbf{Y}=\sum_{i} \mathbf{a}_{i} \mathbf{a}_{i}^{\top}$ and the objective function is trace $(\mathbf{S Y})=\sum_{i} s_{i}\left[\mathbf{a}_{i} \mathbf{a}_{i}^{\top}\right]_{i, i}$, but this is maximized when $\mathbf{a}_{i}=\mathbf{e}_{i}$, and $\mathbf{Y}=\mathbf{I}$, so that the solution is $\mathbf{X}=\mathbf{V} \mathbf{U}^{\top}$.
-
-\footnotetext{
-${ }^{15}$ Historical note: this problem is closely related to Wahba's Problem [Wahba, 1965].
-}
-
-\section*{7.4. Interpreting Principal Components}
-
-One criticism that is often leveled against Principal Component Analysis is that its loadings are hard to interpret. The goal of this chapter is to partially dispel this myth. The output of a PCA can be interpreted, and in fact sometimes it provides additional non-trivial perspectives for the user.
-
-\subsection*{7.4.1. The Clustering View}
-
-The first avenue to interpretation is to do no transformation at all. The principal components are uniquely determined up to a change of sign: if $\mathbf{u}$ is an eigenvector associated to eigenvalue $\lambda$, so is $-\mathbf{u}$. We show that their loadings can be interpreted as a clustering membership index [Ding and He, 2004]. In order to make the connection between clustering and PCA, we first introduce the $K$ means approach. We partition our $n$ assets into $K$ clusters, each characterized by a set membership $C_{k}$ and centroids $\mathbf{m}_{k}:=\sum_{i \in C_{k}} \mathbf{r}^{i} /\left|C_{k}\right|$. The number of clusters $K$ is set in advance. The cluster membership is found by minimizing the sum of squared distances from the centroids:
-$$
-\begin{array}{r}
-\min \sum_{k=1}^{K} \sum_{i \in C_{k}}\left\|\mathbf{r}^{i}-\mathbf{m}_{k}\right\|^{2} \\
-\text { s.t. } \mathbf{m}_{k}:=\sum_{i \in C_{k}} \mathbf{r}^{i} /\left|C_{k}\right| \\
-C_{i} \cap C_{j}=\varnothing, i \neq j \\
-\bigcup_{i} C_{i}=\{1, \ldots, N\} \tag{7.47}
-\end{array}
-$$
-
-The objective function can be rewritten as
-$$
-\begin{equation*}
-\sum_{i}\left\|\mathbf{r}^{i}\right\|^{2}-\sum_{k=1}^{K}\left|C_{k}\right|^{-1} \sum_{j, \ell \in C_{k}}\left(\mathbf{r}^{j}\right)^{\top} \mathbf{r}^{\ell} \tag{7.48}
-\end{equation*}
-$$
-
-The first sum is a constant and does not affect the optimization problem. We could represent cluster membership algebraically. Let $\mathbf{h}_{k} \in \mathbb{R}^{n}$ and define $\left[\mathbf{h}_{k}\right]_{i}=1 / \sqrt{\left|C_{k}\right|}$ if asset $i$ is in cluster $C_{k}$, zero otherwise. Because an asset needs to belong to exactly one cluster, there is a constraint on the vectors: $\sum_{k} \sqrt{\left|C_{k}\right|} \mathbf{h}_{k}=\mathbf{1}$, where $\mathbf{1} \in \mathbb{R}^{n}$ is a vector of ones. Define $\mathbf{H}=\left(\mathbf{h}_{1}, \ldots, \mathbf{h}_{K}\right) \in$ $\mathbb{R}^{n \times K}$. Let $\mathbf{g}=\left(\sqrt{\left|C_{1}\right|}, \ldots, \sqrt{\left|C_{K}\right|}\right)$. The condition that each asset belongs to precisely one cluster can be expressed as $\mathbf{H g}=\mathbf{1}$. Therefore to solve a $K$-clustering problem, we need to solve
-$$
-\begin{align*}
-& \max \operatorname{trace}\left(\mathbf{H}^{\top} \mathbf{R} \mathbf{R}^{\top} \mathbf{H}\right)  \tag{7.49}\\
-& \text { s.t. }[\mathbf{H}]_{i, k} \in\left\{0,\left|C_{k}\right|^{-1 / 2}\right\} \tag{7.50}
-\end{align*}
-$$
-
-Notice that the columns of $\mathbf{H}$ have unit norm and are orthogonal. Then it is natural to relax the discrete requirements on $\mathbf{H}$ and to solve
-$$
-\begin{gather*}
-\max \operatorname{trace}\left(\mathbf{H}^{\top} \mathbf{R} \mathbf{R}^{\top} \mathbf{H}\right)  \tag{7.51}\\
-\mathbf{H}^{\top} \mathbf{H}=\mathbf{I}_{K} \tag{7.52}
-\end{gather*}
-$$
-
-This is the same formulation as the optimization version of the uncentered PCA, Equation (7.11). The interpretation of the loadings then can be one of approximate cluster membership. The simplest case is when we cluster on the first principal component. We can separate the two clusters based on some clustering method on the loadings; oftentimes, a simple inspection of the
-loadings distribution will suggest an appropriate cut-off point. When inspecting multiple eigenvectors, a multivariate clustering algorithm will help identify groups.
-
-\subsection*{7.4.2. The Regression View}
-
-Another way to interpret the loadings of a statistical model is to represent them as sums of vectors, whose weights are intuitive. Qualitatively, we proceed as follows. First, assemble meaningful stock characteristics for a given date. We denote the matrix of characteristics $\mathbf{G} \in \mathbb{R}^{n \times p}$, where each characteristic is a column of the matrix $\mathbf{G}$. We denote $\mathbf{B}$ the matrix of loadings from the statistical model. Now, regress $[\mathbf{B}]_{\cdot, i}$ on the columns of $\mathbf{G}$, and denote the regression coefficients $\boldsymbol{\beta}^{i} \in \mathbb{R}^{p}$. In formulas, $[\mathbf{B}]_{\cdot, i}=\mathbf{G} \boldsymbol{\beta}^{(i)}+\boldsymbol{\eta}$, where $\boldsymbol{\eta} \in \mathbb{R}^{n}$ is a vector orthogonal to the column subspace of $\mathbf{G}$. If we are not using a very wide set of characteristics, then the regression weights help interpret the statistical loadings. The approach is, of course, not restricted to statistical models: we could apply this regression approach to any pair of risk models, to interpret one based on information contained in the other.
-
-As a (very simplified) example, we consider a model built on US asset returns normalized by idio vols, for the date of July 6, 2017. In order to gain intuition aboout the eigenfactors, we regress them against style loadings only; we use Axioma AXUS4 as source of these loadings. In Tables 7.2 and 7.3, we report only the most significant loadings.
-[WILEY EDITORS: place Table 7.2 around here.]
-[WILEY EDITORS: place Table 7.3 around here.]
-
-
-Table 7.2: Regression coefficients for the first principal component.
-\begin{tabular}{lrrrr}
-\hline term & estimate & std.error & t-statistic & $p$ value \\
-\hline Market Intercept & $1.7 \mathrm{E}-02$ & $1.6 \mathrm{E}-04$ & $1.1 \mathrm{E}+02$ & $0.0 \mathrm{E}+00$ \\
-Volatility & $-2.6 \mathrm{E}-03$ & $1.9 \mathrm{E}-04$ & $-1.4 \mathrm{E}+01$ & $8.1 \mathrm{E}-43$ \\
-Short-Term Momentum & $1.2 \mathrm{E}-03$ & $1.6 \mathrm{E}-04$ & $7.6 \mathrm{E}+00$ & $2.8 \mathrm{E}-14$ \\
-Earnings Yield & $7.7 \mathrm{E}-04$ & $1.9 \mathrm{E}-04$ & $4.1 \mathrm{E}+00$ & $3.4 \mathrm{E}-05$ \\
-\hline
-\end{tabular}
-
-Table 7.3: Regression coefficients for the second principal component.
-\begin{tabular}{lrrrr}
-\hline term & estimate & std.error & t-statistic & p value \\
-\hline Dividend Yield & $4.2 \mathrm{E}-03$ & $3.3 \mathrm{E}-04$ & $1.3 \mathrm{E}+01$ & $8.7 \mathrm{E}-36$ \\
-Short-Term Momentum & $-3.4 \mathrm{E}-03$ & $3.3 \mathrm{E}-04$ & $-1.0 \mathrm{E}+01$ & $1.1 \mathrm{E}-24$ \\
-Size & $3.3 \mathrm{E}-03$ & $3.3 \mathrm{E}-04$ & $1.0 \mathrm{E}+01$ & $1.2 \mathrm{E}-23$ \\
-\hline
-\end{tabular}
-
-The first principal component is overwhelmingly explained by the market factor, i.e., the factor of identical loadings all equal to ones. This is usually the case in statistical models. Regarding the second principal component, the most important explanatory variables are a value factor (Dividend Yield), Size, and (with negative coefficient) Short-Term Momentum. The opposite signs for value and momentum are consistent with experience, since the returns of these factors are usually negatively correlated. Size and Dividend Yield loadings are usually positively correlated, the reason being that large caps are likely to pay higher dividends-or dividends at all-than small caps. For this specific date, the correlation is 0.32 . The first factor can be interpreted as a "risk-on" factor, whereas the second factor can be interpreted as a defensive, or "risk-off" factor.
-
-\section*{7.5. Statistical Model Estimation in Practice}
-
-So far we have only presented the theory of statistical factor models. The next two sections discuss the issues related to its implementation. Principal Component Analysis is usually applied to matrices (or panels) that do not have a time dimension. In contrast, we deal with temporal data; and we cannot assume that these data are drawn in each period from the same probability distribution. We will employ the PCA and SVD locally, i.e., on intervals in which the data can be presumed to be approximately stationary. We present two approaches that are used by practitioners. Without any aspiration to establish a winner, we compare their performance on historical US equity data.
-
-\subsection*{7.5.1. Weighted and Two-Stage PCA}
-
-A recurring theme in factor estimation is that weighting observations differently helps. Observations in the distant past are less informative than recent ones; observed returns of stocks with high idiosyncratic risk should be downweighted, compared to those of low-idio stocks. There are therefore two basic transformations that we can apply to the raw return matrix. The first one is in the time dimension. We replace the empirical covariance matrix in Equation (7.9) with a weighted one. Let $\mathbf{W}_{\tau} \in \mathbb{R}^{T \times T}$ a diagonal matrix with positive diagonal elements. The diagonal terms could be, for example, exponential weights $\left[\mathbf{W}_{\tau}\right]_{t, t}=\kappa \exp (-t / \tau)$; the positive constant $\kappa$ is such that the diagonal terms
-sum to $T$. Then the time-weighted empirical uncentered covariance matrix is
-$$
-\begin{equation*}
-\hat{\boldsymbol{\Sigma}}=\frac{1}{T} \mathbf{R} \mathbf{W}_{\tau}^{2} \mathbf{R}^{\top} \tag{7.53}
-\end{equation*}
-$$
-
-This is the same as first transforming the returns $\tilde{\mathbf{R}}=\mathbf{R W}$, and then computing the empirical covariance matrix, Eq. (7.9), on the transformed returns. In practice, we would not compute the covariance matrix and then perform the PCA, but rather perform the SVD on $\tilde{\mathbf{R}}$, which would be computationally less expensive and give us the same results.
-
-A different type of transformation is cross-sectional reweighting. In Chapter 6 we saw that it is optimal to scale returns by the idiosyncratic volatility, or at least a proxy. We propose a two-step procedure ${ }^{16}$. First, perform an SVD (possibly, time-weighted) on the returns; $\mathbf{R}=\mathbf{U S V}^{\top}$. Take the first $p$ components (say, $p=5)$ and compute the idiosyncratic returns $\mathbf{E}=\mathbf{R}-\mathbf{U}_{p} S_{p} \mathbf{V}_{p}^{\top}$; a case we also consider is $p=0$, in which case $\mathbf{E}=\mathbf{R}$. Define the proxy idiosyncratic variances: $\sigma_{i}^{2}=T^{-1} \sum_{t}[\mathbf{E}]_{i, t}^{2}$, and $\mathbf{W}_{\boldsymbol{\sigma}}:=\operatorname{diag}\left(\sigma_{1}^{-1}, \ldots, \sigma_{n}^{-1}\right)$. The asset-level reweighed covariance matrix is
-$$
-\begin{equation*}
-\hat{\boldsymbol{\Sigma}}=\mathbf{W}_{\sigma} \mathbf{R R}^{\top} \mathbf{W}_{\sigma} \tag{7.54}
-\end{equation*}
-$$
-\footnotetext{
-${ }^{16}$ The two-step procedure for reweighting the PCA is relatively common; Boivin and Ng [2006] reweights using idio volatilities, and Bollerslev [1990] using total volatilities.
-}
-One can perform then a second-stage PCA and a factor model on the reweighted covariance matrix: $\hat{\boldsymbol{\Sigma}} \sim \mathbf{U}_{m} \mathbf{S}_{m}^{2} \mathbf{U}_{m}^{\top}+\mathbf{I}$. Finally, pre- and post-multiply by the idiosyncratic weighting matrices $\mathbf{W}_{\sigma}^{-1}$.
-
-We employ the steps above in the following process. We use two time-series reweightings: one with half-life $\tau_{f}$ ( $f$ is for "fast") and $\tau_{s}$ ( $s$ is for "slow"). An empirical insight in asset return data is that volatilities and correlations change over different timescales. Volatilities change rapidly; in fact they may change dramatically over the course of a few days. The ratio between the volatility of a stock during a crisis can be four times as large as the volatility of the same asset during a quiet period. On the other side, pairwise correlations are quite stable. Even in the presence of major market stresses, these correlations marginally increase in absolute value. This suggests that we separate volatilities and correlations. Therefore, in the first stage, we use a short half-life to capture adequately changes in volatility. In the second stage, we use a longer-half life to estimate the factor structure of correlations.
-
-
-\subsubsection*{Procedure7.1:Statisticalmodel estimation}
-1. Inputs: $\mathbf{R} \in \mathbb{R}^{n \times T}, \tau_{s} \geq \tau_{f}>0, p \in \mathbb{N}, m>0$.
-2. Time-Series Reweighting:
-$$
-\begin{aligned}
-\mathbf{W}_{\tau_{f}} & :=\kappa \operatorname{diag}\left(\exp \left(-T / \tau_{f}\right), \ldots, \exp \left(-1 / \tau_{f}\right)\right) \\
-\tilde{\mathbf{R}} & =\mathbf{R W}_{\tau_{f}}
-\end{aligned}
-$$
-3. First stage PCA: $\tilde{\mathbf{R}}:=\tilde{\mathbf{U}} \tilde{\mathbf{S}} \tilde{\mathbf{V}}^{\boldsymbol{\top}}$
-4. Idio Proxy Estimation:
-$$
-\begin{array}{rlrl}
-\mathbf{E} & =\tilde{\mathbf{R}}-\tilde{\mathbf{U}}_{p} \tilde{\mathbf{S}}_{p} \tilde{\mathbf{V}}_{p}^{\top} & & \text { (truncated SVD) } \\
-\sigma_{i}^{2} & =\frac{1}{T} \sum_{t}[\mathbf{E}]_{i, t}^{2} & \text { (idio var proxies) } \\
-\mathbf{W}_{\sigma} & :=\operatorname{diag}\left(\sigma_{1}^{-1}, \ldots, \sigma_{n}^{-1}\right) &
-\end{array}
-$$
-5. Idio Reweighing:
-$$
-\begin{aligned}
-\mathbf{W}_{\tau_{s}} & :=\kappa \operatorname{diag}\left(\exp \left(-T / \tau_{s}\right), \ldots, \exp \left(-1 / \tau_{s}\right)\right) \\
-\hat{\mathbf{R}} & :=\mathbf{W}_{\sigma} \mathbf{R W}_{\tau_{s}}
-\end{aligned}
-$$
-6. Second Stage PCA: $\hat{\mathbf{R}}:=\hat{\mathbf{U}} \hat{\mathbf{S}} \hat{\mathbf{V}}^{\top}$
-7. Second-Stage Factor Model: $\hat{\mathbf{r}}=\hat{\mathbf{U}}_{m} \mathbf{f}+\hat{\boldsymbol{\epsilon}}$
-$$
-\begin{aligned}
-& \text { where: } \mathbf{f} \sim N\left(0, \operatorname{diag}\left(\ell\left(s_{1}^{2}\right), \ldots, \ell\left(s_{m}^{2}\right)\right)\right) \\
-& \boldsymbol{\epsilon} \\
-& \sim N\left(0, \bar{\lambda} \mathbf{I}_{n}\right) \\
-& \bar{\lambda}=\frac{1}{n-m} \sum_{i=m+1}^{n} s_{i}^{2}
-\end{aligned}
-$$
-8. Output: Final Factor Model: $\mathbf{r}:=\mathbf{B f}+\boldsymbol{\epsilon}$
-$$
-\begin{aligned}
-\text { where: } \mathbf{B} & =\mathbf{W}_{\sigma}^{-1} \hat{\mathbf{U}}_{m} \\
-\mathbf{f} & \sim N\left(0, \operatorname{diag}\left(\ell\left(s_{1}^{2}\right), \ldots, \ell\left(s_{m}^{2}\right)\right)\right) \\
-\boldsymbol{\epsilon} & \sim N\left(0, \bar{\lambda} \hat{\mathbf{W}}_{\sigma}^{-2}\right)
-\end{aligned}
-$$
-
-This procedure is flexible enough to include several PCA-related procedures as special cases, and to serve as a basis for further experimentation. Some examples:
-- When $p=0$, then idio reweighting becomes a z -scoring, so that the secondstage PCA is effectively applied to the correlation matrix.
-- The special case of equal-weighted observations in time is obtained in the limit $\tau \rightarrow \infty$.
-- It is straightforward to use different shrinkage methods in the second-stage factor model step.
-- In the second-stage factor model step, we use the Probabilistic PCA results of Section 7.1.2. The idio reweighting steps approximately "whitens" the idiosyncratic returns, i.e., it makes them unit-variance, so that PPCA applies. However, we could replace this with a different estimation procedure, like Maximum Likelihood.
-
-\subsection*{7.5.2. Implementing Statistical Models in Production}
-
-It is not sufficient to have a procedure that estimates the loadings and the covariance matrix at a point in time. In our applications, factor models are dynamic. At time $t$, we have an estimation universe of stocks, and we use return data up to $T_{\text {max }}$ periods in the past. We apply the two-stage PCA using returns data between $t-T_{\max }+1$ and $t$, to obtain:
-- Loadings $\mathbf{B}_{t}$. This is the output loadings matrix.
-- Factor returns and idio returns estimate at time $t$ :
-$$
-\begin{align*}
-\hat{\mathbf{f}}_{t} & =\left(\mathbf{B}_{t-1}^{\top} \mathbf{W}_{\sigma, t-1}^{2} \mathbf{B}_{t-1}\right)^{-1} \mathbf{B}_{t-1}^{\top} \mathbf{W}_{\sigma, t-1}^{2} \mathbf{r}_{t}  \tag{7.55}\\
-& =\left[\hat{\mathbf{U}}_{m}\right]_{t}^{\top} \mathbf{W}_{\sigma, t-1} \mathbf{r}_{t}  \tag{7.56}\\
-\hat{\boldsymbol{\epsilon}}_{t} & =\mathbf{r}_{t}-\mathbf{B}_{t} \hat{\mathbf{f}}_{t} \tag{7.57}
-\end{align*}
-$$
-
-We need to address some outstanding problems:
-1. Sign indeterminacy of eigenvectors;
-2. Time-changing estimation universe;
-3. Imputation of loadings for non-estimation universe assets;
-4. Imputation of missing values for new or temporarily non-traded assets.
-
-We tackle them in order.
-- Sign indeterminacy of eigenvectors. Let us begin with a simple observation. In a statistical model, eigenvectors are identified modulo a sign change, i.e., if $\mathbf{u}$ is an eigenvector of matrix $\boldsymbol{\Sigma}$ and associated eigenvalue $\lambda$, then so is $-\mathbf{u}$. When we compute the SVD for adjacent periods, we add and remove observations, which may lead to a sign flip in the loadings. It is important therefore that loadings be collinear, in the sense that the cosine angle between eigenvectors (i.e., their cosine similarity in adjacent periods be positive. Aside from the straightforward realignment exercise, the turnover of eigenvectors is important in two respects. First, because, if we observe that $S_{C}\left(\mathbf{u}^{i}(t), \mathbf{u}^{i}(t+1)\right) \simeq 0$, then it is difficult to determine the sign of consecutive eigenvalues. As a result, it is difficult to determine the sign of the factor return $f_{i}(t)$ over time. Aside from any statistical considerations, highturnover statistical factors cannot be employed for performance attribution. The second consideration is that a very high-turnover factor results in factor-
-mimicking portfolios with very high turnover as well, and is therefore a factor that is very difficult to trade, either for hedging or speculation purposes.
-- Time-changing estimation universe. Similarly to fundamental models, statistical models are estimated on a predetermined set of assets. The rationale for the choice of such universe is the same as for fundamental models. Estimation universe assets may be representative of the investment universe of the trading strategy; may be sufficiently liquid to be considered tradeable; and, relatedly, may be sufficiently traded to ensure good price discovery and therefore reliable return calculations. Assets enter and leave the universe over time. We have a dilemma. We cannot use the latest universe composition, because the past returns of recent additions to the index may be unreliable because the asset was illiquid, or be missing altogether. We can still opt to keep these recent additions, provided that their returns are well defined; or alternatively we can use the assets at the intersection of all the universes over the time interval used for estimation. If the time interval used for model estimation is not too long, and if the universe turnover is not too high, we will still have a sufficiently broad panel of assets. It is preferable to employ an estimation universe that has the lowest possible turnover, and it is important to use a consistent procedure to select the assets to include in $\mathbf{R}$.
-- Imputing loadings for non-estimation universe assets. There are assets that are not in the estimation universe, but that have complete returns. They do not have loadings. We can impute loadings by performing a time-series regression of asset returns against the factor returns. This approach is justified by the results in Subsection 7.1.3: we can recover loadings from time series regression, provided that the factor returns we obtained using the estimation universe are close to the true factor returns.
-- Imputation of missing values for new or temporarily non-traded assets. Some assets do not have sufficient return history to regress their loadings; examples are newly-listed assets (IPOs, ADRs), or assets that were either delisted for a long period of time, or had trading volumes considered too low to result in reliable returns. A possible solution is to use additional characteristics of the asset to impute its loadings. The approach is similar to the one we presented in Section 7.4.2 on the interpretation of loadings using regression. In this case, however, we usually are not afforded the luxury to know many of the asset's style characteristics like momentum, beta, liquidity, or profitability. All we have is knowledge of the industry and country of the asset. We regress observed loadings against these two characteristics, and predict the missing loadings. It is common practice to shrink predicted loadings toward zero. We will cover a rationale for this practice in later sections devoted to hedging.
-
-\section*{7.6. ×Appendix}
-
-\subsection*{7.6.1. Exercises and Extensions to PCA}
-
-Exercise 7.1(Low-rank factorization): Prove that a matrix $\mathbf{A} \in \mathbb{R}^{n \times T}$ is of $\operatorname{rank} m \leq \min \{n, T\}$ if and only if it can be decomposed in the product of two matrices $\mathbf{B} \in \mathbb{R}^{n \times m}$ and $\mathbf{C} \in \mathbb{R}^{m \times T}$.
-
-Exercise 7.2(PCA solution): Prove that the solution $\mathbf{w}^{\star}$ in Problems (7.7) and (7.10) is unique and that constraint $\|\mathbf{w}\|^{2} \leq 1$ is always binding, i.e., $\left\|\mathbf{w}^{\star}\right\|=1$.
-
-Exercise 7.3(Alternative PCA formulation): Prove that the optimiza-
-tion (7.11) gives the same solution as finding the first $m$ eigenvectors of $\hat{\boldsymbol{\Sigma}}$, and as finding iteratively $k$ unit-norm vectors $\mathbf{w}_{1}, \ldots, \mathbf{w}_{k}$, with $\mathbf{w}_{k}$ orthogonal to the first $k-1$ vectors $\mathbf{w}_{k}$, that maximize $\mathbf{w}_{k}^{\top} \hat{\boldsymbol{\Sigma}} \mathbf{w}_{k}$.
-
-Exercise 7.4(Covariance Matrix of a Linear Transformation): Prove that if the random vector $\mathbf{r}$ taking values in $\mathbb{R}^{n}$ has covariance matrix $\boldsymbol{\Sigma}$, and if $\mathbf{A} \in \mathbb{R}^{m \times n}$, then the random vector $\mathbf{x}=\mathbf{A r}$ has covariance matrix $\mathbf{A} \boldsymbol{\Sigma} \mathbf{A}^{\top}$.
-
-Exercise 7.5（A Simple Spiked Matrix）：Let B $\in \mathbb{R}^{n \times m}$ be an $m$-rank matrix. Prove that the first $m$ eigenvalues of $\mathbf{B B}{ }^{\boldsymbol{\top}}+\sigma^{2} \mathbf{I}_{n}$ are greater than $\sigma^{2}$.
-
-Exercise 7.6: Solve the optimization problem, Eq. (7.16).
-
-Exercise 7.7(The Power Method): A simple (the simplest?) algorithm for computing the largest eigenvalue of a symmetric p.d. matrix $\boldsymbol{\Sigma}$ is the following: 1. start with a unit-norm $\mathbf{x}_{0}$ chosen at random (say, sample the coordinates from a standard normal distribution, then normalize it); 2. iterate: $\mathbf{x}_{i+1}=\boldsymbol{\Sigma} \mathbf{x}_{i} /\left\|x_{i}\right\|$; 3. after the vector converges (say $\left\|x_{i+1}-x_{1}\right\|$ is smaller than some tolerance), $\mathbf{x}_{i+1}$ approximates the top eigenvector, and $\mathbf{x}_{i}^{\top} \boldsymbol{\Sigma} \mathbf{x}_{i}$ the top eigenvalue.
-1. Prove the convergence and correctness of the power method. (Hint: $\mathbf{x}_{i}=$ $\left.\boldsymbol{\Sigma}^{i} \mathbf{x}_{0} /\left\|\boldsymbol{\Sigma}^{i} \mathbf{x}_{0}\right\|.\right)$
-2. Let $\delta \in(0,1)$. Find $f(\delta)$ such that $\mathbf{x}_{i}^{\top} \boldsymbol{\Sigma} \mathbf{x}_{i} \geq(1-\delta) \lambda_{1}$ if $i \geq f(\delta)$.
-3. How would you extend it to find all the eigenvalues of $\boldsymbol{\Sigma}$ ?
-
-Exercise 7.8(Iterated Projections for the SVD): A simple (the simplest?) algorithm for computing the largest singular value of a matrix $\mathbf{R} \in \mathbb{R}^{n \times T}$ is the following: 1 . start with $\mathbf{x}_{0} \in \mathbb{R}^{T}$ chosen at random (say, sample the coor-
-dinates from a standard normal distribution), 2. iterate:
-$$
-\begin{align*}
-\mathbf{y}_{i+1} & =\mathbf{R} \mathbf{x}_{i}  \tag{7.58}\\
-\mathbf{x}_{i+1} & =\mathbf{R}^{\top} \mathbf{y}_{i+1} \tag{7.59}
-\end{align*}
-$$
-3. after the vectors converge $\mathbf{x}_{i+1}$ approximates the highest left eigenvector, $\mathbf{y}_{i+1}$ the higher right eigenvector, and $\mathbf{y}_{i+1}^{\top} \mathbf{R} \mathbf{x}_{i+1}$ the top singular value.
-1. Prove the convergence and correctness of the algorithm (hint: power method);
-2. How would you extend it to find the SVD of $\mathbf{R}$ ? (Hint: not the same way of the power method).
-
-Exercise 7.9(Time Series Regression from the $\boldsymbol{S V D}$ ): Let $\mathbf{R}=$ USV $^{\top}$, and set $\hat{\mathbf{F}}:=\mathbf{S}_{m} \mathbf{V}_{m}^{\top}$. The vector $\hat{\mathbf{f}}_{i}$, the $i$ th row of $\hat{\mathbf{F}}$, is the time series of the $i$ th factor return. Prove that the least-squares regression coefficient of the time series $\mathbf{r}_{i}=\beta_{i, j} \hat{\mathbf{f}}_{j}+\boldsymbol{\epsilon}$, is $\beta_{i, j}=[\mathbf{U}]_{i, j}$.
-
-Exercise 7.10(Oja's Iterative Algorithm): Let $\mathbf{r}_{t}, t=1, \ldots, T$ be a time series of returns drawn from a common distribution on $\mathbb{R}^{n}$ with covariance matrix $\boldsymbol{\Omega}$. Prove that the following algorithm converges to the first eigenvector of $\boldsymbol{\Omega}$ :
-1. Set $i=0$ and choose a unit-norm $\mathbf{v}_{1} \in B^{n}$ uniformly at random.
-2. Choose column $\pi(i)$ uniformly at random between 1 and $T$.
-3. Update the direction
-$$
-\begin{align*}
-\mathbf{v}_{i+1} & =\mathbf{v}_{n}+i^{-1}\left(1-\mathbf{v}_{i}^{\top} \mathbf{e}\right)\left(\mathbf{r}_{\pi(i)}^{\top} \mathbf{v}_{i}\right) \mathbf{r}_{\pi(i)}  \tag{7.60}\\
-\mathbf{v}_{i+1} & \leftarrow \frac{\mathbf{v}_{i+1}}{\left\|\mathbf{v}_{i+1}\right\|} \tag{7.61}
-\end{align*}
-$$
-4. Set $i \leftarrow i+1$. If $\left\|\mathbf{v}_{i+1}-\mathbf{v}_{i}\right\|$ then stop. Otherwise go to Step 2 .
-
-Solution (sketch): Let $\mathbf{R} \in \mathbb{R}^{n \times T}$, and $\mathbf{X}$ a random matrix taking values in $\mathbb{R}^{n \times n} . \mathbf{X}$ takes one of $T$ values: $\mathbf{r}_{i} \mathbf{r}_{i}^{\top}$ with equal probability $1 / T$. One can interpret the product $T^{-1} \mathbf{v}^{\top} \mathbf{R} \mathbf{R}^{\top} \mathbf{v}$ as the expectation $E\left(\mathbf{v}^{\top} \mathbf{X v}\right)$. The first eigenvalue of $T^{-1} \mathbf{R} \mathbf{R}^{\top}$ is
-$$
-\begin{equation*}
-\max _{\|\mathbf{v}\|=1} E\left(\frac{\mathbf{v}^{\top} \mathbf{X} \mathbf{v}}{\|\mathbf{v}\|^{2}}\right) \tag{7.62}
-\end{equation*}
-$$
-
-We can apply the stochastic gradient algorithm to the maximum search. Let $f(\mathbf{X}, \mathbf{v}):=\left(\mathbf{v}^{\top} \mathbf{X} \mathbf{v}\right) /\|\mathbf{v}\|^{2}-\lambda\|\mathbf{v}\|^{2}$. The derivative $\nabla_{\mathbf{v}} f$ for a unit-norm vector $\|\mathbf{v}\|$ is
-$$
-\begin{equation*}
-2\left(1-\mathbf{v}^{\top} \mathbf{e}\right) \mathbf{X} \mathbf{v} \tag{7.63}
-\end{equation*}
-$$
-
-Exercise 7.11(Distance Between Subspaces): Let A, B $\in \mathbb{R}^{n \times m}$, be orthonormal matrices. If the two column subspaces are "similar", then any unit-norm vector in the column subspace of $\mathbf{A}$ is well-approximated by some unit-norm vector in the column subspace of $\mathbf{B}$. Define similarity between the two subspaces as
-$$
-\begin{equation*}
-S(\mathbf{A}, \mathbf{B}):=\frac{1}{2} \max _{\|\mathbf{x}\| \leq 1} \min _{\|\mathbf{y}\| \leq 1}\|\mathbf{A x}-\mathbf{B y}\|^{2} \tag{7.64}
-\end{equation*}
-$$
-1. Prove that $S(\mathbf{A}, \mathbf{B})$ is $1-\sigma_{1}\left(\mathbf{A}^{\top} \mathbf{B}\right)$, where $\sigma_{1}\left(\mathbf{A}^{\top} \mathbf{B}\right)$ is the first singular value of $\mathbf{A}^{\top} \mathbf{B}$.
-2. Prove that $S(\mathbf{A}, \mathbf{B})$ is not a distance because it does not satisfy the triangle inequality.
-
-Exercise 7.12(Angle Between Subspaces): Let A, B $\in \mathbb{R}^{n \times m}$, be orthonormal matrices. Let the least cosine distance between subspaces be the cosine of the smallest achievable angle between two vectors, one belonging to the column subspace of $\mathbf{A}$, the other belonging to the column subspace of $\mathbf{B}$.
-
-Prove that $S_{C}(\mathbf{A}, \mathbf{B})=\sigma_{n}\left(\mathbf{A}^{\top} \mathbf{B}\right)$, where $\sigma_{m}\left(\mathbf{A}^{\top} \mathbf{B}\right)$ is the last singular value of $\mathbf{A}^{\top} \mathbf{B}$.
-
-Exercise 7.13(Covariance Matrix Invariance for Degenerate Eigenvalues): Consider a risk model with the following structure: its loading matrix $\mathbf{B}$ has the form $\mathbf{B}=\mathbf{D U}$, where $\mathbf{D} \in \mathbb{R}^{n \times n}$ is diagonal positive definite, and $\mathbf{U} \in \mathbb{R}^{n \times m}, \mathbf{U}^{\top} \mathbf{U}=\mathbf{I}_{m}$; and its factor covariance matrix is proportional to the identity: $\boldsymbol{\Sigma}_{f}=\bar{\lambda} \mathbf{I}_{m}$.
-1. Prove that if we replace $\mathbf{U}$ with an "equivalent" $\tilde{\mathbf{U}} \in \mathbb{R}^{m \times n}$ spanning the same subspace, the covariance matrix does not change.
-2. Extend the result to the case where $\boldsymbol{\Sigma}_{f}$ is still diagonal, but with the first $p$ variances being greater than the rest: $\lambda_{1}>\lambda_{2}>\ldots>\lambda_{p}>\lambda_{p+1}=$ $\ldots=\lambda_{m}$, and with
-$$
-\begin{aligned}
-\tilde{\mathbf{U}}_{\cdot, 1: p} & =\mathbf{U}_{\cdot, 1: p} \\
-\tilde{\mathbf{U}}_{\cdot,(p+1): m}^{\top} \tilde{\mathbf{U}}_{\cdot,(p+1): m} & =\mathbf{I}_{m-p}
-\end{aligned}
-$$
-
-\subsection*{7.6.2. Asymptotic Properties of PCA}
-
-This is a summary of the asymptotic properties of PCA in the regime where the number of variables $n$ is constant and the number of observations $T$ goes to infinity. We have $T$ realizations of iid random vectors $\mathbf{x}_{t} \sim N(\mathbf{0}, \boldsymbol{\Sigma})$, from which we want to estimate $\boldsymbol{\Sigma}$. We assume that the $\mathbf{x}_{t, i}$ have finite fourth moments. Let $\hat{\boldsymbol{\Sigma}}_{T}:=T^{-1} \sum_{t=1}^{T} \mathbf{x}_{t} \mathbf{x}_{t}^{\top}$. By the Strong Law of Large Numbers, $\hat{\boldsymbol{\Sigma}}_{T} \rightarrow \boldsymbol{\Sigma}$ almost surely. Both eigenvalues and eigenvectors converge to the covariance matrix. Anderson [1963] proves a Central Limit Theorem for the eigenvalues of the covariance matrix. Decompose the empirical and true covariance matrices into their eigenvalues and eigenvectors:
-$$
-\begin{align*}
-\boldsymbol{\Sigma} & =\mathbf{U} \boldsymbol{\Lambda} \mathbf{U}^{\top}  \tag{7.65}\\
-\hat{\boldsymbol{\Sigma}}_{T} & =\hat{\mathbf{U}} \hat{\boldsymbol{\Lambda}} \hat{\mathbf{U}}^{\top} \tag{7.66}
-\end{align*}
-$$
-with $\lambda_{1}>\lambda_{2}>\ldots>\lambda_{n}$; all eigenvalues are assumed to be distinct. Anderson proves that, as $T \rightarrow \infty$,
-$$
-\begin{align*}
-& \sqrt{T}(\hat{\boldsymbol{\lambda}}-\boldsymbol{\lambda}) \sim N(\mathbf{0}, 2 \boldsymbol{\Lambda})  \tag{7.67}\\
-& \sqrt{T}\left(\hat{\mathbf{u}}_{i}-\mathbf{u}_{i}\right) \sim N\left(\mathbf{0}, \mathbf{E}_{i}\right)  \tag{7.68}\\
-& \quad \mathbf{E}_{i}:=\mathbf{U}\left[\begin{array}{cccc}
-\frac{\lambda_{1} \lambda_{i}}{\left(\lambda_{1}-\lambda_{i}\right)^{2}} & 0 & \cdots & 0 \\
-0 & \frac{\lambda_{2} \lambda_{i}}{\left(\lambda_{2}-\lambda_{i}\right)^{2}} & \cdots & 0 \\
-0 & 0 & 0 & 0 \\
-\cdots & \cdots & \cdots & \cdots \\
-0 & 0 & \cdots & \frac{\lambda_{n} \lambda_{i}}{\left(\lambda_{n}-\lambda_{i}\right)^{2}}
-\end{array}\right] \tag{7.69}
-\end{align*}
-$$
-where the $i$ th row has all zeros. Therefore:
-1. the standard error on $\hat{\lambda}_{i}$ is $2 \lambda_{i} / \sqrt{T}$.
-2. the standard error on the principal components, defined as $\sqrt{E\left(\left\|\hat{\mathbf{u}}_{i}-\mathbf{u}_{i}\right\|^{2}\right)}$, is
-$$
-\begin{equation*}
-\frac{1}{\sqrt{T}} \sqrt{\sum_{k=1, k \neq i}^{n} \frac{\lambda_{k} \lambda_{i}}{\left(\lambda_{k}-\lambda_{i}\right)^{2}}} \tag{7.70}
-\end{equation*}
-$$
-
-The relative error depends on the separation between eigenvalues.
+import numpy as np
+
+
+def exponential_decay_weights(N, half_life, normalize='sum_to_N'):
+    """
+    Generate an array of exponential decay weights based on half-life.
+
+    Parameters:
+    - N (int): Number of data points (must be positive).
+    - half_life (float): Half-life period (must be positive).
+    - normalize (str): Normalization method. Options:
+        - 'raw': No normalization; raw exponential decay weights.
+        - 'sum_to_1': Normalize weights so that their sum equals 1.
+        - 'sum_to_N': Normalize weights so that their sum equals N.
+      Default is 'sum_to_N'.
+
+    Returns:
+    - weights (numpy.ndarray): Array of weights based on the chosen normalization.
+    """
+    if not isinstance(N, int) or N <= 0:
+        raise ValueError("Number of data points N must be a positive integer.")
+    if half_life <= 0:
+        raise ValueError("Half-life must be positive.")
+    if normalize not in ['raw', 'sum_to_1', 'sum_to_N']:
+        raise ValueError("normalize must be one of 'raw', 'sum_to_1', or 'sum_to_N'.")
+
+    # Calculate the decay constant
+    lambda_ = np.log(2) / half_life
+
+    # Generate weights: w_k = e^(-lambda * k) for k = 0 to N-1
+    k = np.arange(N)
+    weights = np.exp(-lambda_ * k)
+
+    # Apply normalization based on the 'normalize' parameter
+    if normalize == 'sum_to_1':
+        weights /= weights.sum()
+    if normalize == 'sum_to_N':
+        weights *= (N / weights.sum())
+    # If 'raw', do nothing
+
+    return weights
+
+def perform_svd(R, n_components=None):
+    """
+    Perform Singular Value Decomposition (SVD) and truncate to retain top components.
+
+    Parameters:
+    - R (numpy.ndarray): Input matrix of shape (n_assets, n_time_periods).
+    - n_components (int): Number of principal components to retain.
+
+    Returns:
+    - U_truncated (numpy.ndarray): Truncated left singular vectors (loadings).
+    - S_truncated (numpy.ndarray): Truncated singular values.
+    - Vt_truncated (numpy.ndarray): Truncated right singular vectors (time factors).
+    """
+    U, S, Vt = np.linalg.svd(R, full_matrices=False)
+    if n_components is not None:
+        U = U[:, :n_components]
+        S = S[:n_components]
+        Vt = Vt[:n_components, :]
+    return U, S, Vt
+
+def estimate_idiosyncratic_variances(R, U_p, S_p, Vt_p):
+    """
+    Estimate idiosyncratic variances for each asset.
+
+    Parameters:
+    - R (numpy.ndarray): Original return matrix of shape (n_assets, n_time_periods).
+    - U_p (numpy.ndarray): Truncated left singular vectors from first stage PCA (n_assets, p).
+    - S_p (numpy.ndarray): Truncated singular values from first stage PCA (p,).
+    - Vt_p (numpy.ndarray): Truncated right singular vectors from first stage PCA (p, n_time_periods).
+
+    Returns:
+    - sigma_squared (numpy.ndarray): Idiosyncratic variances for each asset (n_assets,).
+    """
+    # Reconstruct the approximated return matrix
+    R_explained = U_p @ np.diag(S_p) @ Vt_p  # Shape: (n_assets, n_time_periods)
+
+    # Compute idiosyncratic returns (residuals)
+    residuals = R - R_explained  # Shape: (n_assets, n_time_periods)
+
+    # Compute squared residuals
+    residuals_squared = residuals ** 2  # Shape: (n_assets, n_time_periods)
+
+    # Compute idiosyncratic variances as the mean of squared residuals
+    sigma_squared = residuals_squared.mean(axis=1)  # Shape: (n_assets,)
+
+    # Handle potential division by zero by adding a small epsilon where sigma_squared is zero
+    epsilon = 1e-8
+    sigma_squared = np.where(sigma_squared == 0, epsilon, sigma_squared)
+
+    return sigma_squared
+
+class FactorModelEstimator:
+    def __init__(self, tau_fast, tau_slow, n_first_pca_component, n_second_pca_component):
+        """
+        Initialize the FactorModelEstimator.
+
+        Parameters:
+        - tau_fast (float): Fast half-life for time-series weighting.
+        - tau_slow (float): Slow half-life for time-series weighting.
+        - n_first_pca_component (int): Number of principal components to retain in the first stage.
+        - n_second_pca_component (int): Number of final factors to retain in the second stage.
+        """
+        if tau_slow < tau_fast:
+            raise ValueError("Slow half-life (tau_slow) must be greater than or equal to fast half-life (tau_fast).")
+        self.tau_fast = tau_fast
+        self.tau_slow = tau_slow
+        self.n_first_pca_component = n_first_pca_component
+        self.n_second_pca_component = n_second_pca_component
+        self.W_idio = None
+        self.B = None
+        self.factor_variances = None
+        self.lambda_bar = None
+        self.D = None  # Idiosyncratic Variance Matrix
+        self.U_second_pca = None
+
+    def fit(self, R):
+        """
+        Fit the two-stage PCA factor model to the return matrix.
+
+        Parameters:
+        - R (numpy.ndarray): Return matrix of shape (n_assets, n_time_periods).
+
+        Returns:
+        - None
+        """
+        n_assets, n_periods = R.shape
+
+        # Step 1: Generate fast and slow exponential decay weights
+        weights_fast = exponential_decay_weights(N=n_periods, half_life=self.tau_fast, normalize='sum_to_N')
+        weights_slow = exponential_decay_weights(N=n_periods, half_life=self.tau_slow, normalize='sum_to_N')
+
+        # Step 2: Create diagonal weighting matrices
+        W_tau_fast = np.diag(weights_fast)    # Shape: (n_periods, n_periods)
+        W_tau_slow = np.diag(weights_slow)    # Shape: (n_periods, n_periods)
+
+        # Step 3: Apply fast weighting to the return matrix (First Stage)
+        tilde_R_first_pca = R @ W_tau_fast    # Shape: (n_assets, n_periods)
+
+        # Step 4: Perform first stage PCA
+        U_first_pca, S_first_pca, Vt_first_pca = perform_svd(tilde_R_first_pca, self.n_first_pca_component)
+
+        # Step 5: Estimate idiosyncratic variances
+        sigma_squared = estimate_idiosyncratic_variances(R, U_first_pca, S_first_pca, Vt_first_pca)  # Shape: (n_assets,)
+
+        # Step 6: Create idiosyncratic variance matrix D
+        D = np.diag(sigma_squared)              # Shape: (n_assets, n_assets)
+        self.D = D
+
+        # Step 7: Create idiosyncratic weighting matrix W_idio = diag(1 / sigma_i)
+        sigma = np.sqrt(sigma_squared)          # Shape: (n_assets,)
+        sigma_inv = 1 / sigma                    # Shape: (n_assets,)
+        self.W_idio = np.diag(sigma_inv)         # Shape: (n_assets, n_assets)
+
+        # Step 8: Apply idiosyncratic and slow weighting to the return matrix (Second Stage)
+        hat_R_second_pca = self.W_idio @ R @ W_tau_slow  # Shape: (n_assets, n_periods)
+
+        # Step 9: Perform second stage PCA
+        U_second_pca, S_second_pca, Vt_second_pca = perform_svd(hat_R_second_pca, self.n_second_pca_component)
+        self.U_second_pca = U_second_pca
+        
+        # Step 10: Assemble the final factor loadings matrix B = diag(sigma) @ U_second_pca
+        B = np.diag(sigma) @ U_second_pca                 # Shape: (n_assets, n_second_pca_component)
+        self.B = B
+
+        # Step 11: Define factor variances based on singular values
+        self.factor_variances = S_second_pca ** 2          # Shape: (n_second_pca_component,)
+
+        # Step 12: Compute lambda_bar as the average of the remaining singular values squared
+        # Since we've truncated to n_second_pca_component, if there are more singular values,
+        # compute the mean of their squares. Otherwise, set lambda_bar to zero.
+        if self.n_second_pca_component < len(S_second_pca):
+            remaining_singular_values = S_second_pca[self.n_second_pca_component:]
+            self.lambda_bar = np.mean(remaining_singular_values ** 2)
+        else:
+            self.lambda_bar = 0  # No remaining singular values
+
+    def get_loadings(self):
+        """
+        Get the factor loadings matrix.
+
+        Returns:
+        - B (numpy.ndarray): Factor loadings matrix of shape (n_assets, n_second_pca_component).
+        """
+        if self.B is None:
+            raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
+        return self.B
+
+    def get_factor_variances(self):
+        """
+        Get the variances of the factors.
+
+        Returns:
+        - factor_variances (numpy.ndarray): Variances of the factors of shape (n_second_pca_component,).
+        """
+        if self.factor_variances is None:
+            raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
+        return self.factor_variances
+
+    def get_lambda_bar(self):
+        """
+        Get lambda_bar, the average idiosyncratic variance.
+
+        Returns:
+        - lambda_bar (float): Average idiosyncratic variance.
+        """
+        if self.lambda_bar is None:
+            raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
+        return self.lambda_bar
+
+    def get_idiosyncratic_variance_matrix(self):
+        """
+        Get the idiosyncratic variance matrix D.
+
+        Returns:
+        - D (numpy.ndarray): Diagonal idiosyncratic variance matrix of shape (n_assets, n_assets).
+        """
+        if self.D is None:
+            raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
+        return self.D
+
+
+    def calculate_factor_returns(self, R_new):
+        """
+        Calculate factor returns given new return
+        
+        Parameters:
+        - R_new (numpy.ndarray): Return matrix of shape (n_assets, n_time_periods).
+
+        Returns:
+        - f (numpy.ndarray):  (n_second_pca_component, n_time_periods).
+        """
+        f_new = self.U_second_pca.T @ self.W_idio @ R_new
+        return f_new
+
+    def calculate_idio_returns(self, R_new):
+        """
+        Calculate asset idio returns given new return
+        
+        Parameters:
+        - R_new (numpy.ndarray): Return matrix of shape (n_assets, n_time_periods).
+
+        Returns:
+        - idio_new (numpy.ndarray):  (n_assets, n_time_periods).
+        """
+        f_new = self.calculate_factor_return(R_new)
+        B = self.get_loadings()
+        idio_new = R_new - B @ f_new
+        return idio_new
