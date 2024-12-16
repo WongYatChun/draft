@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd
 
 def exponential_decay_weights(N, half_life=None, normalize='sum_to_N'):
     """
@@ -110,19 +110,12 @@ class FactorModelEstimator:
         - tau_slow (float): Slow half-life for time-series weighting.
         - n_first_pca_component (int): Number of principal components to retain in the first stage.
         - n_second_pca_component (int): Number of final factors to retain in the second stage.
-        """
-        if tau_slow < tau_fast:
-            raise ValueError("Slow half-life (tau_slow) must be greater than or equal to fast half-life (tau_fast).")
+        """        
         self.tau_fast = tau_fast
         self.tau_slow = tau_slow
         self.n_first_pca_component = n_first_pca_component
         self.n_second_pca_component = n_second_pca_component
-        self.W_idio = None
-        self.B = None
-        self.factor_variances = None
-        self.lambda_bar = None
-        self.D = None  # Idiosyncratic Variance Matrix
-        self.U_second_pca = None
+        self.intermediate = {}  # Dictionary to store all intermediate and final values
 
     def fit(self, R):
         """
@@ -139,51 +132,83 @@ class FactorModelEstimator:
         # Step 1: Generate fast and slow exponential decay weights
         weights_fast = exponential_decay_weights(N=n_periods, half_life=self.tau_fast, normalize='sum_to_N')
         weights_slow = exponential_decay_weights(N=n_periods, half_life=self.tau_slow, normalize='sum_to_N')
+        self.intermediate['weights_fast'] = weights_fast
+        self.intermediate['weights_slow'] = weights_slow
 
         # Step 2: Create diagonal weighting matrices
         W_tau_fast = np.diag(weights_fast)    # Shape: (n_periods, n_periods)
         W_tau_slow = np.diag(weights_slow)    # Shape: (n_periods, n_periods)
+        self.intermediate['W_tau_fast'] = W_tau_fast
+        self.intermediate['W_tau_slow'] = W_tau_slow
 
         # Step 3: Apply fast weighting to the return matrix (First Stage)
         tilde_R_first_pca = R @ W_tau_fast    # Shape: (n_assets, n_periods)
+        self.intermediate['tilde_R_first_pca'] = tilde_R_first_pca
 
         # Step 4: Perform first stage PCA
         U_first_pca, S_first_pca, Vt_first_pca = perform_svd(tilde_R_first_pca, self.n_first_pca_component)
+        self.intermediate['U_first_pca'] = U_first_pca
+        self.intermediate['S_first_pca'] = S_first_pca
+        self.intermediate['Vt_first_pca'] = Vt_first_pca
 
         # Step 5: Estimate idiosyncratic variances
         sigma_squared = estimate_idiosyncratic_variances(R, U_first_pca, S_first_pca, Vt_first_pca)  # Shape: (n_assets,)
+        self.intermediate['sigma_squared'] = sigma_squared
 
         # Step 6: Create idiosyncratic variance matrix D
         D = np.diag(sigma_squared)              # Shape: (n_assets, n_assets)
-        self.D = D
+        self.intermediate['D'] = D
 
         # Step 7: Create idiosyncratic weighting matrix W_idio = diag(1 / sigma_i)
         sigma = np.sqrt(sigma_squared)          # Shape: (n_assets,)
         sigma_inv = 1 / sigma                    # Shape: (n_assets,)
-        self.W_idio = np.diag(sigma_inv)         # Shape: (n_assets, n_assets)
+        W_idio = np.diag(sigma_inv)             # Shape: (n_assets, n_assets)
+        self.intermediate['W_idio'] = W_idio
 
         # Step 8: Apply idiosyncratic and slow weighting to the return matrix (Second Stage)
-        hat_R_second_pca = self.W_idio @ R @ W_tau_slow  # Shape: (n_assets, n_periods)
+        hat_R_second_pca = W_idio @ R @ W_tau_slow  # Shape: (n_assets, n_periods)
+        self.intermediate['hat_R_second_pca'] = hat_R_second_pca
 
         # Step 9: Perform second stage PCA
         U_second_pca, S_second_pca, Vt_second_pca = perform_svd(hat_R_second_pca, self.n_second_pca_component)
-        self.U_second_pca = U_second_pca
-        
+        self.intermediate['U_second_pca'] = U_second_pca
+        self.intermediate['S_second_pca'] = S_second_pca
+        self.intermediate['Vt_second_pca'] = Vt_second_pca
+
         # Step 10: Assemble the final factor loadings matrix B = diag(sigma) @ U_second_pca
         B = np.diag(sigma) @ U_second_pca                 # Shape: (n_assets, n_second_pca_component)
-        self.B = B
+        self.intermediate['B'] = B
 
         # Step 11: Define factor variances based on singular values
-        self.factor_variances = S_second_pca ** 2          # Shape: (n_second_pca_component,)
+        factor_variances = S_second_pca ** 2          # Shape: (n_second_pca_component,)
+        self.intermediate['factor_variances'] = factor_variances
 
         # Step 12: Compute lambda_bar as the average of the remaining singular values squared
         # Since we've truncated to n_second_pca_component, if there are more singular values,
         # compute the mean of their squares. Otherwise, set lambda_bar to zero.
         if self.n_second_pca_component < len(S_second_pca):
             remaining_singular_values = S_second_pca[self.n_second_pca_component:]
-            self.lambda_bar = np.mean(remaining_singular_values ** 2)
+            lambda_bar = np.mean(remaining_singular_values ** 2)
         else:
-            self.lambda_bar = 0  # No remaining singular values
+            lambda_bar = 0  # No remaining singular values
+        self.intermediate['lambda_bar'] = lambda_bar
+
+    def get_intermediate(self, key):
+        """
+        Retrieve a specific intermediate value by key.
+
+        Parameters:
+        - key (str): The key corresponding to the desired intermediate value.
+
+        Returns:
+        - The requested intermediate value.
+
+        Raises:
+        - KeyError: If the key does not exist in the intermediate dictionary.
+        """
+        if key not in self.intermediate:
+            raise KeyError(f"Intermediate value '{key}' not found.")
+        return self.intermediate[key]
 
     def get_loadings(self):
         """
@@ -191,10 +216,13 @@ class FactorModelEstimator:
 
         Returns:
         - B (numpy.ndarray): Factor loadings matrix of shape (n_assets, n_second_pca_component).
+
+        Raises:
+        - ValueError: If the model has not been fitted yet.
         """
-        if self.B is None:
+        if 'B' not in self.intermediate:
             raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
-        return self.B
+        return self.intermediate['B']
 
     def get_factor_variances(self):
         """
@@ -202,10 +230,13 @@ class FactorModelEstimator:
 
         Returns:
         - factor_variances (numpy.ndarray): Variances of the factors of shape (n_second_pca_component,).
+
+        Raises:
+        - ValueError: If the model has not been fitted yet.
         """
-        if self.factor_variances is None:
+        if 'factor_variances' not in self.intermediate:
             raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
-        return self.factor_variances
+        return self.intermediate['factor_variances']
 
     def get_lambda_bar(self):
         """
@@ -213,10 +244,13 @@ class FactorModelEstimator:
 
         Returns:
         - lambda_bar (float): Average idiosyncratic variance.
+
+        Raises:
+        - ValueError: If the model has not been fitted yet.
         """
-        if self.lambda_bar is None:
+        if 'lambda_bar' not in self.intermediate:
             raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
-        return self.lambda_bar
+        return self.intermediate['lambda_bar']
 
     def get_idiosyncratic_variance_matrix(self):
         """
@@ -224,38 +258,60 @@ class FactorModelEstimator:
 
         Returns:
         - D (numpy.ndarray): Diagonal idiosyncratic variance matrix of shape (n_assets, n_assets).
-        """
-        if self.D is None:
-            raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
-        return self.D
 
+        Raises:
+        - ValueError: If the model has not been fitted yet.
+        """
+        if 'D' not in self.intermediate:
+            raise ValueError("The model has not been fitted yet. Call the 'fit' method first.")
+        return self.intermediate['D']
 
     def calculate_factor_returns(self, R_new):
         """
-        Calculate factor returns given new return
-        
+        Calculate factor returns given new return data.
+
         Parameters:
-        - R_new (numpy.ndarray): Return matrix of shape (n_assets, n_time_periods).
+        - R_new (numpy.ndarray or pandas.DataFrame): New return matrix of shape (n_assets, n_time_periods).
 
         Returns:
-        - f (numpy.ndarray):  (n_second_pca_component, n_time_periods).
+        - f_new (numpy.ndarray): Factor returns of shape (n_second_pca_component, n_time_periods).
+
+        Raises:
+        - ValueError: If the model has not been fitted yet.
         """
-        R_new = R_new.values
-        f_new = self.U_second_pca.T @ self.W_idio @ R_new
+        if isinstance(R_new, pd.DataFrame):
+            R_new = R_new.values
+        required_keys = ['U_second_pca', 'W_idio']
+        for key in required_keys:
+            if key not in self.intermediate:
+                raise ValueError(f"The model has not been fitted yet. Missing '{key}'.")
+        U_second_pca = self.intermediate['U_second_pca']
+        W_idio = self.intermediate['W_idio']
+        f_new = U_second_pca.T @ W_idio @ R_new
+        
         return f_new
 
     def calculate_idio_returns(self, R_new):
         """
-        Calculate asset idio returns given new return
-        
+        Calculate asset idiosyncratic returns given new return data.
+
         Parameters:
-        - R_new (numpy.ndarray): Return matrix of shape (n_assets, n_time_periods).
+        - R_new (numpy.ndarray or pandas.DataFrame): New return matrix of shape (n_assets, n_time_periods).
 
         Returns:
-        - idio_new (numpy.ndarray):  (n_assets, n_time_periods).
+        - idio_new (numpy.ndarray): Idiosyncratic returns of shape (n_assets, n_time_periods).
+
+        Raises:
+        - ValueError: If the model has not been fitted yet.
         """
-        R_new = R_new.values
+        if isinstance(R_new, pd.DataFrame):
+            R_new = R_new.values
+        required_keys = ['U_second_pca', 'W_idio', 'B']
+        for key in required_keys:
+            if key not in self.intermediate:
+                raise ValueError(f"The model has not been fitted yet. Missing '{key}'.")
         f_new = self.calculate_factor_returns(R_new)
-        B = self.get_loadings()
+        B = self.intermediate['B']
         idio_new = R_new - B @ f_new
+        
         return idio_new
