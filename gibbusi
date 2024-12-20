@@ -1,608 +1,548 @@
-\title{Chapter 10: Beyond Simple Mean-Variance}
+\section*{Chapter 8 \\ Evaluating Excess Returns}
 
-\section*{10.1. Shortcomings of Naïve MVO}
-
-Before introducing more complex optimizations, let's work through a simple example - maybe the simplest instance of the simplest optimization problem-to illustrate the implications of MVO. We have just two assets, with non-negative Sharpe Ratios $s_{1}, s_{2}$. Their returns have correlation $\rho$. The inverse of the covariance matrix is
-$$
-\mathbf{C}^{-1}=\frac{1}{1-\rho^{2}}\left[\begin{array}{cc}
-1 & -\rho \\
--\rho & 1
-\end{array}\right]
-$$
-
-So by Equation (9.6), the optimal volatility allocation is
-$$
-\begin{aligned}
-& v_{1}^{\star}=\frac{\kappa}{1-\rho^{2}}\left(s_{1}-\rho s_{2}\right) \\
-& v_{2}^{\star}=\frac{\kappa}{1-\rho^{2}}\left(s_{2}-\rho s_{1}\right)
-\end{aligned}
-$$
-
-Where $\kappa>0$ is a parameter determined by the risk tolerance or by the constraint on maximum portfolio risk. If $s_{2} / s_{1}<\rho$, then we short asset 2 . Consider first
-the case where $s_{2}=0$ and $\rho>0$. In this case, we always short the asset. Asset 2 acts as hedge. Shorting it is beneficial because a) it has no cost (zero expected return); b) it reduces the volatility of the portfolio, since it is positively correlated to asset 1. When the Sharpe Ratio of asset 2 is positive, then there is a cost to shorting. A short position in asset 2 reduces volatility, but in order to improve the Sharpe Ratio, the correlation $\rho$ must exceed the threshold $s_{2} / s_{1}$.
-
-Even though the recommendation to short an asset with positive returns is explainable, it is probably at odds with the intuition of many readers. If two assets are very correlated, wouldn't it be preferable to go long both, thus averaging out the signal error? We can make this reasoning more rigorous by assessing the impact of estimation error on expected returns and on the correlation.
-
-Impact of errors in forecasted Sharpe Ratios. We denote the true Sharpe Ratios $\tilde{s}_{i}$, and assume that the error between the true and forecasted Sharpe Ratios is bounded: $\|\tilde{\mathbf{s}}-\mathbf{s}\| \leq \epsilon$. We choose optimal dollar volatilities based on forecasted Sharpe Ratios $\mathbf{v}^{\star}$, and observe performance that is a function of $\tilde{\mathbf{s}}$. The realized expected return is
-$$
-E(\operatorname{PnL})=\frac{\kappa}{1-\rho^{2}}\left[\left(s_{1}-\rho s_{2}\right) \tilde{s}_{1}+\left(s_{2}-\rho s_{1}\right) \tilde{s}_{2}\right]
-$$
-
-In the worst case, we solve the problem
-$$
-\begin{aligned}
-& \min E(\mathrm{PnL}) \\
-& \text { s.t. }\|\tilde{\mathbf{s}}-\mathbf{s}\| \leq \epsilon \\
-& \tilde{\mathbf{s}} \in \mathbb{R}^{2}
-\end{aligned}
-$$
-
-I leave the solution as an exercise (also, see Insight 10.1); the relative reduction in PnL is
-$$
--\frac{\sqrt{\left(s_{1}-\rho s_{2}\right)^{2}+\left(s_{2}-\rho s_{1}\right)^{2}}}{\left(s_{1}-\rho s_{2}\right) s_{1}+\left(s_{2}-\rho s_{1}\right) s_{2}} \epsilon
-$$
-
-This is also the relative loss in Sharpe, since the volatility of the portfolio is unaffected by return forecast error. Figure 10.1 shows numerical results for two assets, assuming an error $\epsilon=0.5$ and varying levels of correlation. An error of 0.5 is perhaps conservative; actual differences in forecasted versus realized Sharpe Ratios are higher. Notice that high correlation makes things worse. In all scenarios, the percentage in efficiency is significant. It is of course lower for higher Sharpes (because the relative forecasting error is smaller); and is higher for higher correlations. In all cases it exceeds $10 \%$ and can be as high as $50 \%$.
-[WILEY EDITORS: place Figure 10.1 around here.]
-
-![](https://cdn.mathpix.com/cropped/2024_12_20_1564b045dd40d185d12cg-356.jpg?height=1714&width=874&top_left_y=542&top_left_x=555)
-
-Figure 10.1: Level plots of the loss of PnL (and Sharpe Ratio) as a function of the Sharpe Ratio of two assets, assuming a maximum error $\epsilon$ in the Sharpe Ratio norm. Parameters: $\epsilon=0.5$; Correlation: $\rho=0.1$ (top), $\rho=0.5$ (bottom).
-
-
-Impact of errors in correlation among assets. We repeat the analysis, but allowing for error in the assets' correlation $\rho$. We denote the true correlation $\tilde{\rho}$ and assume that the estimation error is bounded: $|\tilde{\rho}-\rho| \leq \epsilon$. The error in estimated correlation affects the volatility; the expected expected return is not affected. The Sharpe Ratio is minimized when the realized volatility is maximized:
-$$
-\begin{gathered}
-\max \left(\mathbf{V}^{\star}\right)^{\top} \tilde{\mathbf{C}} \mathbf{V}^{\star} \\
-\text { s.t. }|\tilde{\rho}-\rho| \leq \epsilon \\
-\rho \in \mathbb{R}
-\end{gathered}
-$$
-
-In this case the worst-case realized relative volatility (exercise!) is
-$$
-\sqrt{\left(\mathbf{V}^{\star}\right)^{\top} \mathbf{C} \mathbf{V}^{\star}+2 \epsilon\left|v_{1}^{\star} v_{2}^{\star}\right|}
-$$
-and the associated relative loss in Sharpe Ratio is
-$$
-\sqrt{\frac{\left(\mathbf{V}^{\star}\right)^{\top} \mathbf{C} \mathbf{V}^{\star}}{\left(\mathbf{V}^{\star}\right)^{\top} \mathbf{C V}^{\star}+2 \epsilon\left|v_{1}^{\star} v_{2}^{\star}\right|}}-1
-$$
-
-We show the impact of the error in Figure 10.2, for a reasonable error in correlation estimate of 0.1 . However, in periods of crisis, the error can be larger (albeit not dramatically so). In Figure 10.3 I show the impact of correlation error on Sharpe.
-[WILEY EDITORS: place Figure 10.2 around here.]
-[WILEY EDITORS: place Figure 10.3 around here.]
-
-![](https://cdn.mathpix.com/cropped/2024_12_20_1564b045dd40d185d12cg-358.jpg?height=1717&width=873&top_left_y=540&top_left_x=561)
-
-Figure 10.2: Level plots of the loss of PnL (and Sharpe Ratio) as a function of the Sharpe Ratio of two assets, assuming a maximum error $\epsilon$ in the correlation. Parameters: $\epsilon=0.1$; Correlation: $\rho=0.1$ (top), $\rho=0.5$ (bottom).
-![](https://cdn.mathpix.com/cropped/2024_12_20_1564b045dd40d185d12cg-359.jpg?height=782&width=866&top_left_y=1035&top_left_x=556)
-
-Figure 10.3: fraction loss in Sharpe Ratio for two strategies with Sharpe Ratios of 3 and 2 , return correlation $\rho=0.3$, and error $\epsilon$ ranging from 0 to 0.3 .
-
-
-\subsection*{Insight 10.1: A simple linear-quadratic problem}
-
-Let $\mathbf{a}, \mathbf{x}_{0} \in \mathbb{R}^{n}$. The problem $\min \left\{\langle\mathbf{a}, \mathbf{x}\rangle \mid\left\|\mathbf{x}-\mathbf{x}_{0}\right\|^{2} \leq \epsilon^{2}\right\}$ has solution
-$$
-\begin{aligned}
-\mathbf{x}^{\star} & =\mathbf{x}_{0}-\frac{\mathbf{a}}{\|\mathbf{a}\|} \epsilon \\
-\frac{\left\langle\mathbf{a}, \mathbf{x}^{\star}\right\rangle}{\left\langle\mathbf{a}, \mathbf{x}_{0}\right\rangle}-1 & =-\frac{\|\mathbf{a}\|}{\left\langle\mathbf{a}, \mathbf{x}_{0}\right\rangle} \epsilon
-\end{aligned}
-$$
-
-\subsection*{Insight 10.2: Degradation in performance due to forecasting error}
-When we use Naïve MVO optimization, the degradation in Sharpe Ratio arising from forecasted (ex ante) parameters for volatilities and returns vs realized values (ex post) can easily range in the 10-50\%.
-
-\section*{10.2. Constraints and Modified Objectives}
-
-Equation (9.2) is the starting point for more complex optimization problems. They reflect the detailed preferences of the investors, short-term concerns, regulatory constraints, and implementation considerations. In applications, optimization formulations differ widely because they address a wide range of concerns:
-- Investor's preferences: "Keep medium-term momentum exposure exactly equal to zero."
-- Tactical considerations: "Don’t trade this stock because it could be acquired tomorrow" or "liquidate this stock because it could be acquired tomorrow"; both are valid, if incompatible, concerns.
-- Regulatory considerations: "The portfolio must be long only".
-- Fiduciary considerations: "The portfolio must track a benchmark, i.e., the difference in returns between the portfolio's returns and the benchmark's cannot exceed a certain tracking volatility".
-- Implementation considerations: "The objective function must include the trading costs."
-
-From a modeling viewpoint, constraints can take several forms. We introduce those first, and then we map them to the applications at hand. The "mapping" part will be either instructive if you have never been exposed to it, or terminally boring if you have worked in portfolio management for a few years. Rejoice with the former group, and commiserate with the latter.
-
-\subsection*{10.2.1. Types of Constraints}
-
-Although one can imagine infinite types of constraints, some of them are much more common than others. We review them below.
-- Linear constraints. These can be inequality or equality constraints:
-$$
-\begin{array}{lr}
-\mathbf{A}^{\top} \mathbf{w} \leq \mathbf{c} & \text { (Inequality constraints) }  \tag{10.1}\\
-\mathbf{A}^{\top} \mathbf{w}=\mathbf{c} & \text { (Equality constraints) }
-\end{array}
-$$
-
-These are perhaps the most common constraints in financial optimization, because they are used to address several of the concerns listed at the beginning of the section. For example, some strategies are required to be long-only. The constraint is simply
-$$
-\mathbf{w} \geq 0 \quad \text { (Long-Only constraint) }
-$$
-
-Extending this to a bound on maximum short and long size for a single position is only a small step. The rationales for such constraints are many. There are natural limits due to maximum institutional ownership of a stock (say, no more than $5 \%$ of the outstanding stocks); or to the maximum risk concentration in a stock: the idiosyncratic variance of a stock may not exceed a certain percentage of the total idiosyncratic variance, which translates to a linear constraint. Further still, we may impose a maximum liquidation cost requirement on all stocks; which also becomes a constraint on single position size.
-
-A slightly more complex constraint, which does not seem linear at first sight, is on Gross Market Value: $\sum_{i}\left|w_{i}\right| \leq G$. This constraint may originate on
-limits on financial leverage that the fund can apply to its managed assets. The constraint may be turned into a linear one ${ }^{1}$ by introducing ancillary variables representing the long and short side of a position, and additional constraints:
-$$
-\begin{align*}
-\mathbf{x} & \geq 0 \quad \text { (GMV constraint) }  \tag{10.2}\\
-\mathbf{y} & \geq 0  \tag{10.3}\\
-\mathbf{w} & =\mathbf{x}-\mathbf{y}  \tag{10.4}\\
-\sum_{i}\left(x_{i}+y_{i}\right) & \leq G \tag{10.5}
-\end{align*}
-$$
-
-A similar constraint is on the long vs short ratio ${ }^{2}$. If we want the long/short ratio to be equal to a certain value, then the constraint is $\sum_{i} w_{i}^{+}=K \sum_{i} w_{i}^{-}$. This constraint is the same as the GMV constraint, with the exception of Equation (10.5), which we replace with
-$$
-\sum_{i} x_{i}=K \sum_{i} y_{i} \quad(\text { Long } / \text { Short ratio constraint })
-$$
+The task of estimating factor models and testing alphas for systematic strategies usually involves reusing the same historical data. This is somewhat unintuitive. One of the defining features of the past 40 years has been the increased recording of new datasets and their broad dissemination. Investment firms have budgets of tens of millions of dollars allocated to the purchase of market and alternative data, and to the bespoke collection of data (e.g., via web scrapes). And yet, the characteristics of traded assets, and specifically of companies, do not change on a minute-by-minute basis; and investment strategies with relatively long holding times - of the order of a day or longer - do not necessarily employ tick-by-tick data. If we record prices for a broad local investment universe at five-minute intervals, we collect 60 millions numeric data points per year ${ }^{1}$; including a security identifier and a time stamp, the required storage is of the order of gigabytes. History is not replaceable, and sometimes it is not deep. Not replaceable, in the sense that it is not easy to produce a simulated version of the past that provably reproduces all of its features. Not deep, in the sense that we do not live in a stationary world. The pace at which the real world outside of finance changes is breathtaking and accelerating, and markets are a timid reflection of it. Not even taking such change into account, the introduction of new technology, of new market microstructure designs, of new regulations, and the ongoing collective learning process of all market participants make the investing world of five years ago very different from today's. The fact that we have to rely on historical data poses a major challenge. We cannot design experiments. Our studies are observational and repeated. Financial practitioners do not have a shared protocol for experimental analysis. Even if we had one, it is far from obvious that it is the correct one. Well-established disciplines like Medicine and Psychology had shared experimental practices accompanied by experimental design, and yet they have undergone a reevaluation when their practitioners found that most of their results are not replicable [Ioannidis, 2005, Open Science Collaboration, 2015].
 
 \footnotetext{
-${ }^{1}$ Before rediscovering the wheel, know that some financial optimization packages abstract the modeling of the GMV constraint, so that you just have to specify it.
-${ }^{2}$ For example a few years ago, 130/30 portfolios were popular. These strategies managed net-long portfolios, with a $30 \%$ of Net Market Value invested in shorts and $130 \%$ invested in longs
+${ }^{1}$ Assuming 6.5 trading hours, 251 trading days and 3,000 stocks.
 }
 
-Yet another class of constraint is that on factor model exposures, and on exposures to other asset characteristics not in the model. An example is the constraint on historical market betas $\beta_{i}$. The constraint then is $\sum_{i} \beta_{i} w_{i}=b_{0}$. The general form of factor exposure is verbatim that of Equations (10.1).
+This poses a few challenges for us modelers. We have a very large number of signals types, which themselves depend on continuous tuning parameters, and we only have a limited history. This is similar to the situation faced by biostatisticians, who deal with tens of thousands of simultaneous tests in the form of responses from DNA microarray Dudoit et al. [2003], Huang et al. [2009]. The details are quite different. The "response variable" for a DNA microarray is usually discrete ("polytomous"), and responses are uncorrelated or weakly correlated. In quantitative finance, the response variable (be it return or Sharpe) is continuous, and signal correlation plays a decisive role.
 
-A constraint on maximum portfolio turnover takes a similar form to the previous constraints that use absolute values. I am leaving it as an exercise to the reader. The turnover constraint may be either (poorly) justified to control costs, or by fiduciary requirements on portfolio turnover. A better way to model execution costs takes us in the domain of non-linear constraints.
-- Non-linear constraints. A constraint of a different nature is trading-related. Trading occurs over many periods, and one approach to control excessive trading is to limit the traded capital, possibly weighted to account for assetspecific trading cost, in each portfolio rebalancing. This is equivalent to assuming linear transaction costs. We generalize this at little cost, and model trading costs as superlinear in traded amount but growing at a quadratic rate or less: $c_{i}\left|\Delta w_{i}\right|^{\gamma}$, where $\gamma \in[1,2]$. The constraint takes the form:
-$$
-\sum_{i} c_{i}\left|w_{i}-w_{i}^{\text {start }}\right|^{\gamma} \leq C \quad \text { (Trading cost constraint) }
-$$
-where $\mathbf{w}^{\text {start }}$ is the portfolio held at the beginning of the period. The constraint is convex, so that the portfolio optimization problem has a unique solution. Quadratic constraints appear naturally when we want to control risk at a finer resolution than that on total variance. For example, let $\boldsymbol{\Omega}_{\mathbf{f}}^{\text {style }}$ be the principal submatrix in the factor covariance matrix, and let $\mathbf{b}^{\text {style }}=\left(\mathbf{B}^{\text {style }}\right)^{\top} \mathbf{w}$ be the vector of style factor exposures. Then a constraint on the maximum style-factor risk becomes
-$$
-\begin{aligned}
-\mathbf{b}^{\text {style }} & =\left(\mathbf{B}^{\text {style }}\right)^{\top} \mathbf{w} \\
-\left(\mathbf{b}^{\text {style }}\right)^{\top} \boldsymbol{\Omega}_{\mathbf{f}}^{\text {style }} \mathbf{b}^{\text {style }} & \leq \sigma_{\text {style }}^{2} \quad(\text { Style factor vol constraint })
-\end{aligned}
-$$
+This chapter has four sections. First, we list some basic best practices for data preparation and usage. Second, we describe some common backtesting practices and critique them. The third section is entirely devoted to describing a new backtesting protocol, which offers several advantages over the previous ones: it gives finite-sample uniform probabilistic bounds on the Sharpe Ratio of a large set of strategies. The last section applies the theory developed so far to simulated and historical data.
 
-Risk constraints are often not only applied to the positions of a portfolio, but to the active positions of the portfolio itself. For example, consider a
-long-only portfolio with a GMV of $\$ 1 \mathrm{~B}$, and let $\mathrm{w}^{\text {bench }}$ be the positions of a portfolio with the same GMV, with weights proportional to those of the SP500 benchmark. The active holdings are $\mathbf{w}^{\mathbf{a}}=\mathbf{w}-\mathbf{w}^{\text {bench }}$. Tracking error is the volatility of the active portfolio, and is a measure of the freedom the portfolio manager has in selecting stocks. A constraint on the tracking error is
-$$
-\left(\mathbf{w}^{a}\right)^{\top} \boldsymbol{\Omega}_{\mathrm{r}} \mathbf{w}^{a} \leq \sigma_{a}^{2} \quad(\text { tracking error constraint) }
-$$
-- Non-convex constraints. Finally, there are a few constraint types that lead to a non-convex feasible region. Finding a global optimum is in general NP-hard. Convex solvers may either not accept such constraints ${ }^{3}$, or may not converge. I would argue that, in most cases, these constraints should not be used on grounds of sensible modeling. I am presenting them both for completeness and as a cautionary tale.
+\section*{8.1. Backtesting Best Practices}
+
+We review a few best practices for backtesting. They do not originate from some comprehensive theory. Unlike Athena, who was born fully formed from the mind of Zeus, it is an ever-incomplete, occasionally shallow body of knowledge that has formed by experimentation. Some references covering these practices are Arnott et al. [2019], Wang et al. [2014], López de Prado [2020].
+
+\subsection*{8.1.1. Data Sourcing}
+
+High-quality data are essential to backtesting, and the search for better data is a never-ending task for a researcher. There are several broad areas of concern. The first one is data sourcing. There are multiple vendors offering similar data. When comparing them, ask the following questions:
+- Definition and interpretation. Perhaps the first and most important question, not only in data sourcing, but in quantitative investing, is what do the data mean? What is the exact definition of the data collected? What are their physical units? If the dataset is money-related, it should be unambiguous what is the reference currency (or currencies, for exchange rates). If the data is flow-related (i.e., measuring rates over time), the time unit should be defined. A surprising number of mistakes happens because of unit conversion errors.
+- Provenance. Where are the data coming from? Does the vendor collect the
+data themselves (e.g., via web scraping, or internet traffic)? More often, the vendor serves as an intermediary between a data originator and the client. In the former case, what is the collection criterion? Does the vendor sample data or collects the data exhaustively? Is the population sampling methodology sound? In the latter case, who is originating the data? Are they trustworthy?
+- Completeness. This leads to the second question: completeness. Are there data that are obviously missing from the dataset such as, for example, intermittently missing prices? Are there data that are non-obviously missing, such as, for example, unrecorded consumer credit card transactions? Some of these questions can be answered by performing exploratory analysis on the data themselves, others need to be addressed with the vendor.
+- Quality assurance. How does the provider ensure that the data it receives or collects are consistently of good quality? Does it have checks for change points in the data characteristics?
+- Point-in-time vs. restated data. Does the provider offer data collected as of a certain date, without changing them at a later date, based on corrections and company updates? This is an instance of data leakage, which we will cover in more detail later.
+- Transformations. Data are almost always transformed by the vendor. Examples are: imputation of missing data; winsorization and removal of outliers; end-of-period price calculations (last transaction, mid bid-ask price, weighted average). These transformations should be documented, evaluated, and if possible verified by the research analyst.
+- Exploring alternatives and complements. Always ask the following commonsense questions: can we obtain better data, across the following three dimensions. First, are there providers offering larger coverage for the same dataset
+(e.g., more securities at any point in time, deeper history, more frequent data)? Second, are there providers with better data? For example, if data are collected from broker-dealers, the alternative provider has an agreement with a larger number of participating contributors. Third, can we obtain complementary data? These are datasets that jointly with the original one, greatly increase its original value. For example, we may obtain transactional data that help us estimate short-term revenues of a company, in addition to data that give us a good estimate of their costs.
+
+\subsection*{8.1.2. Research Process}
+
+Every researcher has their own research process. This is part of their competitive advantage; it's indeed part of what they are, of thoughts and learned lessons accumulated over a lifetime of experiences and of studying. It would be futile to superimpose the author's overall research philosophy to that of the reader ${ }^{2}$, just in a few pages. However, there are a few steps that are uncontroversial, and are part of basic hygiene. Consider these akin to the precept to never leave home without wearing underwear.
+- Data leakage. The first recommendation is to avoid data leakage. The definition of data leakage is the presence in the training data, the data available up to time $t$, of information contained in the target, i.e., returns in periods $t+1$ and later. The reference rule is to never use data in a backtest on a certain date that we are not able to use in production on that day. Detecting data leakage is more art than science, and it requires both a deep knowledge of the data (see above) and of the problem at hand. Below are a few examples.
+- Survivorship bias. If we backtest the performance of a strategy over an extended period of time, considering only the stocks that have continuously traded during this period, i.e., the surviving stocks at the end of the backtest, we are subject to survivorship bias. Stocks are most often delisted because they experience large losses, trade at low share prices, become illiquid or do not meet some additional criteria for being listed on exchange. Removing them biases the investment sample toward outperformers with different characteristics than those of the broader investment universe at a point in time. For example, the survivors' liquidity, momentum, and size are larger than the universe. This is the simplest and most impactful instance of data leakage. The remedy to this issue is to: a) employ a sensible methodology for inclusion that is applicable at any point in time; b) specify a realistic and conservative rule in the backtest for the event of a delisting. For example, one could assume that the entire investment is written off. Note that the methodology in a) should be specified before backtests are initiated. Changing the inclusion rules based on the result of backtest is also an instance of data leakage, and it should be avoided. Criteria for inclusion are indeed not straightforward to specify. A common recommendation is to use an investment universe defined by a commercialbenchmark, like Russell 1000, Russell 3000, MSCI benchmarks, or commercial factor models investment universes. Note that benchmark components are always announced before ("announcement date") the effective addition date ("reconstitution date"), and the returns of the stocks are affected by the announcement of an inclusion or exclusion. In your backtest, you may want to capture this information, in order to assess how much of the performance of your quantitative strategies is affected by recent changes in the investment universe.
+- Financial statements. Financial statement information for a given quarter or year should be included in the backtesting data on the day (or the day after) of their public release, not on the last quarter to which the data refer.
+- Point-in-time data. Financial data used in the backtest on a given date should always be the most recent data available as of that date. If a 10Q (a quarterly financial report) is restated because of material error, the backtest should not reflect that. The strategy must be tested by allowing the presence of error in its input data.
+- Price adjustments. Shares are regularly split (or reverse-split) into multiple shares. The price of the split share is adjusted accordingly. This occurs when the stock appreciates to the point one share becomes so expensive that it prevents investors from being able to buy it. In order to compute historical returns across long time series, prices and dividend are usually split-adjusted. This introduces a complication. A low stock price in the distant past indicates that the shares have been split several times in the future, likely because of high returns. The price becomes informative of future performance. The recommended remedy is to use adjusted prices only for return calculation. For feature generation, use as-of-date prices.
+- Missingness. In certain cases (mostly unstructured data instances), data points are missing either because they were not made available as-of-date or because they contain sensitive information and were redacted. In the latter case, missingness may be suffering from look-ahead bias and is
+informative of future returns.
+- Avoidable mistakes. The amount of silly mistakes (in hindsight) that experienced, effective researchers make never ceases to amaze. For example, a stock characteristic available in a dataset had high Information Coefficient ${ }^{3}$ (IC). Upon further investigation, it was a stock split conversion factor (see the previous bullet point). As another example, because of an erroneous $t$ vs $t+1$ convention error, a researcher included the next-day return in a three-month momentum factor definition, also causing a false positive.
+- Strategy development. There are some qualitative recommendations that, while missing a solid foundation, are hard to argue against.
+- Have a theory (if you can). It is preferable to have a theory for every anomaly, and to pre-register the predictions of the theory before the backtest. For example, in their paper on quality, Asness et al. [2019] propose a theory guiding the development of the factor; so do Frazzini and Pedersen [2014] when they analyze the beta anomaly. With a theory as a guide, it is easier to choose a security characteristic among many, therefore reducing the number of strategies being tested; it is possible to interpret the result and believe in it more, and it is possible to critique and revise the characteristic, which is maybe not desirable (it would be nice if we got it right the first time) but necessary.
+- Enforce reproducibility. Document all your strategies and make sure you can reproduce and rerun them at any time.
+- Use the same setting in backtesting and in production as much as possible. By this we mean that we should use the same point-in-time data, but also the same optimization formulations, the same market impact model, and the same codebase.
+- Calibrate the market impact model. When we perform a backtest, the market impact model has a "descriptive" role. It estimates the losses in efficiency from actual trading. It is not possible, however, to verify the realized market impact on historical data. In order to align backtest performance to live one, it is important not to take a market impact model at face value, especially one provided by a vendor or a partner. Instead, calibrate its parameters against live performance of the current version of your strategy, so that realized and backtested PnL of your current strategy overlap as much as possible.
+- Include borrow costs. As part of the effort to align production and simulated PnL, one should take borrow costs ${ }^{4}$ for shorted securities into account, since they can have a material impact on the profitability of the short side. This has challenges. Historical borrow rates are not readily available historically. The researcher may have to approximate them, or predict them on the basis of security characteristics. Another complication, albeit less impactful, is the tax treatment of dividends. When they are received by the investor, they are subject to taxation. When the investor is short the security, the treatment of dividends is more complex. In practice, tax dividend treatment is complex, and does not make a material difference in backtests, so it is not modeled. Still, be aware of it, in case you see discrepancies between accounting and simulated PnL.
+- Define the backtesting protocol beforehand. A backtesting protocol is the sequence of actions and decisions that lead to assessing the performance of a strategy. It is the subject of the next section. For the sake of this list of folk precepts, it is sufficient to say that the backtesting protocol should be changed a) rarely, b) for a good reason, and c) if it changes, you should rerun and re-evaluate all your strategies under the new protocol.
+- Define the dataset being used beforehand. If dataset selection is seen as part of the backtesting protocol, the heuristic follows from the previous point. The difference however is that new data become available every day, both in the form of live data, and of extensions to historical dataset. Researchers may be prone to include datasets that confirm their findings, and ignore those that do not. Ignoring new data would be suboptimal, and including them selectively may lead to the wrong conclusions. Use your judgement and research integrity, which no theorems can help.
+
 
 \footnotetext{
-${ }^{3}$ Some solvers are able to understand from the description of the problem whether it is convex or not.
+${ }^{2}$ Although, you may argue, this whole book is an exposition of my investment philosophy. Point taken, to an extent. I am providing some building blocks, and you are reshaping and assembling them into something sensible.
+${ }^{3}$ The Information Coefficient is formally defined in Section 8.3.1.
+${ }^{4}$ In order to short a security, the investor (or an agent on their behalf, like a broker-dealer) must borrow it first from a lender, who charges interest on the loan.
 }
 
-The first constraint type is on the maximum number $N_{\max }$ of assets in the portfolio. This is usually implemented by introducing $0 / 1$ variables $x_{i}$, and by setting a maximum (large) absolute position size $M$. The constraint becomes
-$$
-\begin{align*}
-\left|w_{i}\right| & \leq M x_{i} \quad i=1, \ldots, n \quad \text { (Max number of positions) }  \tag{10.6}\\
-\sum_{i=1}^{n} x_{i} & \leq N_{\max }  \tag{10.7}\\
-x_{i} & \in\{0,1\} \quad i=1, \ldots, n \tag{10.8}
-\end{align*}
-$$
+\section*{8.2. The Backtesting Protocol}
 
-The rationale for this constraint is that a very broad portfolio may be too burdensome to trade or manage. This combinatorial constraint can be handled by some commercial solvers for realistic problem instances with thousands of assets. However, its utility is limited. It is usually preferable to model trading costs directly, and either not include a constraint at all, or have a threshold for trading below which the trades of the optimal solution are set to zero. This usually has a negligible impact on optimality.
+\subsection*{8.2.1. Cross-Validation and Walk-Forward}
 
-A very different type of constraint is on the minimum idio variance as a percentage of the total variance. We have mentioned this metric in Section 4.5.2. It is tempting to include a constraint of the form
-$$
-\begin{equation*}
-\mathbf{w}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{w} \geq p_{\mathrm{idio}} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \tag{10.9}
-\end{equation*}
-$$
-or, equivalently,
-$$
-\begin{equation*}
-\mathbf{w}^{\boldsymbol{\top}}\left[p_{\text {idio }} \mathbf{B} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{B}^{\boldsymbol{\top}}-\left(1-p_{\text {idio }}\right) \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}\right] \mathbf{w} \leq 0 \tag{10.10}
-\end{equation*}
-$$
+Evaluating trading strategies bears similarities with statistical model selection [Hastie et al., 2008]. We have a family of strategies (in Statistics, a family of models), and a performance measure, such as Sharpe Ratio or return on GMV. The strategies themselves may depend on several parameters. Two evaluation schemes are most common. The first one is cross-validation (Hastie et al. [2008], Ch. 7, and Mohri et al. [2018], Ch. 4). The available data is split into a training dataset and a holdout (or validation) dataset. Sometimes, based on the estimated time-dependence in the time series, the training and
+holdout samples are separated by a "buffer" dataset. The training dataset is split into $K$ equal-sized samples ("folds"). Similarly to the buffer between training and holdout datasets, we may want to separate the folds by a short buffer (for equities, just one or two days) to eliminate dependencies between folds. This eliminates a possible source of look-ahead bias. Then, we perform $K$ estimation-evaluation exercises. The parameters are estimated on each of the possible combinations of $K-1$ folds, and the performance of the model is evaluated of the remaining fold using the optimized parameter; see Figure 8.1. Then estimate the cross-validation performance as the average of the single-run performances. Finally, performance is checked against the holdout sample; a scheme is shown in Figure 8.2. There are several contraindications to using crossvalidation for financial applications. First, the samples are not independent. The time dependence is reflected in the returns themselves. We know that serial dependence of returns is weak and has short memory, while volatility dependence is strong and has long memory. For some time series, it is possible to remedy this by keeping the order intact in the training folds and the errors are serially uncorrelated [Bergmeir et al., 2018, Cerqueira et al., 2023]. This is not the only issue faced in financial applications, however. For example, consider the inclusion of security momentum as a predictor. This characteristic uses past returns. Now, if the validation fold precedes temporally the training fold, these past returns are in the validation fold and we are incurring a typical instance of data leakage: the predictors directly contain information about the target. This is an obvious example, but there are subtle ones as well. For example, we could use forward earnings forecast as a predictor. But forward earnings are usually produced by analysts, who base their judgement on past returns. Like momentum, we may have leaked target data into the training set. Besides the temporal dependencies, there is another practical objection to $K$-fold crossvalidation. In their influential book, Hastie et al. [2008] (Section 7.10.2) make a forceful case that the model should entirely be selected by cross-validation. Predictive variables (be they alphas or factors, in our framework) should not be screened in advance. This is often not in practice: the predictiveness of signals or fully-fledged strategies is tested separately. Perform cross-validation enough times on different classes of models, and you will inevitably obtain favorable results. The holdout dataset is meant to serve as a final check against this "fishing expedition" [Cochrane, 2005]. Yet, when the number of raw signals runs in the millions, it is inevitable to cycle through several refinements and model revisions, so that the holdout sample performance becomes just another variable to be optimized, instead of a performance check to be run only once.
 
-The problem is that the matrix $p_{\text {idio }} \mathbf{B} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{B}^{\boldsymbol{\top}}-\left(1-p_{\text {idio }}\right) \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$ is in general not positive definite, and therefore the constraint is not convex (exercise: prove it by providing an example).
+![](https://cdn.mathpix.com/cropped/2024_12_20_83bccf3336bb2a206831g-285.jpg?height=491&width=1291&top_left_y=584&top_left_x=368)
 
-A constraint type with a similar objective is to require a minimum idiosyncratic dollar volatility: $\mathbf{w}^{\boldsymbol{\top}} \boldsymbol{\Omega}_{\boldsymbol{\epsilon}} \mathbf{W} \geq \sigma_{\text {idio }}^{2}$. This is obviously a non-convex constraint, and its proponents should be excommunicated from the Orthodox Church of Optimization. A sensible approach is to simply upper bound the factor variance, or impose bounds of factor exposures, and test the impact of the bound on the portfolio's performance.
+Figure 8.1: A scheme of the cross-validation procedure. Darker boxes are validation folds, while lighter boxes are training folds.
 
-Yet another excommunicable offense is imposing a lower bound on total volatility. I would not mention it, had I not witnessed actual humans proposing it.
+![](https://cdn.mathpix.com/cropped/2024_12_20_83bccf3336bb2a206831g-286.jpg?height=524&width=958&top_left_y=470&top_left_x=535)
 
-In the same spirit, i.e., the goal of ensuring that the portfolio meets a minimum size, is a lower bound on Gross Market Value. The answer to these constraints is that they are usually ill-conceived. If, after accounting for excess return forecasts, trading costs, and risk constraints, the optimal portfolio is small, then maybe it should stay small. And if one really wants to make it bigger (again, not advisable), one could loosen the upper bounds on risk or underestimate the transaction costs.
+Figure 8.2: A scheme of the cross-validation procedure. Data are split into two sets. Cross-validation is performed on the first one (training dataset), to estimate the expected performance of a strategy. The model is then optimized on the entire training dataset, and validated on the second one (validation dataset).
 
-\subsection*{10.2.2. Do Constraints Improve or Worsen Performance?}
+![](https://cdn.mathpix.com/cropped/2024_12_20_83bccf3336bb2a206831g-287.jpg?height=454&width=1194&top_left_y=494&top_left_x=395)
 
-The naïve answer to the title of this section is that - of course!- they worsen performance. If you reduce the feasible region of your optimization problem by adding a constraint, you will not get a better optimum. Specifically, if we maximize the Sharpe Ratio, adding constraints will degrade the Sharpe Ratio ${ }^{4}$ This is true if the data in the problem, i.e. covariance matrix and expected returns, are estimated correctly. If we take estimation error into account, however, constraints may help. The next section interprets constraints as regularization terms for parameters entering in the optimization ${ }^{5}$.
+Figure 8.3: Cross-validated Sharpe for (a) Scenario 1, (b) Scenario 2.
 
-\footnotetext{
-${ }^{4}$ For example, see Clarke et al. [2002].
-${ }^{5}$ The academic literature on this subject is not very large. See Jagannathan and Ma [2003] for an early contribution to the analysis of long-only constraints; The work by DeMiguel et al. [2009a,b] on trading penalties; Fan et al. [2012] on GMV constraints and Ceria et al. [2012], Saxena and Stubbs [2013] on penalties on the factor covariance matrix.
-}
+An example may help illustrate the perils of cross-validation. We have $N=1000$ assets. We simulate iid asset returns with $r_{t, i} \sim N\left(0, \sigma^{2}\right)$, with $\sigma=0.01$. We introduce $p$ random asset characteristics, also iid drawn at random: $[\mathbf{B}]_{i, j} \sim N(0,1)$. These random features are by design not predictive of returns. The backtest consists in a 5 -fold cross-validation, to estimate the performance of the predictors. In each run, we select the best performing factor, based on in-sample IC, and then compute the IC on the test fold. Then we report the average cross-validated IC. We repeat the process on 1000 simulated datasets. Below are the results for two scenarios:
+1. The first one is the "many periods, few predictors" case: we set $T=5000$ (twenty years of daily data) and $p=2$; two predictors because one would have felt too lonely.
+2. The second one is the "not many periods, more predictors" case: we set $T=1250$ (five years of daily data) and $p=500$; not nearly as many as we meet in practice.
 
-\subsection*{10.2.3. Constraints as Penalties}
+The frequency histograms of the simulations are shown in Figure 8.3. Some summary statistics of the simulations are shown in Table 8.1. The averages are close to zero in both case, with a much larger standard deviation for the many factor-case. The percentage of samples whose Sharpe Ratio passes the $1 \%$ significant level is shown in the last column of the table ${ }^{5}$. Frequency histograms for the two simulated scenarios; the conversion IC to Sharpe Ratio is $\mathrm{SR}=\mathrm{IC} \sqrt{251 N}$
 
-One alternative way to interpret a constraint in portfolio optimization is as a penalty term added to the objective function: given a problem
-$$
-\begin{aligned}
-& \max f(\mathrm{x}) \\
-& \text { s.t. } g(\mathrm{x}) \leq a
-\end{aligned}
-$$
-with optimal solution $\mathbf{x}^{\star}(a)$, there is a $\lambda^{\star}(a)>0$ such that
-$$
-\max f(\mathbf{x})-\lambda^{\star}(a) g(\mathbf{x})
-$$
-has the same solution $\mathbf{x}^{\star}(a)$. We used this result at the beginning of the chapter. The parameter $\lambda^{\star}(a)$ can also be interpreted as a sensitivity to the constraint's right-hand side parameter $a$. The variable $\lambda$ is the marginal change in the optimum when we increase (or "relax") $a: d f\left(\mathbf{x}^{\star}(a)\right) / d a=\lambda(a)$. Since a commercial solver returns both $\mathbf{x}^{\star}$ and $\lambda^{\star}$, this means that we get sensitivities at zero additional cost. This results also opens up a different modeling approach. What if we converted constraints into penalties? We now know that the outcome, for the appropriate penalizing coefficient, is the same. Does this mean that the approaches are equivalent? The answer is no, and the remainder of this section is devoted to illustrating the difference.
-
-First, let us focus our attention on the meaning of constraints and penalties. There are constraints that are commensurable with the objective, and that are naturally expressed as penalties. For example, you could put a constraint on maximum trading costs. However, costs and expected PnL in the objective have the same unit (dollar) and it makes more sense to express the objective function as the difference of PnL and trading cost. The penalty parameter is simply one.
-
-What about risk? If we fix the time interval, the variance constraint has the dimension of dollar squared, and is therefore not commensurable to PnL in the objective. What we could add to the objective function is $\sqrt{\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}}$. This is possible in some optimization packages ${ }^{6}$ However, if we know the approximate value $\sigma_{0}$ of final volatility, we can choose a penalty parameter such that the adding a volatility term or a variance one gives a similar result. We do so by linearizing in the region of the optimum portfolio:
-$$
-\begin{aligned}
--\lambda \sqrt{\sigma_{0}^{2}+\left(\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\sigma_{0}^{2}\right)} & \simeq-\frac{\lambda}{\sigma_{0}}\left(\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\sigma_{0}^{2}\right) \\
-& =\lambda \sigma_{0}-\tilde{\lambda} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \\
-\tilde{\lambda} & :=\frac{\lambda}{\sigma_{0}}
-\end{aligned}
-$$
-
-\footnotetext{
-${ }^{6} \mathrm{~A}$ volatility constraint or penalty is in practice computationally more burdensome to solve than a variance constraint or penalty.
-}
-
-The constant term is irrelevant to the optimization problem, and the volatility is locally approximated by a variance.
-
-A second class of constraints does not have an obvious interpretation. Should we add the constraint on GMV as a penalty? Or long-only constraints? The answer, somewhat surprisingly, is that adding those constraints as penalty may actually help the performance of the optimized portfolio, when the parameters in the model are not accurately estimated.
-
-Let us start with an augmented version of Problem (9.8):
-$$
-\begin{gather*}
-\max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}  \tag{10.11}\\
-\text { s.t. }\|\mathbf{w}\|^{2} \leq G
-\end{gather*}
-$$
-whose penalized version is
-$$
-\begin{equation*}
-\max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\nu\|\mathbf{w}\|^{2} \tag{10.12}
-\end{equation*}
-$$
-
-This problem can interpreted in many different ways. The first one is a simple rewriting of the quadratic terms as $\lambda \mathbf{w}^{\boldsymbol{\top}}\left(\boldsymbol{\Omega}_{\mathbf{r}}+(\nu / \lambda) \mathbf{I}_{n}\right) \mathbf{w}=: \mathbf{w}^{\boldsymbol{\top}} \tilde{\boldsymbol{\Omega}}_{\mathbf{r}} \mathbf{w}$. The problem then is a MVO with a modified covariance matrix. The correlations of the original covariance matrix have been reduced by a factor $\lambda /(\lambda+\nu)$. The asset variances have been increased, and are more similar to each other; in the limit $\nu \rightarrow \infty$ they are identical. The norm constraint therefore has a "regularizing" effect on the solution. There are different optimization formulations that leads to the same solution of the optimization problem (10.12).
-1. Uncertain alpha [Stubbs and Vance, 2005]. Let us start with the assumption that the vector $\boldsymbol{\alpha}$ is not known with accuracy. We make the assumption that the vector is distributed according to a multivariate Gaussian: $\boldsymbol{\alpha} \sim N\left(\boldsymbol{\alpha}_{0}, \tau^{2} \mathbf{I}_{n}\right)$. We still solve a MVO, taking into account alpha uncertainty:
-$$
-\operatorname{var}\left(\mathbf{r}^{\top} \mathbf{w}\right)=\operatorname{var}\left(\boldsymbol{\alpha}^{\top} \mathbf{w}\right)+\operatorname{var}\left[(\mathbf{r}-\boldsymbol{\alpha})^{\top} \mathbf{w}\right]=\mathbf{w}^{\top}\left(\tau^{2} \mathbf{I}_{n}+\boldsymbol{\Omega}_{\mathbf{r}}\right) \mathbf{w}
-$$
-The MVO formulation is again the same as that of Equation (9.8), but with a modified covariance matrix. As in the case of Equation (10.12), the variances are made more equal, and correlations are shrunk toward zero.
-
-2. Robust alpha [Pedersen et al., 2021]. Instead of modeling alphas' imperfect estimation by assuming that we know their distribution, we model their error deterministically, and adversarially: we know that the true alphas
-are within a certain distance $d$ from our estimate and, as we did at the beginning of the chapter, we look at the worst case, i.e., the realized alpha is the worst possible one among the admissible realizations. In formulas, we solve
-$$
-\begin{align*}
-& \max \mathbf{a}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}  \tag{10.13}\\
-& \text { s.t. } \mathbf{a}=\arg \min _{\mathbf{x}}\left\{\mathbf{x}^{\top} \mathbf{w}\|\mid \mathbf{x}-\boldsymbol{\alpha}\| \leq d\right\} \tag{10.14}
-\end{align*}
-$$
-We know what the solution to the nested problem (10.14): from Insight 10.1, it is equal to $\mathbf{a}=\boldsymbol{\alpha}-d \mathbf{w} /\|\mathbf{w}\|$. Hence we solve
-$$
-\begin{equation*}
-\max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-d\|\mathbf{w}\| \tag{10.15}
-\end{equation*}
-$$
-This is similar, but not identical, to Equation (10.12): the norm penalty term is not squared. The same argument can be made to show that the norm and the norm squared are interchangeable, once the penalty constant $d$ is rescaled: $d\|\mathbf{w}\| \simeq\left(d /\left\|\mathbf{w}_{0}\right\|\right)\|\mathbf{w}\|^{2}$, for a $\left\|\mathbf{w}_{0}\right\|$ close to $\|\mathbf{w}\|$ of the final solution.
-
-3. Robust factors [Ceria et al., 2012]. We consider another instance of constrained optimization. A recurrent theme in this book is model misspecification. Factor models can be misspecified (both in their factor structure and in their expected returns), but they also offer remedies. Consider the case of an omitted factor. As a special case of misspecification, its effect is to worsen the Sharpe Ratio of the MVO portfolio. In order to reduce the impact, let us consider again an adversarial approach. Assume that there is a hidden factor, whose loadings we do not know, but whose volatility $\tau$ is given. We use this as a parameter to quantify the importance of the
-omitted factor.
-The new factor model includes an additional factor loading $\mathbf{v}$ orthogonal to $\mathbf{B}$. The covariance matrix is
-$$
-\tilde{\boldsymbol{\Omega}}_{\mathrm{r}}=\boldsymbol{\Omega}_{\mathrm{r}}+\tau^{2} \mathbf{v v}^{\top}
-$$
-
-We solve
-$$
-\begin{aligned}
-\max _{\mathbf{w}} & \min _{\|\mathbf{v}\| \leq 1} \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\tau^{2} \mathbf{v} \mathbf{v}^{\top}\right) \mathbf{w} \\
-& \max _{\mathbf{w}} \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\frac{\tau^{2}}{\|\mathbf{w}\|^{2}} \mathbf{w w}^{\boldsymbol{\top}}\right) \mathbf{w} \\
-& \max _{\mathbf{w}} \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\tau^{2} \mathbf{I}_{n}\right) \mathbf{w}
-\end{aligned}
-$$
-
-So, yet again, we are solving an optimization problem with a penalized covariance matrix.
-4. Robust asset correlations [Boyd et al., 2016]. Here we have another case of adversarial modeling that is expressed as a penalization term. Assume that we estimate the asset correlation matrix terms with some error independent of the asset pair, so that the difference between the estimated correlation and the true correlation is at most $\left|\rho_{i, j}-\hat{\rho}_{i, j}\right| \leq d$. The adversarial model looks for a solution to the MVO problem, where Nature chooses the covariance matrix with the highest variance compatible with the error bound:
-$$
-\begin{align*}
-\max & \mathbf{a}^{\top} \mathbf{w}-  \tag{10.16}\\
-\lambda & \sigma^{2}  \tag{10.17}\\
-\text { s.t. } \sigma^{2}(\mathbf{w})= & \arg \max _{\Delta \in \mathbb{R}^{n \times n}} \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\boldsymbol{\Delta}\right) \mathbf{w}  \tag{10.18}\\
-& \text { s.t. }\left|[\boldsymbol{\Delta}]_{i, j}\right| \leq d \sqrt{[\boldsymbol{\Omega}]_{i, i}[\boldsymbol{\Omega}]_{j, j}}, i, j=1, \ldots, n
-\end{align*}
-$$
-
-The objective of the nested problem is equivalent to
-$$
-\begin{equation*}
-\mathbf{w}^{\top} \boldsymbol{\Delta} \mathbf{w}=\sum_{i, j} w_{i} w_{j} \sqrt{[\boldsymbol{\Omega}]_{i, i}[\boldsymbol{\Omega}]_{j, j}} \rho_{i, j} \tag{10.19}
-\end{equation*}
-$$
-
-Every term is maximized when $\rho_{i, j}=d \times \operatorname{sgn}\left(w_{i} w_{j}\right)$, and the objective function value is
-$$
-\begin{align*}
-\left(\mathbf{w}^{\star}\right)^{\top} \boldsymbol{\Delta} \mathbf{w}^{\star} & =d \sum_{i, j}\left|w_{i} w_{j}\right| \sqrt{[\boldsymbol{\Omega}]_{i, i}[\boldsymbol{\Omega}]_{j, j}}  \tag{10.20}\\
-& =d\left(\sum_{i}\left|w_{i}\right| \sqrt{[\boldsymbol{\Omega}]_{i, i}}\right)  \tag{10.21}\\
-& =d\|\mathbf{V} \mathbf{w}\|_{1}^{2} \tag{10.22}
-\end{align*}
-$$
-
-Where $\mathbf{V}$ is a diagonal covariance matrix whose $i$ th diagonal term is the volatility of asset $i$. Let us plug this back in the original problem:
-$$
-\begin{equation*}
-\max \mathbf{a}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\lambda d\|\mathbf{V} \mathbf{w}\|_{1}^{2} \tag{10.23}
-\end{equation*}
-$$
-
-And we have yet again a penalization term, which is, in this case, the square of an L1 norm of the portfolio weights. The function $\|\mathbf{V w}\|_{1}^{2}$ is convex, so the optimization problem is tractable. I am summarizing the penalization approaches in the table below.
-5. Robust covariance matrix [Ledoit and Wolf, 2004]. Consider a different starting point to model robust covariance optimization. We assume that the adversary has a budget for the maximum cumulative squared error of the asset covariances: $\sum_{i, j}[\boldsymbol{\Delta}]_{i, j}^{2} \leq d^{2}$. This is the same as a bound on the Frobenius norm of the error, $\|\boldsymbol{\Delta}\|_{F}$. The robust problem formulation
-is similar to the previous one:
-$$
-\begin{aligned}
-& \max \mathbf{a}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\lambda \sigma^{2} \\
-& \text { s.t. } \sigma^{2}=\arg \max _{\Delta}\left\{\mathbf{w}^{\top} \boldsymbol{\Delta} \mathbf{w} \mid\|\boldsymbol{\Delta}\|_{F}^{2} \leq d^{2}\right\}
-\end{aligned}
-$$
-
-The strategy to solve this problem is similar to previous cases: the adversary maximizes a linear objective function with a norm constraint; see Insight 10.1 for the solution. In this case, $\left(\sigma^{\star}\right)^{2}=d\|\mathbf{w}\|^{2}$, yet again, and the problem becomes an MVO with a quadratic penalization term.
-\begin{tabular}{lll}
-\hline Approach & Penalty & Parameter Interpretation \\
-\hline Uncertain Alpha & $\tau^{2}\|\mathbf{w}\|^{2}$ & std.error of $\hat{\boldsymbol{\alpha}}$ \\
-Robust Alpha & $d\|\mathbf{w}\|$ & max distance $\|\boldsymbol{\alpha}-\hat{\boldsymbol{\alpha}}\|$ \\
-Robust Factor & $\lambda \tau^{2}\|\mathbf{w}\|^{2}$ & volatility of a missing factor \\
-Robust Correlations & $\lambda d\|\mathbf{V} \mathbf{w}\|_{1}^{2}$ & max distance $\left|\rho_{i, j}-\hat{\rho}_{i, j}\right|$ \\
-Robust Covariance & $\lambda d\|\mathbf{w}\|^{2}$ & max distance $\left\|\boldsymbol{\Omega}_{\mathbf{r}}-\hat{\boldsymbol{\Omega}} \hat{\mathbf{r}}_{\mathbf{r}}\right\|$ \\
+Table 8.1: Frequency histograms for the two simulated scenarios; the conversion IC to Sharpe Ratio is $\mathrm{SR}=\mathrm{IC} \sqrt{251 N}$..
+\begin{tabular}{lllll}
+\hline$T$ & $p$ & Mean(SR) & Stdev (SR) & \% passing \\
+\hline 5000 & 2 & 0.07 & 0.6 & 1.2 \\
+1250 & 500 & 0.04 & 1.4 & 19 \\
 \hline
 \end{tabular}
 
-Exercise 10.1: (30) Define the norm $\|\mathbf{x}\|_{\boldsymbol{\Lambda}, p}:=\left\|\boldsymbol{\Lambda}^{-1} \mathbf{x}\right\|_{p}$. Extend Problem (10.12) to this norm. Read [Olivares-Nadal and DeMiguel, 2018] for additional interpretations of this penalty, and discuss their applicability to real-world settings.
-
-\subsection*{Insight 10.3: The distinction between constraints and penalties}
-
-Although they can yield the same optimal portfolio, the constrained and penalty version differ in two important ways. The first one is that the shadow price of the constraint is not known before the optimization is run. This means that the solution can be very sensitive to the choice of the right-hand side of the constraint: we don't know the trade-off between constraint limit and optimum value. This is not the case with a penalty: we set the price, and the price has often a straightforward interpretation (like the price for risk). In successive optimizations, this price is unchanged making comparisons easier. When the interpretation is clear, penalties are preferable. The second difference is almost a corollary of the first one: in the constrained formulation, we may have no feasible solution, which is, in a loose sense, like saying that the price of the constraint is infinite. This is never the case with a penalized formulation, which is always feasible.
-
-\section*{10.3. How Does Estimation Error Affect Sharpe Ratio?}
-
-An investor starts with estimates of expected returns and of the covariance matrix ${ }^{7}$. We denote them with $\hat{\boldsymbol{\alpha}}$ and $\hat{\boldsymbol{\Omega}}_{\mathbf{r}}$ respectively. The MVO portfolio is proportional to $\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}$; the proportionality constant is irrelevant for the Sharpe Ratio. The realized Sharpe Ratio, however, is a function of the true expected returns and covariance matrix $\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathrm{r}}$ :
-$$
-\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathrm{r}}\right)=\frac{\boldsymbol{\alpha}^{\top}\left(\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}\right)}{\sqrt{\left(\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}\right)^{\top} \boldsymbol{\Omega}_{\mathbf{r}}\left(\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}\right)}}
-$$
+A remedy to the data leakage issues arising in cross-validation is walkforward backtesting [Pardo, 2007]. In this scheme, we use historical data up to period $t$ and target returns for period $t+1$. The scheme is as close as possible to the production process. It addresses two drawbacks of cross-validation for time-series - serial dependence and risk of data leakage - and it also augments naturally the dataset with the arrival of new data. Finally, it is naturally adaptive: it fine-tunes parameters as the environment changes. These advantages are complementary to cross-validation. As a result, it is often the case that signals, or simplified strategies, are first tested using cross-validation, and then tested "out of sample" in a walk-forward test. However, this is not ideal, however, since it has an opportunity cost caused by the delay in running the strategy in production. Walk-forward has an additional important drawback: it uses less training data than cross-validation. When the set of models and parameters is very large, this limitation could be very severe. On the other side, when the model has been identified, and only a few parameters need to be optimized, then this drawback becomes negligible. Two additional trading settings in which walk-forward does not suffer from data limitations are when a) data are plenty. This is the case of high-frequency trading; b) data are very non-stationary.
 
 \footnotetext{
-${ }^{7}$ The third leg of the trading stool is a model for trading cost. We will cover this in later chapters
+${ }^{5}$ This is the percentage of simulation samples for which the condition $\mathrm{SR}>$ $2.3 \sqrt{\left(1+\mathrm{SR}^{2} / 2\right) / T}$
+}
+![](https://cdn.mathpix.com/cropped/2024_12_20_83bccf3336bb2a206831g-289.jpg?height=689&width=1278&top_left_y=463&top_left_x=375)
+
+Figure 8.4: Two common walk-forward schemes. The top one uses fixed-length training data, thus keeping the estimation procedures comparable. The bottom one uses all the available data up to certain epoch, possibly weighting data differently based on the interval from the decision epoch.
+
+
+This is the case, to some extent, of every trading strategy, and this very fact suggests that walk-forward backtesting is, in any event, a necessary step in the validation of a strategy, and in its preparation for production.
+
+Summing up, neither cross-sectional nor walk-forward schemes are without flaws. Ideally, we would like a protocol with the following features.
+1. non-anticipative/immune from data leakage;
+2. taking into account serial dependency;
+3. using all data;
+4. allowing for multiple testing of a very large number of signals;
+5. Providing a rigorous decision rule.
+
+Walk forward meets the first two requirements; cross-validation meets the third. Neither meet the last two. The next section introduces a novel backtesting protocol, the Rademacher Anti-Serum (in short, RAS) (in short, RAS), which meets these requirements.
+
+\section*{8.3. The Rademacher Anti-Serum (RAS)}
+
+\subsection*{8.3.1. Setup}
+
+We will be concerned with testing the performance of strategies and signals.
+1. Strategies are the time series of the walk-forward simulated returns zscored by their predicted volatility, which we denote by $x_{t, n}$, so that their average equals the empirical sharpe ratio for strategy $n$. In this respect, the protocol is similar to walk-forward.
+2. When we test signals, we instead consider the Information Coefficient
+(IC) for the signal $n$ at time $t$, which is defined as the cosine of the angle (their cosine similarity) between the alpha vector predicted by signal $n$ in period $t$, and the idiosyncratic returns in the same period. ${ }^{6}$
+
+The definitions are below ${ }^{7}$ :
+$$
+\begin{aligned}
+& x_{t, n}:=\frac{\mathbf{w}_{t, n}^{\top} \mathbf{r}_{t}}{\sqrt{\mathbf{w}_{t, n}^{\top} \boldsymbol{\Omega}_{t} \mathbf{w}_{t, n}}} \\
+& x_{t, n}:=\frac{\boldsymbol{\alpha}_{t, n}^{\top} \boldsymbol{\epsilon}_{t}}{\left\|\boldsymbol{\alpha}_{t, n}\right\|\left\|\boldsymbol{\epsilon}_{t}\right\|} \quad \text { (Sharpe Ratio) } \quad \text { (Information Coefficient) }
+\end{aligned}
+$$
+
+We also denote $x_{t, n}$ both instances; the interpretation will be clear from the context. In either case, the dataset needed for the analysis is a $T \times N$ matrix X. Rows denote observations as of a certain timestamp and columns denote strategies, whose set we denote $S$. For notational simplicity, the $t$ th row of $\mathbf{X}$ is denoted by $\mathbf{x}_{t}$, and the $n$th column $\mathbf{x}^{n}$. In the following we make the important assumption that the random vectors $\mathbf{x}_{t}$ are iid, drawn from a common probability distribution $P$. We have two justifications for the assumptions. The first one is empirical. Serial dependence is small for returns observed at daily frequencies or lower ${ }^{8}$. The second one is that our framework can be extended to the case of time-dependent returns, at the price of weaker, asymptotic results. We recommend to inspect the autocorrelation plots of the univariate series $\mathbf{x}_{t}$. If there is sizable autocorrelation up to lag $s$, then replace the original time series with $\lfloor N / s\rfloor$ non-overlapping, contiguous averages of blocks $\left(x_{1+k s, n}, \ldots, x_{(k+1) s, n}\right)$. We employ the following notation. We let the joint distribution of $\mathbf{x}_{t}$ be $P$. Let $D=\bigotimes_{i=1}^{T} P$ be the joint probability distribution on the space of $T \times N$ matrices in which the element $\mathbf{x}_{t} \sim P$ has independent, identically distributed (iid) rows, each drawn from $P$.
+
+\footnotetext{
+${ }^{6}$ The IC is featured prominently in Section 9.5.
+${ }^{7}$ For definitions and uses of $\boldsymbol{\alpha}$, see Sections 4.3 and 9.4.
+${ }^{8}$ See Chapter 2 and references therein, for example Cont [2001] and Taylor [2007].
 }
 
-We compare the realized Sharpe Ratio to the best Sharpe ratio, based on the true values of $\boldsymbol{\alpha}$ and $\boldsymbol{\Omega}_{\mathbf{r}}$, given by Equation (9.5):
-$$
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)}
-$$
-
-We call this the Sharpe Ratio Efficiency (SRE) . It is important to study this quantity, because we want to know, at all times, whether we are losing a great deal of performance from inaccurate parameter estimation or large transaction costs. We will ask a few qualitative and quantitative questions, and see how far can the analysis take us ${ }^{8}$.
-
-First, we prove an intuitive fact: incorrect estimates worsen performance.
-
-Theorem 10.1: The Sharpe Ratio Efficiency is less or equal than one, and if it equal to one if and only if $\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}$ and $\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}$ are collinear.
-
-Proof. The SRE is
+The expected value of $\mathbf{x}_{t}$ is denoted by $\boldsymbol{\theta} \in \mathbb{R}^{N}$. This is the true vector of strategy/signal performances. Define $\hat{\boldsymbol{\theta}}(\mathbf{X}) \in \mathbb{R}^{N}$ as the vector of column averages of $\mathbf{X}$ :
 $$
 \begin{equation*}
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathrm{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathrm{r}}\right)}=\frac{\boldsymbol{\alpha}^{\top} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \hat{\boldsymbol{\alpha}}}{\sqrt{\hat{\boldsymbol{\alpha}}^{\top} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \boldsymbol{\Omega}_{\mathrm{r}} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \hat{\boldsymbol{\alpha}}}} \frac{1}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathrm{r}}^{-1} \boldsymbol{\alpha}}} \tag{10.24}
+\hat{\boldsymbol{\theta}}(\mathbf{X})=\frac{1}{T} \sum_{t=1}^{T} \mathbf{x}_{t} \tag{8.1}
+\end{equation*}
+$$
+which is the expected value of the row of $\mathbf{X}$ according to the bootstrap distribution.
+
+Let a Rademacher random vector $\boldsymbol{\epsilon}$ be a $T$-dimensional random vector whose elements are iid and take values 1 or -1 with probability $1 / 2$. The Rademacher Complexity of $\mathbf{X}$ is defined as [Mohri et al., 2018]:
+$$
+\hat{R}=E_{\boldsymbol{\epsilon}}\left(\sup _{n} \frac{\boldsymbol{\epsilon}^{\top} \mathbf{x}^{n}}{T}\right)
+$$
+
+Before stating a rigorous result linking this quantity to a bound on performance, we focus our attention on its interpretation. Specifically, we can interpret $\hat{R}$ in at least three ways.
+- As the covariance to random noise: Consider $\boldsymbol{\epsilon}$ as a random covariate. We can interpret $\hat{R}$ as the expected value of the highest covariance of the performance measure of a strategy to random noise. If, on average, for every set of $+/-1$ indicators, there is at least a strategy that covaries with it, then "we can do no wrong": for every realization of a random vector $\boldsymbol{\epsilon}$, there is a strategy $\mathbf{x}^{n}$ that would do well matching it, i.e., $\boldsymbol{\epsilon}^{\top} \mathbf{x}^{n} / T \simeq 1$. If we interpret the $x_{t, n}$ as predictions for epoch $t$, then this means that for every sequence of events $\epsilon_{t}$ we have a strategy that predicts them well.
+- As generalized 2-way cross-validation: For sufficiently large $T$, the sets of positive elements in $\boldsymbol{\epsilon}_{t}$ concentrates around size $T / 2$. We denote $S^{+}$the set of $T / 2$ periods where $\epsilon_{t}=1$, and $S^{-}$the other periods. Rewrite the term inside the sup as
+$$
+\begin{aligned}
+\frac{\epsilon^{\top} \mathbf{x}^{n}}{T} & =\frac{1}{2} \frac{2}{T} \sum_{s \in S^{+}} x_{s, n}-\frac{1}{2} \frac{2}{T} \sum_{s \in S^{-}} x_{s, n}=\frac{1}{2}\left(\hat{\theta}_{n}^{+}-\hat{\theta}_{n}^{-}\right) \\
+\hat{\theta}_{n}^{+} & :=\frac{2}{T} \sum_{s \in S^{+}} x_{s, n} \\
+\hat{\theta}_{n}^{-} & :=\frac{2}{T} \sum_{s \in S^{-}} x_{s, n}
+\end{aligned}
+$$
+
+For strategy $n$, this is the discrepancy in average performance measured on two equal-sized random subsets of the observations. By taking the sup across strategies, we are estimating the worst case: we estimate performance on a subset, and get a very different result on the remaining subset! And if the discrepancy is high for each random subset, this will indicate that performance is not consistent: there's always at least a strategy that performs comparatively well somewhere and poorly in the remaining periods. The associated $\hat{R}$ is high, and means that the set of strategies has unreliable performance.
+- As measure of span over possible performances: We interpret $\boldsymbol{\epsilon}$ as a "random direction" chosen at random in $\mathbb{R}^{T}$. The vector has Euclidean norm equal to $\sqrt{T}$. In the case where the performance measure is the standardized return, $E\left(\left\|\mathbf{x}^{n}\right\|\right)$ is also equal to $\sqrt{T}$, and is strongly concentrated around this value. The empirical Rademacher $\hat{R}$ is then approximately equal to
+$$
+E_{\epsilon}\left(\sup _{n} \frac{\epsilon^{\top} \mathbf{x}^{n}}{\|\boldsymbol{\epsilon}\|\left\|\mathbf{x}^{n}\right\|}\right)
+$$
+
+This can be interpreted in the following way. We have a set of $N$ vectors $\mathrm{x}^{1}, \ldots, \mathrm{x}^{N}$. We pick a random direction in the ambient space, and observe the maximum collinearity (expressed as the cosine similarity) of this random direction to our vectors. The expected value of this collinearity measures how much our set of strategy vectors span $\mathbb{R}^{T}$. If we have $n$ vectors that are copies of the same vector, the answer is: not very well. If, conversely, these vectors are all orthogonal, we have maximum collinearity. The Rademacher complexity is a geometric measure of how much the vectors $\mathbf{x}^{n}$ "span" $\mathbb{R}^{T}$.
+
+One interesting characteristic of the Rademacher complexity is that it takes into account dependence among strategies. If for example we had a billion strategies to our set of candidate strategies, but they are all identical (hence perfectly correlated) we are not increasing the Rademacher complexity. However, if the strategies are uncorrelated from each other, then the Rademacher complexity is high, indicating higher likelihood of overfitting.
+
+\subsection*{8.3.2. Main result and Interpretation}
+
+The thrust of our protocol is to provide a uniform additive "haircut" (i.e., a term we subtract from the empirical performance) to the performance statistic. In other terms, for each strategy $n$ we have an empirical performance $\hat{\theta}_{n}$, by Equation (8.1). In the case of z -scored returns, this is the empirical Sharpe Ratio. Then, we can establish a probabilistic guarantee on the true Sharpe Ratio: with high probability, say, greater than $1-\delta$, the Sharpe Ratio of the strategy is greater than $\hat{\theta}_{n}$ - "haircut", where the haircut is a function of the Rademacher complexity, the number of samples $T$, and the parameter $\delta$.
+
+Here, we describe the steps that establish a lower bound for performance.
+
+We start with signals. In this case, we have $\left|x_{t, n}\right| \leq 1$, because the value is a correlation. For all signals, the true performance metric $\theta_{n}$ is bounded below by the empirical performance minus a haircut, with probability greater than $1-\delta$ :
+$$
+\begin{equation*}
+\theta_{n} \geq \hat{\theta}_{n}-\underbrace{2 \hat{R}}_{\text {(data snooping) }}-\underbrace{2 \sqrt{\frac{\log (2 / \delta)}{T}}}_{\text {(estimation error) }} \tag{8.2}
 \end{equation*}
 $$
 
-Let ${ }^{9}$
+The result is described in Procedure 8.1.
+
+\subsection*{Procedure 8.1: Rademacher Anti-Serum for signals}
+1. Backtest all the strategies using a walk-forward procedure. Let $\mathbf{X} \in \mathbb{R}^{T \times N}$ be the matrix with Information Coefficients of strategy $n$ at time $t$.
+2. Compute $\hat{\theta}(\mathbf{X})$, as defined in Equation (8.1).
+3. Compute $\hat{R}(\mathbf{X})$.
+4. For all $n \in 1, \ldots, N$
+$$
+\theta_{n} \geq \hat{\theta}_{n}-2 \hat{R}-2 \sqrt{\frac{\log (2 / \delta)}{T}}
+$$
+with probability greater than $1-\delta$.
+
+Now, consider the case for Sharpe analysis. The formula is similar, but with a different estimation error.
+$$
+\begin{equation*}
+\theta_{n} \geq \hat{\theta}_{n}-\underbrace{2 \hat{R}}_{\text {(data snooping) }}-\underbrace{3 \sqrt{\frac{2 \log (2 / \delta)}{T}}-\sqrt{\frac{2 \log (2 N / \delta)}{T}}}_{\text {(estimation error) }} \tag{8.3}
+\end{equation*}
+$$
+
+The proofs are in the Appendix, Section 8.5.
+
+\subsection*{Procedure 8.2: Rademacher Anti-Serum for Sharpe}
+1. Backtest all the strategies using a walk-forward procedure. Let $\mathbf{X} \in \mathbb{R}^{T \times N}$ be the matrix with Information Ratio of strategy $n$ at time $t$.
+2. Compute $\hat{\theta}(\mathbf{X})$, as defined in Equation (8.1).
+3. Compute $\hat{R}(\mathbf{X})$.
+4. For all $n \in 1, \ldots, N$
+$$
+\theta_{n} \geq \hat{\theta}_{n}-2 \hat{R}-3 \sqrt{\frac{2 \log (2 / \delta)}{T}}-\sqrt{\frac{2 \log (2 N / \delta)}{T}}
+$$
+with probability greater than $1-\delta$.
+
+
+[WILEY EDITORS: place Figure 8.5 around here.]
+![](https://cdn.mathpix.com/cropped/2024_12_20_83bccf3336bb2a206831g-297.jpg?height=735&width=1275&top_left_y=451&top_left_x=371)
+
+Figure 8.5: Rademacher complexity for 5000 strategies, with iid Gaussian returns, and variable pairwise correlation. Estimate based on 2E4 samples.
+
+
+We focus on the interpretation of the claim. The theorem states that the lower bounds on IC and Sharpe hold simultaneously at least with probability 1$\delta$. Moreover the statement holds for any finite $T$; no asymptotic approximation is involved. The true expected performance differs from the empirical performance because of two nonnegative terms:
+- The first is the term $2 \hat{R}$. This is the data snooping term. The larger the number of strategies, the higher the $\hat{R}$, because sup is strictly increasing in the number of strategies. Moreover, as we discussed, the higher the dependency among strategies, the lower the $\hat{R}$. In the limit case where we test multiple replicas of the same strategy, $\hat{R}$ is zero. To provide some intuition about the behavior of Rademacher complexity, we consider a set of strategies with normally distributed returns with zero expected returns and a given pairwise correlation among strategy returns. Figure 8.5 displays $2 \hat{R}$ as a function of the pairwise correlation. The Rademacher complexity decreases in the correlation, and increases in the number of strategies. Given the data matrix $\mathbf{X}$, the quantity $\hat{R}$ is estimated via simulation. An upper bound for this quantity is given by Massart's lemma:
+$$
+\hat{R} \leq \frac{\sqrt{2 \log N}}{T}
+$$
+- The second is the estimation term. For some intuition, consider the case of $T$ iid normal random variables $\theta_{t}$ with mean 0 and unit variance. Their average $\hat{\theta}$ is distributed as a normal distribution with standard deviation $1 / \sqrt{T}$. What is the $\delta$-quantile of the distribution? There is no closed-formula for it, but we can approximate it using Equation (??). For a normal distribution with zero mean and standard deviation $1 / \sqrt{T}$, and Cumulative Distribution Function $F$,
+$$
+\begin{equation*}
+F^{-1}(\delta) \geq-\sqrt{\frac{2 \log [1 /(2 \sqrt{2 \pi} \delta)]}{T}} \tag{8.4}
+\end{equation*}
+$$
+
+This is similar, up to constants, to the estimation errors in Equations (8.2) and (8.3). In the limit $t \rightarrow \infty$ The estimation error in both procedures approaches 0 .
+
+The estimation error above is independent of $N$ for bounded distributions and is $\propto \sqrt{\log N}$ for subGaussian ones. An argument for this dependency is the following. Consider the following special case. We have $N$ Gaussian signals with iid returns $N(0,1)$. The empirical Sharpe Ratios of the $N$ strategies are also iid, $\hat{\theta}_{n} \sim N(0,1 / T)$. It can be shown [van Handel, 2016, Kamath, 2020] that
+$$
+\frac{1}{\sqrt{\pi \log 2}} \sqrt{\frac{\log N}{T}} \leq E\left(\max _{i} \hat{\theta}_{i}\right) \leq 2 \sqrt{\frac{\log N}{T}}
+$$
+
+When the SR is zero, the maximum (and high quantiles) of the Sharpe Ratio grow as $\sqrt{(\log N) / T}$. In order not to have false positives, the "haircut" on the empirical SR should be equal to $\kappa \sqrt{(\log N) / T}$, for some positive $\kappa$. In addition, we should have a term that captures the tail behavior of $\max _{i} \hat{\theta}_{i}$. For large $N$, the dominant term of the estimation error in Equation (8.3) is $\sqrt{2(\log N) / T+2 \log (2 / \delta) / T}$, which is majorized by $\sqrt{2(\log N) / T}+$ $\sqrt{2 \log (2 / \delta) / T}$. The first term is the $\kappa \sqrt{\frac{\log N}{T}}$ growth term, and the second one is the term accounting for the confidence interval that we saw in Equation (8.4).
+
+The procedure is operationally simple: simulate all possible strategies in a walk-forward manner. There should be no look-ahead bias: the strategies should be formulated without looking at the entire dataset and their parameters should be tuned based on past history only. As we mentioned in the "best practices" section, all strategies should be documented and should run in parallel to the production strategy. Then, estimate the Rademacher complexity of matrix $\mathbf{X}$ by the expectation in the definition of that statistic. The Rademacher complexity is easy to compute for millions (or more) strategies, and can be computed for even larger sets of strategies using tools from numerical analysis.
+- The SAR procedure for signals uses the worst case $\left|x_{t, n}\right| \leq 1$. In practice, however, it is extremely unlikely to observe ICs close to one; IC greater than 0.1 is extremely unlikely. If we assume $\left|x_{t, n}\right| \leq \kappa<1$, and apply Theorem 8.3, the estimation term becomes smaller, by a factor $\kappa$ :
+$$
+\text { "estimation error" }=2 \kappa \sqrt{\frac{\log (2 / \delta)}{T}}
+$$
+
+Consider some realistic parameters: $\kappa=0.02, \delta=0.01$ and $T=2500$. Then the estimation error is about 0.002 .
+- In the SAR procedure for strategies, the formula for the estimation error is a rather simple bound and the constant factor could be probably improved. For realistic parameters, the error is quite large. For example $\delta=0.01$, $T=2500$, and $N=1 E 6$, the estimation error is 0.31 , corresponding to an annualized estimation error of 5.1. This seems a loose bound, compared to the standard formula for the standard error of the Sharpe Ratio [Lo, 2002]: for a strategy with Sharpe Ratio equal to 3, the estimation error haircut is $F(\delta) \sqrt{\left(1+S R^{2} / 2\right) / T} \sqrt{251}=1.7$.
+- The constant of the data snooping term is also conservative, since in the proof we rely on a chain of inequalities to obtain a bound.
+
+I will close with the wise words of former colleague: "the path connecting theory and practice is paved with carefully tuned parameters." The best we can hope from theory is an insightful, interpretable result, which is amenable to be fine-tuned for applications by means of simulation. The bound of Procedure 8.2 will take the form ${ }^{9}$
+$$
+\theta_{n}-\hat{\theta}_{n} \geq-a \hat{R}-b \sqrt{\frac{2 \log (2 / \delta)}{T}}
+$$
+with parameters
+
+\footnotetext{
+${ }^{9}$ In the estimation error of Equation (8.3), for $\delta \geq 0.01$ and $N \leq 1 E 8$, the term dependent on $N$ is smaller than the term independent of it, i.e., $\sqrt{\frac{2 \log (2 N / \delta)}{T}} \leq 0.6 \times 33 \sqrt{\frac{2 \log (2 / \delta)}{T}}$, and is very weakly dependent on $N$.
+}
+
+\section*{8.4. Some Empirical Results}
+
+\subsection*{8.4.1. Simulations}
+
+Let us see how this approach performs in a simulated setting first. We first consider strategies whose returns are normally distributed, are iid (within each strategy) and are cross-sectionally pairwise correlated, with correlation $\rho$. Specifically, the return of strategy $i$ in period $t$ is given by $r_{i, t}=\rho * f_{t}+$ $\sqrt{1-\rho^{2}} * \epsilon_{i, t}$, with $\epsilon_{i, t} \sim N(0,1)$ and $f_{t} \sim N(0,1)$. We run simulations for different values of the correlation, for different numbers of strategies, and for expected returns (and therefore non-annualized Sharpe Ratios) equal to 0 and 0.1. For each simulation, we report the maximum empirical Sharpe Ratio $\max _{i} \hat{\theta}_{i}$, the Rademacher complexity, the estimation error, the percentage of detected positive strategies, i.e. of strategies for which the right-hand side of the Equation (8.2) exceeds 0, and is therefore deemed to have positive Sharpe Ratio. We also report the percentage of "Rademacher positive strategies, i.e., the strategies that exceed the data snooping haircut alone. In formula:
 $$
 \begin{align*}
-& \mathrm{a}:=\boldsymbol{\Omega}_{\mathrm{r}}^{-1 / 2} \boldsymbol{\alpha}  \tag{10.25}\\
-& \mathbf{b}:=\boldsymbol{\Omega}_{\mathrm{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \hat{\boldsymbol{\alpha}} \tag{10.26}
-\end{align*}
+\hat{\theta}_{n}-2 \hat{R}-2 \sqrt{\frac{\log (2 / \delta)}{T}} & >0  \tag{8.5}\\
+\hat{\theta}_{n}-2 \hat{R} & >0 \tag{8.6}
+\end{align*} \quad \text { ("positive") }
 $$
+
+We perform simulations with returns distributed both according to a Gaussian distribution and to a $t$ distribution with five degrees of freedom. The latter aims to approximate heavy-tailed returns. The simulation are performed for all possible combinations of the following parameters:
+1. Correlation: $\rho \in\{0.2,0.8\}$.
+2. Number of strategies: $N \in\{500,5000\}$.
+3. Number of periods: $T \in\{2500,5000\}$.
+4. Population Sharpe: We consider two cases. In the first one, all strategies have $\mathrm{SR}=0$. In the second one, $80 \%$ have $\mathrm{SR}=0$, and $20 \%$ have $\mathrm{SR}=0.2$ (the Sharpe Ratio is not annualized).
+
+For each of the sixteen scenarios, we run eight simulations: we generate a historical return matrix $\mathbf{X}_{n}$. For each instance we compute the following outputs:
+1. $\max _{i} \hat{\theta}_{i}^{(n)}$, the maximum realized Sharpe Ratio across the strategies.
+2. $\hat{R}_{n}$ the Rademacher complexity of $\mathbf{X}_{n}$.
+3. The estimation error $2 \sqrt{\log (2 / \delta) / T}$, for $\delta=5 E=2$.
+4. The percentage of positive strategies, as per Equation (8.5).
+5. The percentage of Rademacher positive strategies, as per Equation (8.6).
+6. The percentage of true positive strategies. This percentage is either 0 or 20\%.
+
+The tables below report the average across the eight simulations. Tables 8.3 and 8.4 show the results for normally- and t-distributed returns, respectively. 
+
+[WILEY EDITORS: place Table 8.2 around here.]
+
+Table 8.2: $\quad$ Comparison of $\hat{R}$ and Massart's bound.
+\begin{tabular}{rrrr}
+\hline$N$ & $T$ & $\hat{R}$ & Massart's bound \\
+\hline 500 & 2500 & 0.059 & 0.070 \\
+5000 & 2500 & 0.072 & 0.083 \\
+500 & 5000 & 0.042 & 0.049 \\
+5000 & 5000 & 0.051 & 0.058 \\
+\hline
+\end{tabular}
+
+[WILEY EDITORS: place Table 8.3 around here.] [WILEY EDITORS: place Table 8.4 around here.]
+
+Table 8.3: Simulations for normally distributed returns.
+\begin{tabular}{rrrrrrrrrrr}
+\hline$\rho$ & $N$ & $T$ & $\max _{i} \theta_{i}$ & $\max _{i} \bar{\theta}_{i}$ & $R$ & error & \% pos & \% rad pos & \% true pos \\
+\hline 0.2 & 500 & 2500 & 0 & 0.059 & 0.059 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.8 & 500 & 2500 & 0 & 0.050 & 0.037 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.2 & 500 & 2500 & 0.2 & 0.252 & 0.060 & 0.109 & 1.7 & 20.0 & 20.0 \\
+0.8 & 500 & 2500 & 0.2 & 0.228 & 0.037 & 0.109 & 14.3 & 20.0 & 20.0 \\
+0.2 & 5000 & 2500 & 0 & 0.074 & 0.072 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.8 & 5000 & 2500 & 0 & 0.041 & 0.044 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.2 & 5000 & 2500 & 0.2 & 0.264 & 0.072 & 0.109 & 0.1 & 19.9 & 20.0 \\
+0.8 & 5000 & 2500 & 0.2 & 0.242 & 0.045 & 0.109 & 12.3 & 20.0 & 20.0 \\
+0.2 & 500 & 5000 & 0 & 0.039 & 0.042 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.8 & 500 & 5000 & 0 & 0.019 & 0.026 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.2 & 500 & 5000 & 0.2 & 0.234 & 0.042 & 0.077 & 19.9 & 20.0 & 20.0 \\
+0.8 & 500 & 5000 & 0.2 & 0.221 & 0.026 & 0.077 & 20.0 & 20.0 & 20.0 \\
+0.2 & 5000 & 5000 & 0 & 0.051 & 0.051 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.8 & 5000 & 5000 & 0 & 0.037 & 0.031 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.2 & 5000 & 5000 & 0.2 & 0.247 & 0.051 & 0.077 & 18.6 & 20.0 & 20.0 \\
+0.8 & 5000 & 5000 & 0.2 & 0.230 & 0.032 & 0.077 & 20.0 & 20.0 & 20.0 \\
+\hline
+\end{tabular}
+
+
+Table 8.4: Simulations for t-distributed returns.
+\begin{tabular}{rrrrrrrrrrr}
+\hline$\rho$ & $N$ & $T$ & $\max _{i} \theta_{i}$ & $\max _{i} \bar{\theta}_{i}$ & $R$ & error & \% pos & \% rad pos & \% true pos \\
+\hline 0.2 & 500.0 & 2500 & 0 & 0.059 & 0.059 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.8 & 500.0 & 2500 & 0 & 0.035 & 0.036 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.2 & 500.0 & 2500 & 0.2 & 0.250 & 0.060 & 0.109 & 1.4 & 20.0 & 20.0 \\
+0.8 & 500.0 & 2500 & 0.2 & 0.237 & 0.037 & 0.109 & 16.6 & 20.0 & 20.0 \\
+0.2 & 5000.0 & 2500 & 0 & 0.070 & 0.072 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.8 & 5000.0 & 2500 & 0 & 0.045 & 0.044 & 0.109 & 0.0 & 0.0 & 0.0 \\
+0.2 & 5000.0 & 2500 & 0.2 & 0.265 & 0.072 & 0.109 & 0.1 & 19.9 & 20.0 \\
+0.8 & 5000.0 & 2500 & 0.2 & 0.242 & 0.045 & 0.109 & 11.0 & 20.0 & 20.0 \\
+0.2 & 500.0 & 5000 & 0 & 0.047 & 0.042 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.8 & 500.0 & 5000 & 0 & 0.023 & 0.026 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.2 & 500.0 & 5000 & 0.2 & 0.234 & 0.042 & 0.077 & 20.0 & 20.0 & 20.0 \\
+0.8 & 500.0 & 5000 & 0.2 & 0.220 & 0.026 & 0.077 & 20.0 & 20.0 & 20.0 \\
+0.2 & 5000.0 & 5000 & 0 & 0.051 & 0.051 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.8 & 5000.0 & 5000 & 0 & 0.034 & 0.031 & 0.077 & 0.0 & 0.0 & 0.0 \\
+0.2 & 5000.0 & 5000 & 0.2 & 0.247 & 0.051 & 0.077 & 18.5 & 20.0 & 20.0 \\
+0.8 & 5000.0 & 5000 & 0.2 & 0.231 & 0.031 & 0.077 & 20.0 & 20.0 & 20.0 \\
+\hline
+\end{tabular}
+
+We interpret the results below.
+
+1. For a fixed distribution of the population Sharpe, the maximum empirical Sharpe Ratio $\max _{i} \bar{\theta}_{i}$ is predictably increasing in $N$, it is decreasing in $\rho$ because the "effective" number of strategies decreases, as the strategies are more correlated, and it is decreasing in $T$, by the Central Limit Theorem.
+2. Everything else equal, the Rademacher complexity is decreasing in $\rho$, increasing in $N$, and is decreasing in $T$. It is interesting to compare $\hat{R}$ to the bound from Massart's lemma. in Table 8.2, I report the highest $\hat{R}$ from Table 8.3, and Massart's bounds. Massart's bound is at most $19 \%$ higher than the observed Rademacher complexity.   
+3. The data snooping term and the estimation error term have the same magnitude.
+4. In the null Sharpe case (all strategies have zero Sharpe Ratio), the
+percentage of detected positive cases ("\% pos") is zero or nearly zero in all cases; there are no false positives.
+5. In the alternative Sharpe case ( $20 \%$ of strategies have Sharpe Ratio equal to 0.2 ), the percentage positives is always smaller than the percentage of true positives. All detected positives are in fact true positives: the False Discovery Rate (FDR), defined as the ratio of false positives to all detected positives, is zero. In a few cases the percentage of positives is much lower than the percentage of true positives. The bounds is too conservative.
+6. The percentage of Rademacher positives is much closer to the percentage of true positives. The FDR is still zero in this case.
+
+
+\subsection*{8.4.2. Historical Anomalies}
+
+It is of independent interest to analyze anomalies published in the academic literature. We consider two sources of returns. In their paper, Jensen et al. [2023] extend a dataset of factor anomalies introduced by Hou et al. [2020], and test their replicability and out-of-sample performance. The dataset contains published characteristics, and it is not possible to know which characteristics were tested prior to publications. In principle, all such variants should be included in the study. Had they been included, the Rademacher complexity of the dataset would have been higher. As criteria for inclusion, we required that the factors have at least ten years of trading history, and that they be produced on the last day ${ }^{10}$ in the dataset, December 31. 2023. We perform the analysis at the country level. Table 8.5 shows the same columns as the previous two table, with the exception of the percentage of true positives, which is not know a priori. The United Kingdom, United States and Hong Kong and Malaysia are the only markets where a positive percentage of factors meet the Rademacher bound, Equation 8.6.
+
+[WILEY EDITORS: place Table 8.5 around here.] 
+
+Table 8.5: $\quad$ Summary data for the factors in Jensen et al.'s database.
+\begin{tabular}{lrrrrrrr}
+\hline Country & $N$ & $T$ & $\max _{i} \bar{\theta}_{i}$ & $\hat{R}$ & error & $\%$ pos & $\% \mathrm{rad}$ pos \\
+\hline AUS & 153 & 3584 & 0.072 & 0.040 & 0.091 & 0.0 & 0.0 \\
+BRA & 141 & 2823 & 0.057 & 0.046 & 0.102 & 0.0 & 0.0 \\
+CAN & 153 & 3880 & 0.043 & 0.038 & 0.087 & 0.0 & 0.0 \\
+CHE & 153 & 3358 & 0.066 & 0.042 & 0.094 & 0.0 & 0.0 \\
+DEU & 153 & 4475 & 0.052 & 0.036 & 0.081 & 0.0 & 0.0 \\
+FRA & 153 & 4327 & 0.055 & 0.037 & 0.083 & 0.0 & 0.0 \\
+GBR & 153 & 4546 & 0.082 & 0.036 & 0.081 & 0.0 & $\mathbf{0 . 7}$ \\
+HKG & 153 & 4101 & 0.100 & 0.037 & 0.085 & 0.0 & $\mathbf{6 . 5}$ \\
+IND & 153 & 2785 & 0.091 & 0.046 & 0.103 & 0.0 & 0.0 \\
+JPN & 150 & 2549 & 0.036 & 0.047 & 0.108 & 0.0 & 0.0 \\
+KOR & 148 & 2560 & 0.049 & 0.047 & 0.107 & 0.0 & 0.0 \\
+MYS & 152 & 3436 & 0.084 & 0.042 & 0.093 & 0.0 & $\mathbf{0 . 7}$ \\
+SAU & 139 & 2925 & 0.076 & 0.045 & 0.100 & 0.0 & 0.0 \\
+THA & 146 & 2988 & 0.043 & 0.044 & 0.099 & 0.0 & 0.0 \\
+TWN & 151 & 2899 & 0.068 & 0.044 & 0.101 & 0.0 & 0.0 \\
+USA & 153 & 13155 & 0.069 & 0.020 & 0.047 & 0.0 & $\mathbf{1 8 . 3}$ \\
+ZAF & 151 & 2676 & 0.062 & 0.047 & 0.105 & 0.0 & 0.0 \\
+\hline
+\end{tabular}
+
+Another source of factor return data is curated by Andrew Chen [Chen and Zimmerman, 2022]. Among the anomalies ${ }^{11}$, we select those that were available as of the end of
+2023 and had at least five years of history. The summary results are displayed in Table 8.6. The percentage of strategies that meet the Rademacher bound is above $3 \%$. The smaller percentage is attributable to the fact that the number of periods (days) with complete observations is 5911 (compared to 13155 for the Jensen, Kelly and Pedersen dataset) and to the Rademacher complexity being 0.033 (compared to 0.02 for the Jensen, Kelly and Pedersen dataset).
+
+[WILEY EDITORS: place Table 8.6 around here.]
+
+Table 8.6: Summary data for the factors in Zimmerman and Chen's database.
+\begin{tabular}{rrrrrrr}
+\hline$N$ & $T$ & $\max _{i} \bar{\theta}_{i}$ & $\hat{R}$ & error & \% pos & \% rad pos \\
+\hline 192 & 5911 & 0.126 & 0.033 & 0.070 & 0 & $\mathbf{3 . 1}$ \\
+\hline
+\end{tabular}
+
 
 \footnotetext{
-${ }^{8}$ Early papers on model estimation error, and the relative impact of alpha and estimation error, are Michaud [1989], Shephard [2009], Chopra and W.Ziemba [1993].
-${ }^{9}$ Let $\mathbf{H}$ be a symmetric positive definite matrix and let $\mathbf{V} \boldsymbol{\Lambda} \mathbf{V}^{\top}$ be its Singular Value Decomposition. Define $\mathbf{H}^{1 / 2}:=\mathbf{V} \boldsymbol{\Lambda}^{1 / 2} \mathbf{V}^{\top}$. Then $\mathbf{H}^{1 / 2} \mathbf{H}^{1 / 2}=\mathbf{H}$ and $\left\|\mathbf{H}^{1 / 2}\right\|_{\mathrm{op}}^{2}=\|\mathbf{H}\|_{\mathrm{op}}$.
-}
-so that
-$$
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)}=\frac{\mathbf{a}^{\top} \mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}
-$$
-
-The Sharpe Ratio efficiency is always less than one because of Cauchy-Schwartz inequality ${ }^{10}$, unless $\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}$ and $\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}$ are collinear.
-
-
-\footnotetext{
-${ }^{10}$ Which can be found in almost any linear algebra book. If $\mathbf{x}, \mathbf{y} \in \mathbb{R}^{n}$, then $\left|\mathbf{a}^{\top} \mathbf{b}\right| \leq$ $\sqrt{\mathbf{a}^{\top} \mathbf{a}} \sqrt{\mathbf{b}^{\top} \mathbf{b}}$, with the equality holding only if $\mathbf{a}=\kappa \mathbf{b}$.
+${ }^{10}$ Data downloaded on August 15, 2024 from https://jkpfactors.com/.
+${ }^{11}$ We use the 'Predictor' dataset, downloaded from https://www.openassetpricing/ on
 }
 
-\subsection*{10.3.1. The Impact of Alpha Error}
 
-It is more useful to derive lower bounds on performance inefficiency, based on the estimation error of either expected returns of covariance.
+\section*{8.5. Appendix}
 
-We need to introduce a few basic results. Let the norm of a matrix be defined as the operator norm. Define the relative alpha error as
-$$
-\left\|\frac{\boldsymbol{\alpha}}{\|\boldsymbol{\alpha}\|}-\frac{\hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|}\right\| \leq \delta_{\mathrm{alpha}}
-$$
+\subsection*{8.5.1. Proofs for RAS}
 
-In the Appendix (Section 10.4.1) I prove the following result:
+We use some essential inequalities in the proofs. Standard references are Boucheron et al. [2013] and Vershynin [2018].
+
+Theorem 8.1(McDiarmid's inequality): Let $X_{1}, \ldots, X_{n}$ be independent random variables, and $f: \mathbb{R}^{n} \rightarrow \mathbb{R}$, such that, for each $i$,
 $$
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta_{\text {alpha }}^{2}
+\sup _{x_{i}, x_{i}^{\prime}}\left|f\left(x_{1}, \ldots, x_{i}, \ldots, x_{n}\right)-f\left(x_{1}, \ldots, x_{i}^{\prime}, \ldots, x_{n}\right)\right| \leq c_{i}
 $$
 
-\subsection*{10.3.2. The Impact of Risk Error}
+Then, for all $\epsilon>0$,
+$$
+P(|f-E f|>\epsilon) \leq \exp \left(-\frac{2 \epsilon^{2}}{\sum_{i} c_{i}^{2}}\right)
+$$
 
-If there is $\kappa>0$ such that
+Specifically, if $c_{i}=c$, and with probability greater than $1-\delta / 2$,
+$$
+f<E f-\sqrt{\frac{n c^{2}}{2} \log (\delta / 2)}
+$$
+
+A mean-zero $\sigma$-Sub-Gaussian random variable $X$ is one for which a positive constant $\sigma$ exists, such that the inequality $P(|X|>\epsilon) \leq 2 \exp \left(-\epsilon^{2} /\left(2 \sigma^{2}\right)\right)$ holds for all positive $\epsilon$. The parameter $\sigma^{2}$ is the proxy variance.
+
+Theorem 8.2(Generalized Hoeffding's inequality): Let $X_{1}, \ldots, X_{n}$ be i.i.d. random variables with finite sub-Gaussian norms and proxy. Then, for all $\epsilon>0$,
 $$
 \begin{equation*}
-\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}-\kappa \mathbf{I}\right\| \leq \delta_{\text {risk }} \tag{10.27}
+P\left(\frac{1}{n} \sum_{i=1}^{n} X_{i}-E X>\epsilon\right) \leq \exp \left(-\frac{n \epsilon^{2}}{2 \sigma^{2}}\right) \tag{8.7}
 \end{equation*}
 $$
 
-Then
+Theorem 8.3(Bounds for Bounded Performance Metrics): Assume that $\left|x_{t n}\right| \leq a$ for all $n=1, \ldots, N, t=1, \ldots, T$. For all $n \in 1, \ldots, N$
 $$
 \begin{equation*}
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-\frac{2 \delta_{\text {risk }}}{\kappa+\delta_{\text {risk }}} \tag{10.28}
+\theta_{n} \geq \hat{\theta}_{n}-2 \hat{R}-3 a \sqrt{\frac{2 \log (2 / \delta)}{T}} \tag{8.8}
 \end{equation*}
 $$
 
-This formula follows directly from the Equation (10.24). At first sight, what is interesting about this result is how weak it is. Let us consider a few special cases. We define $\mathbf{H}:=\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}$.
-1. If the estimated covariance matrix is biased, but uniformly so, i.e., $\hat{\boldsymbol{\Omega}}_{\mathbf{r}}=$ $\kappa \boldsymbol{\Omega}_{\mathbf{r}}$, then $\mathbf{H}=\kappa^{-1} \mathbf{I}$, and there is no efficiency loss. We knew this already from the previous chapter. What happens in practice is that we would deploy a portfolio with the highest Sharpe Ratio, but incorrect volatility.
-
-2. Say, however, that we really estimate the covariance matrix incorrectly, so that $\mathbf{H} \not \propto \mathbf{I}$. It can still happen that we have a SRE of one! This will happen if $\hat{\boldsymbol{\alpha}}$ is proportional to an eigenvector of $\mathbf{H}$ with a positive eigenvalue. Say the associated eigenvalue is $\gamma$. Then, use directly Equation
+Proof. The straightforward inequality holds for all $n=1, \ldots, N: \theta_{n}-\hat{\theta}_{n} \geq$ $-\sup _{n}\left|\hat{\theta}_{n}-\theta_{n}\right|$. Define
 $$
 \begin{equation*}
-\operatorname{SRE}=\frac{\hat{\boldsymbol{\alpha}}^{\top}(\gamma \hat{\boldsymbol{\alpha}})}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \sqrt{\frac{\|\hat{\boldsymbol{\alpha}}\|^{2}}{\hat{\boldsymbol{\alpha}}^{\top}\left(\gamma^{2} \hat{\boldsymbol{\alpha}}\right)}}=\operatorname{sgn}(\gamma) \tag{10.24}
-\end{equation*}
-$$
-Even more pathologically, though, this also implies that if our $\hat{\boldsymbol{\alpha}}$ is proportional to an eigenvector with negative eigenvalue, then the Sharpe Ratio Efficiency is -1. Incidentally, $\mathbf{H}$ is neither necessarily symmetric nor positive definite, so a negative eigenvalue is indeed a possibility.
-
-3. But, you may argue, this is an exceptional circumstance. Consider a simpler but instructive case. We make the assumption that $\hat{\boldsymbol{\Omega}}_{\mathrm{r}}$ has the same eigenvectors as $\boldsymbol{\Omega}_{\mathrm{r}}$. In other words, the Singular Value Decompositions
-only differ because of the Singular Values.
-$$
-\begin{aligned}
-& \Omega_{\mathrm{r}}=\mathbf{U} \boldsymbol{\Lambda} \mathbf{U}^{\top} \\
-& \hat{\Omega}_{\mathrm{r}}=\mathbf{U} \hat{\boldsymbol{\Lambda}} \mathbf{U}^{\top}
-\end{aligned}
-$$
-so that $\mathbf{H}=\mathbf{U} \boldsymbol{\Lambda}^{1 / 2} \mathbf{U}^{\top} \mathbf{U} \hat{\boldsymbol{\Lambda}}^{-1} \mathbf{U}^{\top} \mathbf{U} \boldsymbol{\Lambda}^{1 / 2} \mathbf{U}^{\boldsymbol{\top}}=\mathbf{U} \boldsymbol{\Lambda} \hat{\boldsymbol{\Lambda}}^{-1} \mathbf{U}^{\top}$; a great simplification. Denote the eigenvalue ratio $\nu_{i}:=\lambda_{i} / \hat{\lambda}_{i}$. What is the lower bound on the SRE in this case? We solve for $\kappa$ :
-$$
-\begin{aligned}
-\delta & :=\min _{\kappa}\left\|\mathbf{U}\left(\boldsymbol{\Lambda} \hat{\boldsymbol{\Lambda}}^{-1}-\kappa \mathbf{I}\right) \mathbf{U}^{\top}\right\| \\
-& =\min _{\kappa} \sqrt{\max _{i}\left(\nu_{i}-\kappa\right)^{2}} \\
-& =\frac{1}{2}\left(\max _{i} \nu_{i}-\min _{i} \nu_{i}\right)
-\end{aligned}
-$$
-and the optimal point is $\kappa^{\star}=\left(\max _{i} \nu_{i}+\min _{i} \nu_{i}\right) / 2$. We use these values in Equation (10.28) to obtain
-$$
-\mathrm{SRE} \geq 1-\frac{\max _{i} \nu_{i}-\min _{i} \nu_{i}}{\max _{i} \nu_{i}}=\frac{\min _{i} \nu_{i}}{\max _{i} \nu_{i}}
-$$
-
-Hence the loss in efficiency arises from the fact that we estimate unevenly the volatilities of the eigenvectors of the asset covariance matrix. If we underestimate them (or overestimate them) by the same constant, then we lose nothing, as noted in the first point above. Let us think of an adverse case. Say we estimate all volatilities exactly $\left(\nu_{i}=1\right)$ except for one, which we underestimate by $50 \%$. Then the worst-case loss in Sharpe Ratio can be in $50 \%$.
-
-\section*{10.4. ×Appendix}
-
-\subsection*{10.4.1. Theorems on Sharpe Efficiency Loss}
-
-These theorems are informally introduced in Section 10.3.
-We recall that
-$$
-\left\|\mathbf{H}^{-1}\right\|^{-1}\|\mathbf{x}\| \leq\|\mathbf{H} \mathbf{x}\| \leq\|\mathbf{H}\|\|\mathbf{x}\|
-$$
-and
-$$
-\|\mathbf{H y}\| \leq\|\mathbf{H x}\|+\|\mathbf{H}(\mathbf{y}-\mathbf{x})\| \leq\|\mathbf{H} \mathbf{x}\|+\|\mathbf{H}\|\|\mathbf{x}-\mathbf{y}\|
-$$
-so that
-$$
-|\|\mathbf{H} \mathbf{x}\|-\|\mathbf{H y}\|| \leq\|\mathbf{H}\|\|\mathbf{x}-\mathbf{y}\|
-$$
-
-Also, use the cosine rule:
-$$
-\begin{aligned}
-\left\|\frac{\mathbf{a}}{\|\mathbf{a}\|}-\frac{\mathbf{b}}{\|\mathbf{b}\|}\right\|^{2} & =2\left(1-\frac{\mathbf{a}^{\top} \mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}\right) \\
-\Rightarrow \frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} & =\frac{\mathbf{a}^{\top} \mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|} \\
-& =1-\frac{1}{2}\left\|\frac{\mathbf{a}}{\|\mathbf{a}\|}-\frac{\mathbf{b}}{\|\mathbf{b}\|}\right\|^{2}
-\end{aligned}
-$$
-where $\mathbf{a}, \mathbf{b}$ are defined by Equations (10.25) and (10.26).
-
-Lemma 10.1: Let $\mathbf{H}$ be symmetric positive-definite, $\mathbf{x}, \mathbf{y} \in \mathbb{R}^{n}$, and
-$$
-\left\|\frac{\mathbf{x}}{\|\mathbf{x}\|}-\frac{\mathbf{y}}{\|\mathbf{y}\|}\right\| \leq \delta
-$$
-
-Then
-$$
-\left\|\frac{\mathbf{H x}}{\|\mathbf{H x}\|}-\frac{\mathbf{H y}}{\|\mathbf{H y}\|}\right\| \leq 2 \min \left\{\|\mathbf{H}\|\left\|\mathbf{H}^{-1}\right\| \delta, 1\right\}
-$$
-
-Proof. Let $\mathbf{a}, \mathbf{b} \in \mathbb{R}^{n}$.
-$$
-\begin{aligned}
-\left\|\frac{\mathbf{H a}}{\|\mathbf{H a}\|}-\frac{\mathbf{H b}}{\|\mathbf{H b}\|}\right\| & =\left\|\frac{\|\mathbf{H b}\| \mathbf{H a}-\|\mathbf{H a}\| \mathbf{H b}}{\|\mathbf{H a}\|\|\mathbf{H b}\|}\right\| \\
-& =\left\|\frac{\|\mathbf{H b}\| \mathbf{H}(\mathbf{a}-\mathbf{b})-(\|\mathbf{H a}\|-\|\mathbf{H b}\|) \mathbf{H b} \|}{\|\mathbf{H a}\|\|\mathbf{H b}\|}\right\| \\
-& \leq \frac{1}{\|\mathbf{H a}\|}(\|\mathbf{H}(\mathbf{a}-\mathbf{b})\|+|\|\mathbf{H a}\|-\|\mathbf{H b}\||) \\
-& \leq \frac{1}{\|\mathbf{H a}\|}(\|\mathbf{H}(\mathbf{a}-\mathbf{b})\|+\|\mathbf{H}\|\|\mathbf{a}-\mathbf{b}\|) \\
-& \leq \frac{1}{\|\mathbf{H a}\|}(\|\mathbf{H}\|\|(\mathbf{a}-\mathbf{b})\|+\|\mathbf{H}\|\|\mathbf{a}-\mathbf{b}\|) \\
-& =\frac{2}{\|\mathbf{H a}\|}\|\mathbf{H}\|\|(\mathbf{a}-\mathbf{b})\| \\
-\left(\mathbf{a}:=\frac{\mathbf{x}}{\|\mathbf{x}\|}, \mathbf{b}:=\frac{\mathbf{y}}{\|\mathbf{y}\|}\right) & =\frac{2}{\left\|\mathbf{H} \frac{\mathbf{x}}{\|\mathbf{x}\|}\right\|}\|\mathbf{H}\|\left\|\frac{\mathbf{x}}{\|\mathbf{x}\|}-\frac{\mathbf{y}}{\|\mathbf{y}\|}\right\| \\
-& \leq 2\|\mathbf{H}\|\left\|\mathbf{H}^{-1}\right\| \delta
-\end{aligned}
-$$
-
-This bound is tight, up to a constant. For an example, consider the case of diagonal ${ }^{11} \mathbf{H}:=\operatorname{diag}\left(\lambda_{1}, \ldots, \lambda_{n}\right), \mathbf{x}:=\epsilon \mathbf{e}_{1}+\mathbf{e}_{n}, \mathbf{y}:=\mathbf{e}_{n}$, with $\epsilon \leq \lambda_{n} / \lambda_{1}$. 
-
-\footnotetext{
-${ }^{11}$ We use the notation $\mathbf{e}_{1}, \ldots, \mathbf{e}_{n}$ for the standard basis in $\mathbb{R}^{n}$.
-}
-We have
-$$
-\left\|\frac{\mathbf{x}}{\|\mathbf{x}\|}-\frac{\mathbf{y}}{\|\mathbf{y}\|}\right\| \leq \sqrt{\frac{3}{2}} \epsilon=: \delta
-$$
-
-$$
-\begin{aligned}
-\left\|\frac{\mathbf{H x}}{\|\mathbf{H x}\|}-\frac{\mathbf{H y}}{\|\mathbf{H y}\|}\right\| & =\left\|\frac{\lambda_{n} \mathbf{e}_{n}+\epsilon \lambda_{1} \mathbf{e}_{1}}{\sqrt{\lambda_{n}^{2}+\epsilon^{2} \lambda_{1}^{2}}}-\mathbf{e}_{n}\right\| \\
-& =\sqrt{\left(\frac{\lambda_{n}}{\sqrt{\lambda_{n}^{2}+\epsilon^{2} \lambda_{1}^{2}}}-1\right)^{2}+\frac{\left(\epsilon \lambda_{1}\right)^{2}}{\lambda_{n}^{2}+\epsilon^{2} \lambda_{1}^{2}}} \\
-& \geq \sqrt{2 \frac{-\lambda_{n}^{2}\left(\epsilon \lambda_{1} / \lambda_{n}\right)^{2} / 2+\left(\epsilon \lambda_{1}\right)^{2}}{\lambda_{n}^{2}+\left(\epsilon \lambda_{1}\right)^{2}}} \\
-& \geq \sqrt{\frac{\left(\epsilon \lambda_{1}\right)^{2}}{\lambda_{n}^{2}+\left(\epsilon \lambda_{1}\right)^{2}}} \\
-& \geq \frac{1}{\sqrt{2}} \frac{\lambda_{1}}{\lambda_{n}} \epsilon \\
-& =\frac{1}{\sqrt{3}}\|\mathbf{H}\|\left\|\mathbf{H}^{-1}\right\| \delta
-\end{aligned}
-$$
-
-Theorem 10.2(Misspecification of alpha): If
-$$
-\left\|\frac{\boldsymbol{\alpha}}{\|\boldsymbol{\alpha}\|}-\frac{\hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|}\right\| \leq \delta
-$$
-
-Then
-$$
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta^{2}
-$$
-
-Proof. From Lemma 10.1:
-$$
-\begin{aligned}
-\left\|\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}\right\|}-\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}\right\|}\right\| & \leq 2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}\right\| \delta \\
-& =2 \sqrt{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta}
-\end{aligned}
-$$
-
-Then
-$$
-\begin{aligned}
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} & =1-\frac{1}{2}\left\|\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}\right\|}-\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}\right\|}\right\|^{2} \\
-& \geq 1-2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta^{2}
-\end{aligned}
-$$
-
-Theorem 10.3(Misspecification of Risk): If there is $\kappa>0$ such that
-$$
-\begin{equation*}
-\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}-\kappa \mathbf{I}_{n}\right\| \leq \delta \tag{10.29}
+\Phi:=\sup _{n}\left|\hat{\theta}_{n}-\theta_{n}\right| \tag{8.9}
 \end{equation*}
 $$
 
-Then
+We claim that with probability greater than $1-\delta / 2$
 $$
 \begin{equation*}
-\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-\frac{2 \delta}{\kappa+\delta} \tag{10.30}
+\Phi \leq E_{D} \Phi+a \sqrt{\frac{2 \log (2 / \delta)}{T}} \tag{8.10}
 \end{equation*}
 $$
 
-Proof. Let $\mathbf{H}:=\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}$ and let $\hat{\boldsymbol{\alpha}}:=\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}$. Using this notation, the SRE Equation (10.24) and condition (10.29) are
+This allows one to deal with $E_{D} \sup _{n}\left|\hat{\theta}_{n}-\theta_{n}\right|$, which is easier. To prove the inequality, note that, for all $x_{t, i}, x_{t, i}^{\prime} \in[-a, a], t=1, \ldots, T, i=1, \ldots, N$,
+$$
+\begin{equation*}
+\left|\hat{\theta}_{n}\left(\ldots, x_{t, i}, \ldots\right)-\hat{\theta}_{n}\left(\ldots, x_{t, i}^{\prime}, \ldots\right)\right| \leq \frac{2 a}{T} \tag{8.11}
+\end{equation*}
+$$
+from which it follows that
+$$
+\sup _{x_{t, n}, x_{t, n}^{\prime} \in \mathbb{R}^{T}}\left|\Phi\left(\ldots, x_{t, n}, \ldots\right)-\Phi\left(\ldots, x_{t, n}^{\prime}, \ldots\right)\right| \leq \frac{2 a}{T}
+$$
+
+We apply McDiarmid's inequality to $\Phi$ to obtain the result.
+In order to obtain a lower bound on $\theta_{n}$ we need an upper bound on $E_{D} \Phi$. In the equalities below, we introduce a probability measure $D^{\prime}$ identical to, and independent from, $D$.
 $$
 \begin{aligned}
-& \frac{\operatorname{SR}\left(\boldsymbol{\alpha}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)}=\frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \sqrt{\frac{\|\hat{\boldsymbol{\alpha}}\|^{2}}{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H}^{2} \hat{\boldsymbol{\alpha}}}} \\
-& \left\|\mathbf{H}-\kappa \mathbf{I}_{n}\right\| \leq \delta
+& E_{D} \sup _{n}\left|\hat{\theta}_{n}-\theta_{n}\right| \\
+& =E_{D} \sup _{n}\left|\hat{\theta}_{n}(\omega)-E_{D^{\prime}} \hat{\theta}_{n}\left(\omega^{\prime}\right)\right| \\
+& =E_{D} \sup _{n}\left|E_{D^{\prime}} \hat{\theta}_{n}(\omega)-E_{D^{\prime}} \hat{\theta}_{n}\left(\omega^{\prime}\right)\right| \quad \text { (conditioning) } \\
+& \leq E_{D} E_{D^{\prime}} \sup _{n}\left|\hat{\theta}_{n}(\omega)-\hat{\theta}_{n}\left(\omega^{\prime}\right)\right| \\
+& \leq \frac{1}{T} E_{D} E_{D^{\prime}} \sup _{n}\left|\sum_{t}\left(x_{t, n}(\omega)-x_{t, n}\left(\omega^{\prime}\right)\right)\right| \\
+& =(*)
 \end{aligned}
 $$
 
-Let $\lambda_{1} \geq \lambda_{2} \geq \ldots \lambda_{n}$ eigenvalues of $\mathbf{H}$. The condition $\left\|\mathbf{H}-\kappa \mathbf{I}_{n}\right\| \leq \delta$ is equivalent to $\left|\lambda_{i}-\kappa\right| \leq \delta$ for all $i=1, \ldots, n$.
+We introduce an additional source of noise (the $\boldsymbol{\epsilon}$ Rademacher vector) and we lose a constant of 2 , but gain in tractability. We can change the signs of each summand by multiplying by some arbitrary factor $y_{t} \in\{+1,-1\}$, since the
+terms are exchangeable.
 $$
-\begin{gathered}
-\frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \geq \lambda_{n} \geq \kappa-\delta \\
-\frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H}^{2} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \leq \lambda_{1}^{2} \leq(\kappa+\delta)^{2} \\
-\Rightarrow \frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \sqrt{\frac{\|\hat{\boldsymbol{\alpha}}\|^{2}}{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H}^{2} \hat{\boldsymbol{\alpha}}}} \geq \frac{\kappa-\delta}{\kappa+\delta}=1-\frac{2 \delta}{\kappa+\delta}
-\end{gathered}
+\begin{aligned}
+(*) & =\frac{1}{T} E_{D} E_{D^{\prime}} \sup _{n}\left|\sum_{t} y_{t}\left(x_{t, n}(\omega)-x_{t, n}\left(\omega^{\prime}\right)\right)\right| \\
+& =\frac{1}{T} E_{D} E_{D^{\prime}} E_{\epsilon} \sup _{n}\left|\sum_{t} \epsilon_{t}\left(x_{t, n}(\omega)-x_{t, n}\left(\omega^{\prime}\right)\right)\right| \\
+& \leq \frac{1}{T} E_{D} E_{D^{\prime}} E_{\epsilon} \sup _{n} \left\lvert\, \sum_{t} \epsilon_{t}\left(\left.x_{t, n}(\omega)\left|+\frac{1}{T} E_{D} E_{D^{\prime}} E_{\epsilon} \sup _{n}\right| \sum_{t} \epsilon_{t} x_{t, n}\left(\omega^{\prime}\right) \right\rvert\,\right.\right. \\
+& =\frac{1}{T} E_{D} E_{\epsilon} \sup _{n}\left|\sum_{t} \epsilon_{t} x_{t, n}(\omega)\right|+\frac{1}{T} E_{D} E_{\epsilon} \sup _{n}\left|\sum_{t} \epsilon_{t} x_{t, n}(\omega)\right| \\
+& =\frac{2}{T} E_{D} \hat{R} \\
+& =2 R
+\end{aligned}
 $$
 
-The population covariance matrix is not known. A one-period proxy for the covariance matrix is $\mathbf{r r}^{\top}$. The next lemma presents a closed-form expression of the left-hand side of Inequality (10.29) when $\boldsymbol{\Omega}_{\mathrm{r}}$ is replaced by this proxy.
+Where we defined $R$ as the expected value of the Rademacher complexity over the distribution of performance realizations.
+
+We now use McDiarmid again: for all $x_{t, i}, x_{t, i}^{\prime}$,
+$$
+\left|\hat{R}\left(\ldots, x_{t, i}, \ldots\right)-\hat{R}\left(\ldots, x_{t, i}^{\prime}, \ldots\right)\right| \leq \frac{2 a}{T}
+$$
+
+Hence, with probability greater than $1-\delta / 2$
+$$
+\begin{equation*}
+R \leq \hat{R}+a \sqrt{\frac{2 \log (2 / \delta)}{T}} \tag{8.12}
+\end{equation*}
+$$
+
+Now we employ the union bound on inequalities (8.10) and (8.12) to obtain the claim.
+
+Theorem 8.4(Bounds for Sub-Gaussian Performance Metrics): Assume that $P\left(\left|x_{t, n}\right|>\epsilon\right) \leq 2 e^{-\epsilon^{2} / 2}$ for all $\epsilon>0$, for all $n=1, \ldots, N, t=1, \ldots, T$.
+
+Then, for all $n \in 1, \ldots, N$
+$$
+\theta_{n}-\hat{\theta}_{n} \geq-2 \hat{R}-3 \sqrt{\frac{2 \log (2 / \delta)}{T}}-\sqrt{\frac{2 \log (2 N / \delta)}{T}}
+$$
+
+Proof. Let $a>0$. We split $\theta_{n}-\hat{\theta}_{n}$ into the sum of two terms: $\theta_{n}-\hat{\theta}_{n}=$ $g\left(\mathbf{x}^{n}, a\right)+h\left(\mathbf{x}^{n}, a\right)$, where
+$$
+\begin{aligned}
+& \theta_{n}-\hat{\theta}_{n}=g\left(\mathbf{x}^{n}, a\right)+h\left(\mathbf{x}^{n}, a\right) \\
+& \geq-\sup _{n}\left|g\left(\mathbf{x}^{n}, a\right)\right|-\sup _{n}\left|h\left(\mathbf{x}^{n}, a\right)\right| \\
+& g\left(\mathbf{x}^{i}, a\right):=E\left[\frac{1}{T} \sum_{t=1}^{T} x_{t, i} \mathbf{1}\left(\left|x_{t, i}\right| \leq a\right)\right]-\frac{1}{T} \sum_{t=1}^{T} x_{t, i} \mathbf{1}\left(\left|x_{t, i}\right| \leq a\right) \\
+& h\left(\mathbf{x}^{i}, a\right):=E\left[\frac{1}{T} \sum_{t=1}^{T} x_{t, i} \mathbf{1}\left(\left|x_{t, i}\right|>a\right)\right]-\frac{1}{T} \sum_{t=1}^{T} x_{t, i} \mathbf{1}\left(\left|x_{t, i}\right|>a\right)
+\end{aligned}
+$$
+
+We bound $P\left(\sup _{i}\left|h\left(\mathbf{x}^{i}, a\right)\right| \geq v\right)$. By symmetrization
+$$
+E\left|h\left(\mathbf{x}^{i}, a\right)\right| \leq 2 E \sum_{t=1}^{T}\left|\epsilon_{t} x_{t, i} \mathbf{1}\left(\left|x_{t, i}\right|>a\right)\right|
+$$
+
+The random variable $\left|\epsilon_{t} x_{t, i} \mathbf{1}\left(\left|x_{t, i}\right|>a\right)\right|$ is subGaussian, since it is dominated by $\left|x_{t, i}\right|$ with probability 1 , and it has the same proxy variance as $\left|x_{t, i}\right|$. By the General Hoeffing inequality,
+$$
+\begin{aligned}
+P\left(\left|\sum_{t=1}^{T} h\left(x_{t, i}\right)\right|>v\right) & \leq \exp \left(-T v^{2} / 2\right) \\
+P\left(\sup _{i}\left|\sum_{t=1}^{T} h\left(x_{t, i}\right)\right|>v\right) & \leq N \exp \left(-T v^{2} / 2\right) \\
+P\left(\sup _{i}\left|\sum_{t=1}^{T} h\left(x_{t, i}\right)\right|>\sqrt{2 \log (2 N / \delta) / T}\right) & \leq \delta / 2
+\end{aligned}
+$$
+
+By the union bound,
+$$
+\begin{equation*}
+\theta_{n}-\hat{\theta}_{n} \geq-2 \hat{R}-3 \sqrt{\frac{2 \log (2 / \delta)}{T}}-\sqrt{\frac{2 \log (2 N / \delta)}{T}} \tag{8.13}
+\end{equation*}
+$$
