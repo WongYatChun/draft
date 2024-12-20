@@ -1,758 +1,608 @@
-\title{Chapter 9: Portfolio Management: The Basics}
+\title{Chapter 10: Beyond Simple Mean-Variance}
 
-\section*{Overview}
+\section*{10.1. Shortcomings of Naïve MVO}
 
-**Questions**
-1. What are the basic single-period portfolio optimization formulations? How do we interpret the results?
-2. What can go wrong?
-3. How do we incorporate prior information in portfolio optimization?
-
-This chapter is devoted to the basics of portfolio construction. The common theme throughout the chapter is that we limit ourselves to a single-period optimization setting. This a chapter for hedgehogs, not for foxes: we set a narrow playing field, but dig a deep hole. The chapter requires knowledge of basic results from optimization theory ${ }^{1}$.
-
-\footnotetext{
-${ }^{1}$ Extensive treatments of convex optimization are Boyd and Vandenberghe [2004], Luenberger and Ye [2008] and Bazaraa et al. [2006], and finance-oriented optimization textbooks are Cornuéjols et al. [2018], Palomar [2024].
-}
-
-\section*{9.1. Why Mean-Variance Optimization?}
-
-Investors have objectives, information, and constraints. Besides this generic statement, there is not much in common among them. A large fraction of investment professionals cannot-and would not-articulate a clear objective function; their constraints are sometimes ad hoc, vague, or inconsistently enforced. Neither George Soros nor Warren Buffett, nor others among the most successful investors in history, have ever known what the volatility of their portfolios was at any point in time. At the other extreme, academics have developed several normative theories for portfolio construction. In this book I am trying to use relevance to applications as a guiding principle. In the vast majority of applications, the optimization formulations are single-period. This is explainable by a combination of the following ${ }^{2}$ :
-- Interpretability. Multi-period optimization problems are vastly more complex to formulate and, once solved, their solutions are also harder to interpret.
-- Data availability. The amount of data needed for multi-period optimization is larger and more difficult to estimate.
-- Computational tractability. Single-period optimization problems are solvable by commercial solvers in a matter of seconds.
-- Short-term investment horizon. Investors think only about the short term, partly because they heavily discount the future, partly because they do not know how to quantify information uncertainty and rate of change.
-- Lack of standard theoretical results. Few strong results are available characterizing the formulations and the improvement in performance.
-
-\footnotetext{
-${ }^{2}$ On justifications of the mean-variance approach to portfolio optimization, see Cochrane [2005], Huang and Litzenberger [1988]. Both cover the standard cases of exponential and quadratic utilities. A number of textbooks exist covering portfolio construction. A classic is Grinold and Kahn [1999]; see also Chincarini and Kim [2022], Qian et al. [2007], Isichenko [2021]. On the statistics of the Sharpe Ratio, see Lo [2002] and, for a comprehensive and definitive reference, Pav [2023] and references therein.
-}
-
-The objective function $V$ is a function of the portfolio weights $\mathbf{w}$ and of the returns $\mathbf{r}$. Economic theory interprets $V$ as a utility function, taking different values under different realizations of the future. The expected value of the utility function gives the investor the ex ante value of the bet she would be taking by investing in a portfolio. We assume that the investor has initial wealth $W_{0}$, that she knows the distribution of the random vector $\mathbf{r}$, and that she solves the problem
+Before introducing more complex optimizations, let's work through a simple example - maybe the simplest instance of the simplest optimization problem-to illustrate the implications of MVO. We have just two assets, with non-negative Sharpe Ratios $s_{1}, s_{2}$. Their returns have correlation $\rho$. The inverse of the covariance matrix is
 $$
-\begin{equation*}
-\max E\left[V\left(W_{0}+\mathbf{w}^{\boldsymbol{\top}} \mathbf{r}\right)\right] \tag{9.1}
-\end{equation*}
+\mathbf{C}^{-1}=\frac{1}{1-\rho^{2}}\left[\begin{array}{cc}
+1 & -\rho \\
+-\rho & 1
+\end{array}\right]
 $$
 
-The choice of $V$ is not obvious. Common properties of $V$ are that it must be monotonically increasing (more wealth is better than less) and concave (corresponding to risk aversion, and decreasing value of a marginal dollar as a function of wealth). One approach, followed by Markowitz [1959], is to consider a polynomial local approximation of the objective function: $V\left(W_{0}+\mathbf{w}^{\top} \mathbf{r}\right) \simeq$ $V\left(W_{0}\right)+V^{\prime}\left(W_{0}\right) \mathbf{w}^{\top} \mathbf{r}+V^{\prime \prime}\left(W_{0}\right)\left(\mathbf{w}^{\top} \mathbf{r}\right)^{2} / 2$. Taking expectations, we obtain
+So by Equation (9.6), the optimal volatility allocation is
 $$
 \begin{aligned}
-E\left[V\left(W_{0}+\mathbf{w}^{\top} \mathbf{r}\right)\right] \simeq & \simeq\left(W_{0}\right)+V^{\prime}\left(W_{0}\right) \mathbf{w}^{\top} \boldsymbol{\mu}_{\mathbf{r}}+ \\
-& \frac{V^{\prime \prime}\left(W_{0}\right)}{2}\left(\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}+\left(\mathbf{w}^{\top} \boldsymbol{\mu}_{\mathbf{r}}\right)^{2}\right) \\
-\simeq & V\left(W_{0}\right)+V^{\prime}\left(W_{0}\right) \mathbf{w}^{\top} \boldsymbol{\mu}_{\mathbf{r}}+ \\
-& \frac{V^{\prime \prime}\left(W_{0}\right)}{2} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}
+& v_{1}^{\star}=\frac{\kappa}{1-\rho^{2}}\left(s_{1}-\rho s_{2}\right) \\
+& v_{2}^{\star}=\frac{\kappa}{1-\rho^{2}}\left(s_{2}-\rho s_{1}\right)
 \end{aligned}
 $$
 
-We maximize a concave quadratic objective function which is the weighted sum of expected return and variance; hence the name Mean-Variance Optimization
-(MVO) [De Finetti, 1940, Markowitz, 1952]:
+Where $\kappa>0$ is a parameter determined by the risk tolerance or by the constraint on maximum portfolio risk. If $s_{2} / s_{1}<\rho$, then we short asset 2 . Consider first
+the case where $s_{2}=0$ and $\rho>0$. In this case, we always short the asset. Asset 2 acts as hedge. Shorting it is beneficial because a) it has no cost (zero expected return); b) it reduces the volatility of the portfolio, since it is positively correlated to asset 1. When the Sharpe Ratio of asset 2 is positive, then there is a cost to shorting. A short position in asset 2 reduces volatility, but in order to improve the Sharpe Ratio, the correlation $\rho$ must exceed the threshold $s_{2} / s_{1}$.
+
+Even though the recommendation to short an asset with positive returns is explainable, it is probably at odds with the intuition of many readers. If two assets are very correlated, wouldn't it be preferable to go long both, thus averaging out the signal error? We can make this reasoning more rigorous by assessing the impact of estimation error on expected returns and on the correlation.
+
+Impact of errors in forecasted Sharpe Ratios. We denote the true Sharpe Ratios $\tilde{s}_{i}$, and assume that the error between the true and forecasted Sharpe Ratios is bounded: $\|\tilde{\mathbf{s}}-\mathbf{s}\| \leq \epsilon$. We choose optimal dollar volatilities based on forecasted Sharpe Ratios $\mathbf{v}^{\star}$, and observe performance that is a function of $\tilde{\mathbf{s}}$. The realized expected return is
+$$
+E(\operatorname{PnL})=\frac{\kappa}{1-\rho^{2}}\left[\left(s_{1}-\rho s_{2}\right) \tilde{s}_{1}+\left(s_{2}-\rho s_{1}\right) \tilde{s}_{2}\right]
+$$
+
+In the worst case, we solve the problem
 $$
 \begin{aligned}
-\frac{E\left[V\left(W_{0}+\mathbf{w}^{\top} \mathbf{r}\right)\right]-V\left(W_{0}\right)}{V^{\prime}\left(W_{0}\right)} & \simeq \mathbf{w}^{\top} \boldsymbol{\mu}_{\mathbf{r}}-\frac{\rho}{2} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \\
-\rho & :=-\frac{V^{\prime \prime}\left(W_{0}\right)}{V^{\prime}\left(W_{0}\right)}
+& \min E(\mathrm{PnL}) \\
+& \text { s.t. }\|\tilde{\mathbf{s}}-\mathbf{s}\| \leq \epsilon \\
+& \tilde{\mathbf{s}} \in \mathbb{R}^{2}
 \end{aligned}
 $$
-$\rho>0$ is called the coefficient of absolute risk aversion (CARA). The higher the $\rho$, the more risk-averse the investor is.
 
-As examples, consider an objective function of the form $V(x)=-\exp (-a x)$. The CARA for this function is constant $\rho=a$ : it is independent of the wealth $W_{0}$ of the investor, and so are her allocation decisions. The optimization problem is
+I leave the solution as an exercise (also, see Insight 10.1); the relative reduction in PnL is
 $$
-\max _{\mathbf{w}} \mathbf{w}^{\top} \boldsymbol{\mu}_{\mathbf{r}}-\frac{a}{2} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}
-$$
-
-Alternatively, consider the objective function $V(x)=\log (x)$. This function is associated to the Kelly criterion for investing. It has unique properties which warrant a dedicated chapter. Here, let us consider its implications for approximate portfolio optimization. The CARA is $\rho=1 / W_{0}$, so that we solve
-$$
-\max _{\mathbf{w}} \mathbf{w}^{\top} \boldsymbol{\mu}_{\mathbf{r}}-\frac{1}{2 W_{0}} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}
+-\frac{\sqrt{\left(s_{1}-\rho s_{2}\right)^{2}+\left(s_{2}-\rho s_{1}\right)^{2}}}{\left(s_{1}-\rho s_{2}\right) s_{1}+\left(s_{2}-\rho s_{1}\right) s_{2}} \epsilon
 $$
 
-The wealthier the investor is, the more risk-seeking she becomes.
-We have shown that a quadratic utility function implies a mean-variance optimization problem for the investor. This result is standard. Less known is the converse: if an investor selects an investment on the basis of mean and variance only, her utility function is necessarily quadratic [Baron, 1977, Johnstone and Lindley, 2011]. Viewed in the context of axiomatic decision theory,
-portfolio mean-variance optimization is not satisfactory, because a quadratic utility implies that investors are satiated, and have even a dislike of wealth beyond a certain threshold. As a local approximation, however, mean-variance optimization is appropriate. Moments of returns (and portfolios) beyond the second one are beyond the realm of what's possible, as seen in Chapter 2. A portfolio manager settled a long discussion on the topic with the laconic statement that "the first two moments should be enough for everybody".
+This is also the relative loss in Sharpe, since the volatility of the portfolio is unaffected by return forecast error. Figure 10.1 shows numerical results for two assets, assuming an error $\epsilon=0.5$ and varying levels of correlation. An error of 0.5 is perhaps conservative; actual differences in forecasted versus realized Sharpe Ratios are higher. Notice that high correlation makes things worse. In all scenarios, the percentage in efficiency is significant. It is of course lower for higher Sharpes (because the relative forecasting error is smaller); and is higher for higher correlations. In all cases it exceeds $10 \%$ and can be as high as $50 \%$.
+[WILEY EDITORS: place Figure 10.1 around here.]
 
-\section*{9.2. Mean-Variance Optimal Portfolios}
+![](https://cdn.mathpix.com/cropped/2024_12_20_1564b045dd40d185d12cg-356.jpg?height=1714&width=874&top_left_y=542&top_left_x=555)
 
-A factor model gives us an asset-asset covariance matrix $\boldsymbol{\Omega}_{\mathrm{r}} \in \mathbb{R}^{n \times n}$. Given this information, it is straightforward to compute the variance of a portfolio, as we saw in Section 4.5.2 on risk decomposition. The other essential input to the optimization problem is a vector $\boldsymbol{\alpha} \in \mathbb{R}^{n}$ of expected returns, over the same interval at which we have a volatility forecast. The simplest optimization problem is to maximize expected PnL, subject to a constraint on the maximum tolerable volatility, denoted by $\sigma>0$. The problem can be stated as
-$$
-\begin{align*}
-& \max \boldsymbol{\alpha}^{\top} \mathbf{w}  \tag{9.2}\\
-& \text { s.t. } \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \leq \sigma^{2}
-\end{align*}
-$$
+Figure 10.1: Level plots of the loss of PnL (and Sharpe Ratio) as a function of the Sharpe Ratio of two assets, assuming a maximum error $\epsilon$ in the Sharpe Ratio norm. Parameters: $\epsilon=0.5$; Correlation: $\rho=0.1$ (top), $\rho=0.5$ (bottom).
 
-One of the most important metrics used for the evaluation of strategies is the Sharpe Ratio, which we covered in previous chapters. If we have covariance matrix and expected returns, we can formulate the Sharpe Ratio optimization
-thus:
+
+Impact of errors in correlation among assets. We repeat the analysis, but allowing for error in the assets' correlation $\rho$. We denote the true correlation $\tilde{\rho}$ and assume that the estimation error is bounded: $|\tilde{\rho}-\rho| \leq \epsilon$. The error in estimated correlation affects the volatility; the expected expected return is not affected. The Sharpe Ratio is minimized when the realized volatility is maximized:
 $$
-\max _{\mathbf{w}} \frac{\boldsymbol{\alpha}^{\top} \mathbf{w}}{\sqrt{\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathrm{r}} \mathbf{w}}}
+\begin{gathered}
+\max \left(\mathbf{V}^{\star}\right)^{\top} \tilde{\mathbf{C}} \mathbf{V}^{\star} \\
+\text { s.t. }|\tilde{\rho}-\rho| \leq \epsilon \\
+\rho \in \mathbb{R}
+\end{gathered}
 $$
 
-This optimization, however, is indefinite because the objective function $\operatorname{SR}(\mathbf{w})$ is independent of the portfolio size, i.e., homogeneous of degree $0: \operatorname{SR}(t \mathbf{w})=\operatorname{SR}(\mathbf{w})$ for all $t>0$. We can address this issue by bounding the denominator. This means fixing the portfolio size. The upper bound constraint on the denominator is always binding if there is a portfolio $\mathbf{w}$ such that $\boldsymbol{\alpha}^{\top} \mathbf{w}>0$ :
+In this case the worst-case realized relative volatility (exercise!) is
 $$
-\begin{array}{r}
-\max _{\mathbf{w}} \frac{\boldsymbol{\alpha}^{\top} \mathbf{w}}{\sqrt{\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}}} \\
-\text { s.t. } \sqrt{\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}} \leq \sigma \\
-\text { equivalent to } \max _{\mathbf{w}} \frac{\boldsymbol{\alpha}^{\top} \mathbf{w}}{\sigma} \\
-\text { s.t. } \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \leq \sigma^{2} \\
-\text { equivalent to } \max _{\mathbf{w}} \boldsymbol{\alpha}^{\top} \mathbf{w} \\
-\text { s.t. } \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \leq \sigma^{2}
+\sqrt{\left(\mathbf{V}^{\star}\right)^{\top} \mathbf{C} \mathbf{V}^{\star}+2 \epsilon\left|v_{1}^{\star} v_{2}^{\star}\right|}
+$$
+and the associated relative loss in Sharpe Ratio is
+$$
+\sqrt{\frac{\left(\mathbf{V}^{\star}\right)^{\top} \mathbf{C} \mathbf{V}^{\star}}{\left(\mathbf{V}^{\star}\right)^{\top} \mathbf{C V}^{\star}+2 \epsilon\left|v_{1}^{\star} v_{2}^{\star}\right|}}-1
+$$
+
+We show the impact of the error in Figure 10.2, for a reasonable error in correlation estimate of 0.1 . However, in periods of crisis, the error can be larger (albeit not dramatically so). In Figure 10.3 I show the impact of correlation error on Sharpe.
+[WILEY EDITORS: place Figure 10.2 around here.]
+[WILEY EDITORS: place Figure 10.3 around here.]
+
+![](https://cdn.mathpix.com/cropped/2024_12_20_1564b045dd40d185d12cg-358.jpg?height=1717&width=873&top_left_y=540&top_left_x=561)
+
+Figure 10.2: Level plots of the loss of PnL (and Sharpe Ratio) as a function of the Sharpe Ratio of two assets, assuming a maximum error $\epsilon$ in the correlation. Parameters: $\epsilon=0.1$; Correlation: $\rho=0.1$ (top), $\rho=0.5$ (bottom).
+![](https://cdn.mathpix.com/cropped/2024_12_20_1564b045dd40d185d12cg-359.jpg?height=782&width=866&top_left_y=1035&top_left_x=556)
+
+Figure 10.3: fraction loss in Sharpe Ratio for two strategies with Sharpe Ratios of 3 and 2 , return correlation $\rho=0.3$, and error $\epsilon$ ranging from 0 to 0.3 .
+
+
+\subsection*{Insight 10.1: A simple linear-quadratic problem}
+
+Let $\mathbf{a}, \mathbf{x}_{0} \in \mathbb{R}^{n}$. The problem $\min \left\{\langle\mathbf{a}, \mathbf{x}\rangle \mid\left\|\mathbf{x}-\mathbf{x}_{0}\right\|^{2} \leq \epsilon^{2}\right\}$ has solution
+$$
+\begin{aligned}
+\mathbf{x}^{\star} & =\mathbf{x}_{0}-\frac{\mathbf{a}}{\|\mathbf{a}\|} \epsilon \\
+\frac{\left\langle\mathbf{a}, \mathbf{x}^{\star}\right\rangle}{\left\langle\mathbf{a}, \mathbf{x}_{0}\right\rangle}-1 & =-\frac{\|\mathbf{a}\|}{\left\langle\mathbf{a}, \mathbf{x}_{0}\right\rangle} \epsilon
+\end{aligned}
+$$
+
+\subsection*{Insight 10.2: Degradation in performance due to forecasting error}
+When we use Naïve MVO optimization, the degradation in Sharpe Ratio arising from forecasted (ex ante) parameters for volatilities and returns vs realized values (ex post) can easily range in the 10-50\%.
+
+\section*{10.2. Constraints and Modified Objectives}
+
+Equation (9.2) is the starting point for more complex optimization problems. They reflect the detailed preferences of the investors, short-term concerns, regulatory constraints, and implementation considerations. In applications, optimization formulations differ widely because they address a wide range of concerns:
+- Investor's preferences: "Keep medium-term momentum exposure exactly equal to zero."
+- Tactical considerations: "Don’t trade this stock because it could be acquired tomorrow" or "liquidate this stock because it could be acquired tomorrow"; both are valid, if incompatible, concerns.
+- Regulatory considerations: "The portfolio must be long only".
+- Fiduciary considerations: "The portfolio must track a benchmark, i.e., the difference in returns between the portfolio's returns and the benchmark's cannot exceed a certain tracking volatility".
+- Implementation considerations: "The objective function must include the trading costs."
+
+From a modeling viewpoint, constraints can take several forms. We introduce those first, and then we map them to the applications at hand. The "mapping" part will be either instructive if you have never been exposed to it, or terminally boring if you have worked in portfolio management for a few years. Rejoice with the former group, and commiserate with the latter.
+
+\subsection*{10.2.1. Types of Constraints}
+
+Although one can imagine infinite types of constraints, some of them are much more common than others. We review them below.
+- Linear constraints. These can be inequality or equality constraints:
+$$
+\begin{array}{lr}
+\mathbf{A}^{\top} \mathbf{w} \leq \mathbf{c} & \text { (Inequality constraints) }  \tag{10.1}\\
+\mathbf{A}^{\top} \mathbf{w}=\mathbf{c} & \text { (Equality constraints) }
 \end{array}
 $$
 
-Which is optimization problem (9.2). The First-Order Necessary Conditions (FONC) for this problem are:
+These are perhaps the most common constraints in financial optimization, because they are used to address several of the concerns listed at the beginning of the section. For example, some strategies are required to be long-only. The constraint is simply
 $$
-\begin{aligned}
-\nabla_{\mathbf{w}}\left(\boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}\right) & =\boldsymbol{\alpha}-2 \lambda \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \\
-& =0 \\
-\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} & \leq \sigma^{2} \\
-\lambda & \geq 0 \\
-\lambda\left(\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\sigma^{2}\right) & =0
-\end{aligned}
+\mathbf{w} \geq 0 \quad \text { (Long-Only constraint) }
 $$
 
-The solution to these equations is
+Extending this to a bound on maximum short and long size for a single position is only a small step. The rationales for such constraints are many. There are natural limits due to maximum institutional ownership of a stock (say, no more than $5 \%$ of the outstanding stocks); or to the maximum risk concentration in a stock: the idiosyncratic variance of a stock may not exceed a certain percentage of the total idiosyncratic variance, which translates to a linear constraint. Further still, we may impose a maximum liquidation cost requirement on all stocks; which also becomes a constraint on single position size.
+
+A slightly more complex constraint, which does not seem linear at first sight, is on Gross Market Value: $\sum_{i}\left|w_{i}\right| \leq G$. This constraint may originate on
+limits on financial leverage that the fund can apply to its managed assets. The constraint may be turned into a linear one ${ }^{1}$ by introducing ancillary variables representing the long and short side of a position, and additional constraints:
 $$
 \begin{align*}
-\mathbf{w}^{\star} & =\frac{\sigma}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}}} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}  \tag{9.3}\\
-\lambda^{\star} & =\frac{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}}}{2 \sigma} \tag{9.4}
+\mathbf{x} & \geq 0 \quad \text { (GMV constraint) }  \tag{10.2}\\
+\mathbf{y} & \geq 0  \tag{10.3}\\
+\mathbf{w} & =\mathbf{x}-\mathbf{y}  \tag{10.4}\\
+\sum_{i}\left(x_{i}+y_{i}\right) & \leq G \tag{10.5}
 \end{align*}
 $$
 
-The expected return and the Sharpe Ratio of the portfolio are
+A similar constraint is on the long vs short ratio ${ }^{2}$. If we want the long/short ratio to be equal to a certain value, then the constraint is $\sum_{i} w_{i}^{+}=K \sum_{i} w_{i}^{-}$. This constraint is the same as the GMV constraint, with the exception of Equation (10.5), which we replace with
+$$
+\sum_{i} x_{i}=K \sum_{i} y_{i} \quad(\text { Long } / \text { Short ratio constraint })
+$$
+
+\footnotetext{
+${ }^{1}$ Before rediscovering the wheel, know that some financial optimization packages abstract the modeling of the GMV constraint, so that you just have to specify it.
+${ }^{2}$ For example a few years ago, 130/30 portfolios were popular. These strategies managed net-long portfolios, with a $30 \%$ of Net Market Value invested in shorts and $130 \%$ invested in longs
+}
+
+Yet another class of constraint is that on factor model exposures, and on exposures to other asset characteristics not in the model. An example is the constraint on historical market betas $\beta_{i}$. The constraint then is $\sum_{i} \beta_{i} w_{i}=b_{0}$. The general form of factor exposure is verbatim that of Equations (10.1).
+
+A constraint on maximum portfolio turnover takes a similar form to the previous constraints that use absolute values. I am leaving it as an exercise to the reader. The turnover constraint may be either (poorly) justified to control costs, or by fiduciary requirements on portfolio turnover. A better way to model execution costs takes us in the domain of non-linear constraints.
+- Non-linear constraints. A constraint of a different nature is trading-related. Trading occurs over many periods, and one approach to control excessive trading is to limit the traded capital, possibly weighted to account for assetspecific trading cost, in each portfolio rebalancing. This is equivalent to assuming linear transaction costs. We generalize this at little cost, and model trading costs as superlinear in traded amount but growing at a quadratic rate or less: $c_{i}\left|\Delta w_{i}\right|^{\gamma}$, where $\gamma \in[1,2]$. The constraint takes the form:
+$$
+\sum_{i} c_{i}\left|w_{i}-w_{i}^{\text {start }}\right|^{\gamma} \leq C \quad \text { (Trading cost constraint) }
+$$
+where $\mathbf{w}^{\text {start }}$ is the portfolio held at the beginning of the period. The constraint is convex, so that the portfolio optimization problem has a unique solution. Quadratic constraints appear naturally when we want to control risk at a finer resolution than that on total variance. For example, let $\boldsymbol{\Omega}_{\mathbf{f}}^{\text {style }}$ be the principal submatrix in the factor covariance matrix, and let $\mathbf{b}^{\text {style }}=\left(\mathbf{B}^{\text {style }}\right)^{\top} \mathbf{w}$ be the vector of style factor exposures. Then a constraint on the maximum style-factor risk becomes
+$$
+\begin{aligned}
+\mathbf{b}^{\text {style }} & =\left(\mathbf{B}^{\text {style }}\right)^{\top} \mathbf{w} \\
+\left(\mathbf{b}^{\text {style }}\right)^{\top} \boldsymbol{\Omega}_{\mathbf{f}}^{\text {style }} \mathbf{b}^{\text {style }} & \leq \sigma_{\text {style }}^{2} \quad(\text { Style factor vol constraint })
+\end{aligned}
+$$
+
+Risk constraints are often not only applied to the positions of a portfolio, but to the active positions of the portfolio itself. For example, consider a
+long-only portfolio with a GMV of $\$ 1 \mathrm{~B}$, and let $\mathrm{w}^{\text {bench }}$ be the positions of a portfolio with the same GMV, with weights proportional to those of the SP500 benchmark. The active holdings are $\mathbf{w}^{\mathbf{a}}=\mathbf{w}-\mathbf{w}^{\text {bench }}$. Tracking error is the volatility of the active portfolio, and is a measure of the freedom the portfolio manager has in selecting stocks. A constraint on the tracking error is
+$$
+\left(\mathbf{w}^{a}\right)^{\top} \boldsymbol{\Omega}_{\mathrm{r}} \mathbf{w}^{a} \leq \sigma_{a}^{2} \quad(\text { tracking error constraint) }
+$$
+- Non-convex constraints. Finally, there are a few constraint types that lead to a non-convex feasible region. Finding a global optimum is in general NP-hard. Convex solvers may either not accept such constraints ${ }^{3}$, or may not converge. I would argue that, in most cases, these constraints should not be used on grounds of sensible modeling. I am presenting them both for completeness and as a cautionary tale.
+
+\footnotetext{
+${ }^{3}$ Some solvers are able to understand from the description of the problem whether it is convex or not.
+}
+
+The first constraint type is on the maximum number $N_{\max }$ of assets in the portfolio. This is usually implemented by introducing $0 / 1$ variables $x_{i}$, and by setting a maximum (large) absolute position size $M$. The constraint becomes
 $$
 \begin{align*}
-E\left(\mathbf{r}^{\top} \mathbf{w}^{\star}\right) & =\sigma \sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}} \\
-\mathrm{SR}^{\star} & =\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}} \tag{9.5}
+\left|w_{i}\right| & \leq M x_{i} \quad i=1, \ldots, n \quad \text { (Max number of positions) }  \tag{10.6}\\
+\sum_{i=1}^{n} x_{i} & \leq N_{\max }  \tag{10.7}\\
+x_{i} & \in\{0,1\} \quad i=1, \ldots, n \tag{10.8}
 \end{align*}
 $$
 
-A way to interpret (and derive quickly) the solution is to recall that the optimal portfolio is proportional to $\boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}$, and then to find the proportionality factor so that the variance constraint is met. The optimal portfolio is proportional to the volatility budget: the higher the budget, the bigger the portfolio. However, the portfolio is independent of the magnitude of the alpha vector (it is homogeneous of degree zero in alpha): replacing $\boldsymbol{\alpha}$ with $\kappa \boldsymbol{\alpha}$ gives the same solution. This
-is interesting. The parameter $\lambda^{\star}$ also merits special consideration. It is the shadow price (or Lagrange multiplier) of the volatility constraint. If we increase the variance budget by one unit, the expected return increases by $\lambda^{\star}$. In other terms, the shadow price of the variance constraint is the derivative of the objective function with respect to the variance. While this relationship is not very useful in this specific case, it will come in handy for other constraints.
+The rationale for this constraint is that a very broad portfolio may be too burdensome to trade or manage. This combinatorial constraint can be handled by some commercial solvers for realistic problem instances with thousands of assets. However, its utility is limited. It is usually preferable to model trading costs directly, and either not include a constraint at all, or have a threshold for trading below which the trades of the optimal solution are set to zero. This usually has a negligible impact on optimality.
 
-In its simplicity, the solution contains the essential data of the problem: the inverse of the covariance matrix (also called the precision matrix) and the vector of expected return. In the next few pages I would like to interpret, eviscerate, extend this simple formula; and finally, as you start believing it is useful, to caution you against its use. Like all the good things in life, mean-variance optimization is at its most pleasant when it is accompanied by precautionary measures.
-[WILEY EDITORS: place Box (proc/faq/insight) 9.2 around here.]
-First of all, we can derive the same solution when we solve an unconstrained problem:
-$$
-\begin{align*}
-& \max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}  \tag{9.8}\\
-& \text { s.t. } \mathbf{w} \in \mathbb{R}^{n} \tag{9.9}
-\end{align*}
-$$
-
-
-We have added the constraint to the objective function in the form of a penalty term; the informal term for this operation is pricing out the constraint. The objective function is concave, and the solution is given by
-$$
-\mathbf{w}^{\star}=\frac{1}{2 \lambda} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}
-$$
-which gives the same solution as the vol-constrained problem when
-$$
-\lambda=\frac{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}}}{2 \sigma}
-$$
-
-The larger the volatility budget, the smaller the penalty coefficient.
-Notice that this penalty value is the same as the shadow price in the previous formulation. This is not a coincidence. We obtain the same solution when we price out the constraint and we give the variance a unit price equal to the shadow price of that constraint.
-
-A third equivalent formulation is the one where we minimize volatility, subject to a return constraint:
-$$
-\begin{align*}
-& \min \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}  \tag{9.10}\\
-& \text { s.t. } \boldsymbol{\alpha}^{\top} \mathbf{w} \geq \mu \tag{9.11}
-\end{align*}
-$$
-
-The solution is
-$$
-\mathrm{w}^{\star}=\frac{\mu}{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}
-$$
-[WILEY EDITORS: place Box (proc/faq/insight) 9.3 around here.]
-
-
-
-\subsection*{Insight 9.1: Miscalibration of alpha size is not catastrophic}
-
-If you have a volatility constraint, a good volatility model, and your relative alphas are accurate then the error in the absolute size of the alphas does not matter.
-
-\subsection*{Insight 9.2: MVO from asset Sharpes and correlations}
-There is yet another formulation that is equivalent to the previous ones. Oftentimes, we think of portfolio positions not in terms on net market value, but of volatility. We do not invest $\$ 10 \mathrm{M}$ in AAPL. The annualized volatility of AAPL is $20 \%$, and therefore we have a $\$ 2 \mathrm{M}$ volatility position in the stock. This conveys the position size in terms of its range of dollar movement over the course of a year. Now, we can express the Sharpe-Optimal portfolio in terms of volatility in the following way. Let the stock volatilities be $\sigma_{1}, \ldots, \sigma_{n}$, and define $\mathbf{V}$ a diagonal matrix with these volatilities on the main diagonal. Denote the asset correlation matrix with $\mathbf{C}$. The covariance matrix is $\boldsymbol{\Omega}_{\mathrm{r}}=\mathbf{V C V}$. Now let's rewrite the solution to the MVO problem:
-$$
-\begin{align*}
-\mathbf{w}^{\star} & =\frac{1}{2 \lambda}(\mathbf{V C V})^{-1} \boldsymbol{\alpha} \\
-\mathbf{V w}^{\star} & =\frac{1}{2 \lambda} \mathbf{C}^{-1}\left(\mathbf{V}^{-1} \boldsymbol{\alpha}\right) \\
-\mathbf{v}^{\star} & =\frac{1}{2 \lambda} \mathbf{C}^{-1} \mathbf{s}  \tag{9.6}\\
-\mathrm{SR}^{\star} & =\sqrt{\mathbf{s}^{\top} \mathbf{C}^{-1} \mathbf{s}} \tag{9.7}
-\end{align*}
-$$
-
-In the formula above, $\mathbf{v}^{\star}:=\mathbf{V w}^{\star}$ is the vector of optimal dollar volatilities, and $\mathbf{s}$ is the vector of asset-level Sharpe Ratios. Therefore, the optimal dollar volatilities are proportional to the Sharpe Ratios, multiplied by the inverse of the correlation matrix. This is interesting, because dollar volatilities, correlations, and asset Sharpe Ratios are more intuitive quantities than covariances and returns.
-
-
-\subsection*{Insight 9.3: Asset correlations, dispersion, and limits to performance}
-1. From Equation 9.6 when assets are uncorrelated, the optimal dollar vol allocation is proportional to the asset Sharpe Ratios and the optimal Sharpe Ratio is the length of the vector $\left(s_{1}, \ldots, s_{n}\right)$, which is not linear in the single-asset Sharpe Ratios; Sharpe Ratios squared is what matters.
-2. Say that the assets have a pairwise correlation of $\rho \neq 0$. Then ${ }^{a}$ the optimal volatility allocated to asset $i$, in the many-asset case $|\rho n| \gg 0$, is proportional to the excess Sharpe Ratio of the asset, compared to the average Sharpe Ratio:
-$$
-v_{i} \propto s_{i}-E(\mathbf{s})
-$$
-where we define $E(\mathbf{s}):=\frac{1}{n} \sum_{i} s_{i}$. The optimal Sharpe Ratio is
-$$
-\mathrm{SR}^{\star}=\sqrt{\frac{n}{1-\rho} \operatorname{var}(\mathbf{s})+\frac{n}{1+(n-1) \rho} E^{2}(\mathbf{s})}
-$$
-with $\operatorname{var}(\mathbf{s}):=E\left(\mathbf{s}^{2}\right)-E^{2}(\mathbf{s})$. If all assets have the same Sharpe Ratio $s$, then
-$$
-\mathrm{SR}^{\star}=\sqrt{\frac{n s^{2}}{1+(n-1) \rho}}
-$$
-
-Finally, in the many-asset limit, we have $\mathrm{SR}^{\star}=s / \sqrt{\rho}$.
-Summing up the results above:
-- If there is no dispersion in Sharpe Ratios, then the Sharpe Ratio approaches an upper bound $s / \sqrt{\rho}$.
-- However, if there is dispersion in Sharpe Ratios, then the Sharpe Ratio is still proportional to $\sqrt{n}$ and to the dispersion, measured as the cross-sectional standard deviation of the assets' Sharpe Ratios.
-${ }^{a}$ To prove this, verify directly that the inverse of the correlation matrix is
-$$
-\mathbf{C}^{-1}=\frac{1}{1-\rho}\left(\mathbf{I}_{n}-\frac{\rho}{1+(n-1) \rho} \mathbf{e}^{\top}\right)
-$$
-
-
-\subsection*{Insight 9.4: $\star$ Reading the entries of the precision matrix}
-
-Is there a way to interpret further the relationship $\mathbf{w}^{\star} \propto \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}$ ? The optimal position of asset $i$ is a weighted sum of alphas. The $\left[\Omega_{\mathbf{r}}^{-1}\right]_{i, j}$ are proportional to minus the partial correlations of the returns of $i$ and $j$ after controlling for the other asset returns. The interpretation of partial correlation is that it captures collinearity between two random variables, after removing the collinearity of these variables with a set of controlling variables. In practice, one follows this procedure: 1. regress the returns of asset $i$ and $j$ on the returns of the other assets; 2 . compute the correlation between the residuals from the two regressions, which we denote $\rho_{i, j}$. The formula for the optimal portfolio is
-$$
-w_{i} \propto\left[\Omega_{\mathbf{r}}^{-1}\right]_{i, i}\left(\alpha_{i}-\sum_{j \neq i} \rho_{i, j}\left[\Omega_{\mathbf{r}}^{-1}\right]_{j, j} \alpha_{j}\right)
-$$
-
-The diagonal terms of the precision matrix are always positive. The interpretation of this rather convoluted formula is that, whenever the returns of two assets are positively correlated after removing the joint effect of correlations with other variables, the size of the portfolio is reduced, because the collinearity makes the alpha common to both asset $i$ and $j$.
-
-\section*{9.3. Trading in Factor Space}
-
-\subsection*{9.3.1. Factor-Mimicking Portfolios}
-
-We have a factor model, and we estimate the expected factor returns $\boldsymbol{\lambda}$. Say that we want to generate a portfolio which has the closest possible return to one of the factors. For example, we want to generate a "momentum factor" portfolio. What would it be? The returns of the factor-mimicking portfolio (FMP) should be as close as possible to those of the factor: the variance of the difference of the two returns should be minimized. A portfolio $\mathbf{w}$ has an associated factor exposure $\mathbf{b}$. Its returns are $\mathbf{r}^{\top} \mathbf{w}=\mathbf{b}^{\top} \mathbf{f}+\mathbf{w}^{\boldsymbol{\top}} \boldsymbol{\epsilon}$. The tracking variance ${ }^{3}$ between $f_{i}$ and $\mathbf{r}^{\boldsymbol{\top}} \mathbf{w}$ is $E\left[\left(\left(b_{i}-1\right) f_{i}+\sum_{j \neq i} b_{j} f_{j}+\mathbf{w}^{\boldsymbol{\top}} \boldsymbol{\epsilon}\right)^{2}\right]$. This is minimized when $b_{i}-1=0, b_{j}=0$ for $j \neq i$, and the portfolio's idio variance is minimized. The optimization formulation is
-$$
-\begin{aligned}
-& \min \mathbf{w}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{w} \\
-& \text { s.t. } \mathbf{B}^{\top} \mathbf{w}=\mathbf{e}_{i}
-\end{aligned}
-$$
-
-\footnotetext{
-${ }^{3}$ We ignore the term $\boldsymbol{\alpha}_{\perp}$, both out of simplicity and because it is very small.
-}
-
-The solution is $\mathbf{v}_{i}=\boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1} \mathbf{e}_{i}$. The matrix whose column vectors are the factor-mimicking portfolios is ( $\mathbf{P}$ is for "portfolios")
-$$
-\begin{align*}
-\mathbf{P} & :=\left[\begin{array}{cccc}
-\mid & \mid & \ldots & \mid \\
-\mathbf{v}_{1} & \mathbf{v}_{2} & \ldots & \mathbf{v}_{m} \\
-\mid & \mid & \ldots & \mid
-\end{array}\right]  \tag{9.12}\\
-& =\boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1}\left[\begin{array}{cccc}
-\mid & \mid & \ldots & \mid \\
-\mathbf{e}_{1} & \mathbf{e}_{2} & \ldots & \mathbf{e}_{m} \\
-\mid & \mid & \ldots & \mid
-\end{array}\right] \\
-& =\boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1}
-\end{align*}
-$$
-
-We now have factor portfolios as tradable instruments. The expected return of a factor portfolio is $\left(\boldsymbol{\alpha}_{\perp}^{\top}+\boldsymbol{\lambda}^{\top} \mathbf{B}^{\boldsymbol{\top}}\right) \mathbf{v}_{i}=\lambda_{i}$. In practice, we:
-1. generate the FMPs compositions over time;
-2. compute their per-period PnL;
-3. compute their empirical average PnL ;
-4. apply modifications to the expected PnL, such as penalties ${ }^{4}$;
-5. optimize in factor space.
-
-\footnotetext{
-${ }^{4}$ The subject will be covered in Section 10.2.3.
-}
-
-We now prove that FMPs emerge naturally from certain assumptions about returns and FMP composition. In the Appendix (Theorem 9.1), we prove that if alpha spanned is zero and if the idiosyncratic variance of the factor-mimicking portfolios is small, then the mean-variance optimization problem reduces to one in which we only trade FMPs. First, we solve the low-dimensional optimization problem
-$$
-\begin{aligned}
-& \max \boldsymbol{\lambda}^{\top} \mathbf{u}-\frac{1}{2 \gamma} \mathbf{u}^{\top} \boldsymbol{\Omega}_{\mathrm{f}} \mathbf{u} \\
-& \text { s.t. } \mathbf{u} \in \mathbb{R}^{m}
-\end{aligned}
-$$
-
-Say that the solution is $\mathbf{u}^{\star}$. The optimal portfolio is the weighted sum of the FMPs $\mathbf{w}^{\star}=\mathbf{P} \mathbf{u}^{\star}$. A few remarks on the appeal and limitations of the previous result:
-- In factor space, the dimensionality of the problem collapses, but we still have an MVO problem, which is usually more interpretable. The possible drawbacks of mean-variance optimization still hold, but so do the possible remedies, which we present in Chapter 10.
-- Factor-mimicking portfolios make their appearance as the necessary synthetic instruments for trading in factor space. In synthesis, if you perform mean-variance optimization and factors are sufficiently "pure" (having low idiosyncratic risk), then you necessarily trade FMPs. It is an economical, beautiful result.
-- Keep in mind that FMPs are associated to the loadings matrix B, and that there are many loadings matrices resulting in equivalent factor models (see Section 4.4.1). Think of FMPs as a vector basis in a finite-dimensional subspace. There are infinitely many such bases, and they don't need to be orthogonal. The subspace, however, is uniquely identified.
-- The assumption of small factor idiosyncratic variance can be expressed as $\left\|\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1}\right\| \ll 1$. The matrix inside the norm appears repeatedly in this book - in an ideal world, we would like it to be small, in the real world, it is not. The ideal-world solution works well as a sketch of the real world. It tells
-us the broad shape of the portfolio. When trading, we should include the idiosyncratic variance of the portfolio and not solve for the limit case.
-- In conjunction with the previous point, we have also ignored execution costs. They should not be ignored in applications. Chapter 11 is devoted to the subject.
-
-\subsection*{9.3.2. Adding, Estimating, and Trading a New Factor}
-
-Let us consider a simple example, and let us work through the individual steps. In a way, all the steps are implicitly contained in the theory developed so far. The starting point is a factor model with $m$ factors, with parameters $\mathbf{B}, \boldsymbol{\Omega}_{\mathbf{f}}, \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$. We assume that they are constant through time for notational simplicity; extending the example to time-varying parameters is straighforward. The factors have expected returns $\boldsymbol{\lambda}$. We are exploring a new asset characteristic vector $\mathbf{a} \in \mathbb{R}^{n}$. We can add the new factor to the existing model without reestimating the entire model by pushing out the model.
-1. Orthogonalization. First we orthogonalize the new factor to the existing factors. The orthogonalized factor is given by standard linear regression formulas ${ }^{5}$
-$$
-\mathbf{b}_{m+1}=\left(\mathbf{I}_{n}-\mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1} \mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1}\right) \mathbf{a}
-$$
-2. Estimation. Next, we regress in every period the residual returns from the existing model against the orthogonalized factor by using Frisch-Waugh-Lovell theorem ${ }^{6}$ :
-$$
-\begin{align*}
-\boldsymbol{\epsilon}_{t} & =\mathbf{b}_{m+1} \hat{f}_{m+1, t}+\hat{\boldsymbol{\epsilon}}_{t}  \tag{9.13}\\
-\Rightarrow \hat{f}_{m+1, t} & :=\frac{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \boldsymbol{\epsilon}_{t}}{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}}  \tag{9.14}\\
-\hat{\lambda}_{m+1} & :=\frac{1}{T} \sum_{t} \hat{f}_{m+1, t}  \tag{9.15}\\
-\hat{\sigma}_{m+1} & :=\left(\frac{1}{T} \sum_{t} \hat{f}_{m+1, t}^{2}\right)  \tag{9.16}\\
-\widehat{\mathrm{SR}} & =\frac{\hat{\lambda}_{m+1}}{\hat{\sigma}_{m+1}} \tag{9.17}
-\end{align*}
-$$
-
-\footnotetext{
-${ }^{5}$ See Section 4.7.1.
-}
-
-\footnotetext{
-${ }^{6}$ See Section 4.7.3.
-}
-
-In the Appendix (Theorem 9.2), we show that the approximate variance of the new factor is $\hat{\sigma}_{m+1}^{2}=\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)^{-1}$.
-3. Risk updating. We show in Section 9.7.4 that the approximate factor covariance matrix including the new factor is given by
-$$
-\tilde{\boldsymbol{\Omega}}_{\mathbf{f}} \simeq\left[\begin{array}{cc}
-\boldsymbol{\Omega}_{\mathbf{f}} & \mathbf{0} \\
-\mathbf{0} & \left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)^{-1}
-\end{array}\right]
-$$
-
-This result holds only for constant parameters and well-diversified factor portfolios. For time-varying models, we need to resort to numerical estimates for the factor covariance matrix. The analytical results provide a useful approximation.
-4. Trading. The Factor-Mimicking Portfolio of the new factor is
-$$
-\mathbf{v}_{m+1}=\frac{\boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}}{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}}
-$$
-
-This follows from the definition of FMPs, Equation (9.12). A faster route is via the factor return estimation above. The factor return estimate is the same whether we regress using residual returns or total returns ${ }^{7}$ :
-$$
-\begin{aligned}
-\hat{f}_{m+1, t} & =\frac{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \hat{\epsilon}_{t}}{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}} \\
-& =\frac{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{r}_{t}}{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}} \\
-& =\mathbf{v}_{m+1}^{\top} \mathbf{r}_{t}
-\end{aligned}
-$$
-
-Let $\tilde{\boldsymbol{\lambda}}=\left(\boldsymbol{\lambda} \mid \hat{\lambda}_{m+1}\right)$. Finally, we solve the optimization problem
-$$
-\begin{aligned}
-\max & \tilde{\boldsymbol{\lambda}}^{\top} \mathbf{u}-\frac{1}{2 \gamma} \mathbf{u}^{\top} \tilde{\boldsymbol{\Omega}}_{\mathbf{f}} \mathbf{u} \\
-\text { s.t. } \mathbf{u} & \in \mathbb{R}^{m+1}
-\end{aligned}
-$$
-whose solution is simple, because of the block structure of the factor covariance matrix
-$$
-\mathbf{u}^{\star}=\gamma\left[\begin{array}{c}
-\boldsymbol{\Omega}_{\mathbf{f}}^{-1} \boldsymbol{\lambda} \\
-\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}^{-1} \mathbf{b}_{m+1}\right) \hat{\lambda}_{m+1}
-\end{array}\right]
-$$
-
-So, our investment in the preexisting factors is unchanged, but we add a position in the new factor, proportional to the expected factor return divided by its variance.
-
-\footnotetext{
-${ }^{7}$ See Sections 4.7.2 and 4.7.3.
-}
-
-\subsection*{Procedure 9.1: Adding a new factor to a model and trading it}
-1. Inputs: a factor model ( $\left.\mathbf{b}_{t}, \boldsymbol{\Omega}_{\mathbf{f}, t}, \boldsymbol{\Omega}_{\boldsymbol{\epsilon}, t}, \boldsymbol{\epsilon}_{t}\right)$, with expected factor returns $\boldsymbol{\lambda}$; raw loadings for the new factor $\mathbf{a}_{t}$.
-2. Orthogonalize the factor:
-$$
-\mathbf{b}_{m+1, t}=\left(\mathbf{I}_{n}-\mathbf{b}_{t}\left(\mathbf{b}_{t}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{t}\right)^{-1} \mathbf{b}_{t}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1}\right) \mathbf{a}_{t}
-$$
-3. Compute the Factor-Mimicking Portfolio:
-$$
-\begin{aligned}
-\mathbf{v}_{m+1, t} & :=\frac{\boldsymbol{\Omega}_{\epsilon, t}^{-1} \mathbf{b}_{m+1, t}}{\mathbf{b}_{m+1, t}^{\top} \boldsymbol{\Omega}_{\epsilon, t}^{-1} \mathbf{b}_{m+1, t}} \\
-\hat{\lambda}_{m+1} & :=\frac{1}{T} \sum_{t} \mathbf{v}_{m+1, t}^{\top} \mathbf{r}_{t}
-\end{aligned}
-$$
-4. Compute new factor covariance matrix
-$$
-\tilde{\boldsymbol{\Omega}}_{\mathbf{f}} \simeq\left[\begin{array}{cc}
-\boldsymbol{\Omega}_{\mathbf{f}, t} & \mathbf{0} \\
-\mathbf{0} & \left(\mathbf{b}_{m+1, t}^{\top} \boldsymbol{\Omega}_{\boldsymbol{\epsilon}, t}^{-1} \mathbf{b}_{m+1, t}\right)^{-1}
-\end{array}\right]
-$$
-5. Compute new weights for FMPs:
-$$
-\mathbf{u}_{t}^{\star}=\gamma\left[\begin{array}{c}
-\boldsymbol{\Omega}_{\mathbf{f}, t}^{-1} \boldsymbol{\lambda} \\
-\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\boldsymbol{\epsilon}, t}^{-1} \mathbf{b}_{m+1, t}\right) \hat{\lambda}_{m+1, t}
-\end{array}\right]
-$$
-and trade portfolio
-$$
-\mathbf{w}_{t}=\left[\begin{array}{cccc}
-\mid & \mid & \ldots & \mid \\
-\mathbf{v}_{1, t} & \mathbf{v}_{2, t} & \ldots & \mathbf{v}_{m+1, t} \\
-\mid & \mid & \ldots & \mid
-\end{array}\right] \mathbf{u}_{t}^{\star}
-$$
-
-\subsection*{9.3.3. Factor Portfolios from Sorts}
-
-A very popular way to form factor portfolios is to sort securities by a given characteristic, and then form a portfolio in which the long positions are top $x$-quantile positions (say, the top $25 \%$ positions) and the shorts are the bottom $x$-quantile positions. The Net Market Value of each position is identical, so that the portfolio is dollar-neutral. For example, we consider book value-to-price (BtP) as the characteristic for a US investment universe of 2000 stocks, and go long $\$ 1000$ the 500 stocks with the highest value of the ratio, and short $\$ 1000$ the 500 stocks with the lowest value of the ratio. This approach originates with the paper by Fama and MacBeth [1973], who introduced them to alleviate the problem of estimation error of time-series betas of single securities, by estimating portfolio betas instead. The resulting portfolios are sometimes called portfolios from sorts or characteristic portfolios (CPs ; Daniel et al. [2020]). They are widely used by practitioners to convert a metric that describes a potential mispricing into an investable portfolio. What are the drawbacks of this approach? There are at least four.
-1. The characteristic portfolios will have unwanted exposures to other factors. As a result, you may be betting on the characteristic of interest as well as on some other source of systematic risk and return. The unwanted exposures may both increase the overall portfolio risk and reduce the return of the portfolio.
-2. The securities in the characteristic portfolio are equal weighted. This is inefficient, since more volatile securities should have a lower weight.
-3. Being equal-weighted, the sizes in the characteristic portfolio do not reflect the magnitude of the characteristic. For example, if asset A has twice the BtP of asset B , and they both are in top $x$-quantile of the distribution,
-they receive the same weight. This is the same as dichotomizing the characteristic. Dichotomization of data is usually a poor modeling strategy (see, e.g., Harrell [2015]).
-4. Over time, characteristics change, and certain securities may be dropped from/added to the portfolio abruptly (from a target weight to zero). This makes trading more expensive and require some adjustment over the naïve weights.
-
-\subsection*{FAQ 9.1: What about factor portfolios from sorts?}
-Portfolios from sorts (or characteristic portfolios) are dollar-neutral portfolios which consist of equal-weighted long positions for securities having the highest values of a certain characteristic, and equal-weighted short positions for an equal number of securities with the lowest value of a characteristic. They hold the intuitive appeal of being a simple implementation of a dollar-neutral portfolio. However they have many drawbacks: non-optimal volatility weighting, non-optimal characteristic weighting, unwanted exposures to other factors, and high turnover due to abrupt inclusions/exclusions in the portfolio. FMPs are designed to be the most efficient (i.e., lowest risk) portfolios with unit exposure to a characteristic of interest.
-
-\section*{9.4. Trading in Idio Space}
-
-In Section 4.3 we introduced the concepts of alpha spanned and alpha orthogonal. Alpha spanned are asset expected excess returns attributable to non-zero factor expected returns; alpha orthogonal are non explainable by factor returns. Because of Equation (4.3), Sharpe Ratio scales at least like $\sqrt{n}$. Because of this, alpha orthogonal is the golden currency in investing. How does one build a portfolio that exploits only this alpha? By requiring that the optimal portfolio have no exposures, and therefore no returns, to factors. There are many ways to achieve this, and they are encountered in practice. The first one is to build a portfolio that has an upper bound on volatility, maximizes expected returns, and has no factor exposures. By construction, the portfolio contains "pure alpha" and no factor-related PnL. The formulation is:
-$$
-\begin{align*}
-& \max \boldsymbol{\alpha}_{\perp}^{\top} \mathbf{w}  \tag{9.18}\\
-& \text { s.t. } \mathbf{B}^{\top} \mathbf{w}=0 \\
-& \quad \mathbf{w}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{w} \leq \sigma^{2}
-\end{align*}
-$$
-whose solution ${ }^{8}$ is
-$$
-\begin{aligned}
-\hat{\boldsymbol{\alpha}}_{\perp} & :=\left(\mathbf{I}_{n}-\mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1} \mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1}\right) \boldsymbol{\alpha}_{\perp} \\
-\mathbf{w}^{\star} & =\frac{\sigma}{\sqrt{\hat{\boldsymbol{\alpha}}_{\perp}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \hat{\boldsymbol{\alpha}}_{\perp}}} \boldsymbol{\Omega}_{\epsilon}^{-1} \hat{\boldsymbol{\alpha}}_{\perp}
-\end{aligned}
-$$
-\footnotetext{
-${ }^{8}$ Derive it as an exercise, or see Section 9.7.2.
-}
-In Section 9.3.2, we built an FMP for a new factor through two steps: first, orthogonalization; second, inverse variance weighting. The portfolio construction for an alpha orthogonal portfolio is indeed, identical: orthogonalization and inverse variance weighting. If all the asset idiosyncratic volatilities are identical, $\Omega_{\epsilon}$ is proportional to the identity, and the orthogonalization step is superfluous: $\hat{\boldsymbol{\alpha}}_{\perp}=\boldsymbol{\alpha}_{\perp}$.
-
-\section*{9.5. Drivers of Information Ratio: Information Coefficient and Diversification}
-
-What makes a good strategy? Before we are trading (i.e., ex ante), we are living the dream, i.e. Equation (9.5):
-$$
-\mathrm{SR}^{\star}=\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}}
-$$
-
-A substantial part of this and of the next chapter is dedicated to the notion that we do not exist in the Dreamtime. Our forecasted returns and risk models are incorrect, and we should take this knowledge in the investment process. A first step is to establish some ex post relationship for the Sharpe Ratio. Start with the solution to the MVO problem, Equation (9.3):
-$$
-\mathbf{w}^{\star}=\frac{\sigma}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}}} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}
-$$
-
-And assume that the covariance matrix $\boldsymbol{\Omega}_{\mathrm{r}}$ is accurate; admittedly a strong assumption. The expected realized return is
-$$
-\begin{aligned}
-E\left(\mathbf{r}^{\top} \mathbf{w}^{\star}\right) & =\frac{\sigma}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}}} E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}\right) \\
-& =\frac{E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}\right)}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}} \sqrt{E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \mathbf{r}\right)}} \sqrt{\frac{E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \mathbf{r}\right)}{n}} \sqrt{n}
-\end{aligned}
-$$
-
-Recall the Information Coefficient, already introduced in Section 8.3.1:
-$$
-\mathrm{IC}:=\frac{E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}\right)}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}} \sqrt{E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \mathbf{r}\right)}}
-$$
-
-The important thing to know is that the Information Coefficient is a correlation. To see why, we need to transform variables:
-$$
-\begin{align*}
-\tilde{\mathbf{r}} & =\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \mathbf{r}  \tag{9.19}\\
-\hat{\boldsymbol{\alpha}} & =\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}
-\end{align*}
-$$
-
-So that the Information Coefficient can be rewritten in a more succinct form
-$$
-\operatorname{IC}(\hat{\boldsymbol{\alpha}}, \tilde{\mathbf{r}}):=\frac{E\left(\tilde{\mathbf{r}}^{\top} \hat{\boldsymbol{\alpha}}\right)}{\sqrt{\hat{\boldsymbol{\alpha}}^{\top} \hat{\boldsymbol{\alpha}}} \sqrt{E\left(\tilde{\mathbf{r}}^{\top} \tilde{\mathbf{r}}\right)}}
-$$
-which can be interpreted as a cross-sectional uncentered correlation.
-We can simplify things further by proving that $E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \mathbf{r}\right)=n$. The random vector $\mathbf{r}$ has the same covariance matrix ${ }^{9}$ as $\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \boldsymbol{\xi}$, where $\boldsymbol{\xi}$ is a standard multivariate normal.
-$$
-\begin{aligned}
-E\left(\mathbf{r}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \mathbf{r}\right) & =E\left(\boldsymbol{\xi}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \boldsymbol{\xi}\right) \\
-& =\sum_{i=1}^{n} E\left(\xi_{i}^{2}\right) \\
-& =n
-\end{aligned}
-$$
-
-\footnotetext{
-${ }^{9}$ Prove this step-by-step in Exercise 4.3.
-}
-
-Putting everything together, the $E\left(\mathbf{r}^{\top} \mathbf{w}^{\star}\right) / \sigma$ is
-$$
-\mathrm{SR}=\mathrm{IC}(\hat{\boldsymbol{\alpha}}, \tilde{\mathbf{r}}) \sqrt{n}
-$$
-
-This relationship goes back to Grinold [1989] and Grinold and Kahn [1999], who named it The Fundamental Law of Active Management ${ }^{10}$. It is often invoked by practitioners. In practice, users of the formula do not whiten returns and alphas in Equation (9.19). Instead, they apply the law to the active component of a portfolio, so that $\boldsymbol{\Omega}_{\mathrm{r}}$ is replaced by the diagonal $\boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$ and $\boldsymbol{\alpha}$ by $\boldsymbol{\alpha}_{\perp}$. Then, IC becomes the cross-sectional correlation between the standardized alphas (expected excess returns in units of volatility) and the standardized idio returns (so that they have unit variance).
-
-\footnotetext{
-${ }^{10}$ Quite an important name for a "law"! And why not? Nobody had thought of using this title at the time. I can imagine Grinold playing air guitar and singing to an Iron Maiden tune as he was drafting the original 1989 paper.
-}
-
-
-The Fundamental Law has several important implications. The first, and most obvious one, is that performance is driven by two factors. The first one is a measure of skill: the Information Coefficient. It is a strength of the predictive strength of the signal. If we have the ability to extend our forecast to a larger panel of stocks without degrading its predictive power, we should do so! This may or not be the case in real life, depending on specifics of your strategy. Many investors also have a notion of "idea velocity", expressed as the number of forecasts $T$ per year. A higher idea velocity increases, in principle, the Information Ratio. It is really difficult, however, to increase effectively the frequency of independent forecasts.
-
-The Fundamental Law also connects Information Ratio to an ex post measure (the IC) that is interpretable as a correlation, which can be related to a special kind of regression (as per Insight 9.5).
-
-
-
-\subsection*{Insight 9.5: Information Coefficient and predictive regression}
-Being a correlation, the IC is also naturally related to the predictive strength of our alphas, as measured by a cross-sectional regression. As an important step in exploring alphas, we perform a cross-sectional weighted-least squares regression of residual returns against alpha. We estimate a coefficient $x$ that solves the following minimization problem:
-$$
-\min _{b} \sum_{i} \frac{\left(r_{i}-\alpha_{i} b\right)^{2}}{\sigma_{\epsilon, i}^{2}}=\min _{b}\|\tilde{\mathbf{r}}-\hat{\boldsymbol{\alpha}} b\|^{2}
-$$
-
-The solution is given by $b^{\star}=\tilde{\mathbf{r}}^{\top} \hat{\boldsymbol{\alpha}} /\|\hat{\boldsymbol{\alpha}}\|^{2}$ and the residual sum of squares is $\|\tilde{\mathbf{r}}\|^{2}-\left(\tilde{\mathbf{r}}^{\top} \hat{\boldsymbol{\alpha}}\right)^{2} /\|\hat{\boldsymbol{\alpha}}\|^{2}$, while the total sum of squares is $\|\tilde{\mathbf{r}}\|^{2}$. The Coefficient of Determination ("R squared") is, in expectation, equal to:
-$$
-R^{2}=\frac{\left(\tilde{\mathbf{r}}^{\top} \hat{\boldsymbol{\alpha}}\right)^{2}}{\|\hat{\boldsymbol{\alpha}}\|^{2}\|\tilde{\mathbf{r}}\|^{2}}=(\mathrm{IC})^{2}
-$$
-
-And we can link the coefficient of determination in predictive regressions to the Information Ratio:
-$$
-\mathrm{IR}=\sqrt{R^{2} n}
-$$
-
-If there are $T$ investment periods in a year, the annualized Information has a convenient form as a function of per-period cross-sectional R squared
-$$
-\mathrm{IR}=\sqrt{R^{2} n T}=\mathrm{IC} \sqrt{n T}
-$$
-
-Otherwise stated, the annualized Information Ratio is equal to the Information Coefficient times the independent number of return forecasts in a year ${ }^{a}$.
-
-\footnotetext{
-${ }^{a}$ For the relationship between Coefficient of Determination and Information Ratio, see Chincarini and Kim [2007, 2022].
-}
-
-
-\section*{9.6. Aggregation: Signals vs. Portfolios}
-
-So far, we have considered the optimization of a single portfolio. That is the situation usually faced by a quantitative portfolio manager, but is far from being the only one. Let us consider two examples. In the first one, you have a fundamental portfolio manager managing a large team. In order to scale her book, the PM delegates to the analyst trading decisions for the the stocks they cover. The portfolio of the entire team is simply the aggregation of the individual portfolios. This is a fully decentralized solution to portfolio management. What would be the alternative? The analysts do their own research, summarize it into a thesis for each stock, and communicate to the PM, who converts them into positions. This is the centralized solution to portfolio management. Now, we produce the second example by going up one level. We have a large number of portfolio managers; the hedge fund has some excess capital it would like to deploy. One option available to the hedge fund is to take the portfolio positions of the individual teams, and increment them by a given percentage, say, $50 \%$. This can be directly performed at the time of an order's submission. This is
-analogous to the decentralized solution in the first example. There is no need to look inside the box of a team. It's only the output that matters. The predictable alternative is the centralized solution: gather the signals from the teams and construct a portfolio. Figure 9.1 visualizes the two approaches.
-
-[WILEY EDITORS: place Figure 9.1 around here.]
-
-![](https://cdn.mathpix.com/cropped/2024_12_19_198f16e16831a68479f0g-342.jpg?height=353&width=1215&top_left_y=799&top_left_x=406)
-
-Figure 9.1: Left: the decentralized solution to portfolio combination. Right: the centralized solution
-
-A lot of PnL rides on the decision to centralize vs decentralize portfolio construction! How should we organize large teams? How should we deploy spare capital in the most efficient way? The rest of this section is devoted to proving a simple result: under some simple conditions the two approach give the same result. The conditions are, very roughly, that the portfolio constructor is a Mean-Variance optimization problem, and there are no transaction costs. Technical details matter, however. The rest of the section spells them out in detail and states the precise result. As for many equivalent results in economic theory ${ }^{11}$, the theorem is interesting because it doesn't hold in practice. It allows us to compare the idealized conditions under which it holds, and the real-world situation, and identify areas where one solution may have the advantage.
-
-\footnotetext{
-${ }^{11}$ For example, Modigliani-Miller's theorem and Merton's result on the equivalence of an option claim and a replicating portfolio.
-}
-
-Let us formalize the problem. There is an investment universe of $n$ stocks. We have $m$ portfolio managers working under a principal hedge fund manager. Without loss of generality, each one has the same investment coverage of $n$ stocks. Every portfolio manager uses the same asset covariance matrix $\boldsymbol{\Omega}_{\mathbf{r}}$, and has a forecast $\boldsymbol{\alpha}_{i}$.
-
-We model the portfolio managers by assuming that they are mean-variance maximizers. Without loss of generality, PM $i$ produces a unit-volatility portfolio:
-$$
-\begin{aligned}
-& \mathbf{w}_{i}=\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}_{i}}{\sigma_{i}} \\
-& \sigma_{i}:=\sqrt{\boldsymbol{\alpha}_{i}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}_{i}}
-\end{aligned}
-$$
-
-Now we consider two procedures.
-1. Decentralized: PMs trade, the hedge fund manager estimates their Sharpe Ratios and return correlations, and combines their portfolios so as to maximize the overall Sharpe Ratio.
-2. Centralized: The hedge fund manager receives the signals, simulates their properties (e.g., Sharpe Ratio of the MVO portfolios and return correlations of the portfolios) and then combines the signals and trade a single Sharpe-maximizing portfolio.
-
-We consider the two solutions.
-1. Decentralized solution. The hedge fund manager observes Sharpe Ratio $s_{i}$, for $i=1, \ldots, m$ for each PM, as well as the correlation matrix $\mathbf{C}$ for the $m$. Consider Example ?? in Appendix 9.7: the optimal dollar volatility allocated to strategy $i$ is $v_{i}:=\left[\mathbf{C}^{-1} \mathbf{s}\right]_{i}$. The portfolios $\mathbf{w}_{i}$ have
-unit volatility, hence the aggregated portfolio is
-$$
-\mathbf{w}_{\mathrm{dec}}=\sum_{i} v_{i} \mathbf{w}_{i}=\sum_{i}\left[\mathbf{C}^{-1} \mathbf{s}\right]_{i} \frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}_{i}}{\sigma_{i}}
-$$
-2. Centralized solution. The hedge fund manager receives signals and aggregates them: $\boldsymbol{\alpha}=\sum_{i} u_{i} \boldsymbol{\alpha}_{i}$. We need to identify weights $u_{i}$. Let $\mathbf{a}:=E(\mathbf{r})$. The expected PnL of the portfolio $\boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}$ is
-$$
-\begin{array}{r}
-\mathbf{a}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \sum_{i} u_{i} \boldsymbol{\alpha}_{i}=\sum_{i} u_{i} \mathbf{a}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}_{i} \\
-=\sum_{i} u_{i} \sigma_{i} s_{i}
-\end{array}
-$$
-
-The covariance of the portfolio is
-$$
-\begin{aligned}
-\left(\boldsymbol{\Omega}_{\mathbf{r}}^{-1} \sum_{i} u_{i} \boldsymbol{\alpha}_{i}\right)^{\top} \boldsymbol{\Omega}_{\mathbf{r}}\left(\boldsymbol{\Omega}_{\mathbf{r}}^{-1} \sum_{j} u_{j} \boldsymbol{\alpha}_{j}\right) & =\sum_{i} \sum_{j} \boldsymbol{\alpha}_{i}^{\top} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \boldsymbol{\alpha}_{j} u_{i} u_{j} \\
-& =\sum_{i} \sum_{j}[\mathbf{C}]_{i, j} \sigma_{i} \sigma_{j} u_{i} u_{j}
-\end{aligned}
-$$
-
-We find the weights so that the hedge fund manager maximizes the Sharpe Ratio. Define $x_{i}:=\sigma_{i} u_{i}$. The maximization problem is
-$$
-\begin{aligned}
-& \max \frac{\mathbf{s}^{\top} \mathbf{x}}{\sqrt{\mathbf{x}^{\top} \mathbf{C x}}} \\
-& \text { s.t. } \mathbf{x} \in \mathbf{R}^{m}
-\end{aligned}
-$$
-
-The solution is $\mathbf{x}^{\star}=\mathbf{C}^{-1} \mathbf{s} / \sqrt{\mathbf{s C}^{-1} \mathbf{s}}$, so that
-$$
-\mathbf{w}_{\mathrm{cen}}=\frac{1}{\sqrt{\mathbf{s C}^{-1} \mathbf{s}}} \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \sum_{i} \frac{\left[\mathbf{C}^{-1} \mathbf{s}\right]_{i}}{\sigma_{i}} \boldsymbol{\alpha}_{i}
-$$
-
-The two portfolios $\mathbf{w}_{\mathrm{cen}}$ and $\mathbf{w}_{\mathrm{dec}}$ are identical, save for a multiplicative constant,
-which is not essential.
-This equivalency result is, in a sense, positive, because it suggests that, at least to a first approximation, we can decentralize portfolio construction decisions. What could go wrong? A lot. It is a good point to reexamine the assumptions:
-- First, we have ignored execution costs. It is possible that the centralized solution has the advantage, since it would net out opposite-side positions of individual portfolio managers. Optimal execution turns the problem into a multi-period one, so that the analysis in this section does not carry over.
-- Secondly, we have assumed that the portfolio manager solve an MVO problem; the formulation accommodates total return and idio return problems. In real-world implementations, there are side constraints that may differ by portfolio managers. Covariance matrices may also differ among managers, and between them and the hedge fund manager.
-- When the individual units are not systematic, but rather discretionary portfolio managers, the portfolios produced by them are not generated by MVO.
-- In many cases, the volatility allocation to the signals of the PMs in the centralized solution is not done using MVO. Heuristics, precommitments to individual PMs, and other constraints may play a role.
-- Finally, especially in the latter case of discretionary managers, the alpha signal may not be communicated in a timely manner.
-
-In summary, the result suggests that in a real-world setting, provided that transaction costs do not dominate and that agents are MVO optimizers, the centralized solution should not dramatically dominate the decentralized one. The emphasis is on "suggests"; more research is (always) needed.
-
-\section*{9.7. ×Appendix}
-
-\subsection*{9.7.1. Some Useful Results from Linear Algebra}
-
-Spiked Covariance Matrices are the sum of a full-rank sparse (possibly diagonal) matrix and a low-rank matrix. For this class of matrices, there are useful, computationally cheap ways to compute inverse and determinant: the Woodbury-Sherman-Morrison Lemma, and the Matrix Determinant Lemma.
-
-Woodbury-Sherman-Morrison Lemma. Useful to compute the inverse of a matrix (e.g., min-variance portfolio and log-likelihood).
+A very different type of constraint is on the minimum idio variance as a percentage of the total variance. We have mentioned this metric in Section 4.5.2. It is tempting to include a constraint of the form
 $$
 \begin{equation*}
-\left(\mathbf{D}+\mathbf{B} \boldsymbol{\Omega} \mathbf{B}^{\top}\right)^{-1}=\mathbf{D}^{-1}-\mathbf{D}^{-1} \mathbf{B}\left(\boldsymbol{\Omega}^{-1}+\mathbf{B}^{\top} \mathbf{D}^{-1} \mathbf{B}\right)^{-1} \mathbf{B}^{\top} \mathbf{D}^{-1} \tag{9.20}
+\mathbf{w}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{w} \geq p_{\mathrm{idio}} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \tag{10.9}
+\end{equation*}
+$$
+or, equivalently,
+$$
+\begin{equation*}
+\mathbf{w}^{\boldsymbol{\top}}\left[p_{\text {idio }} \mathbf{B} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{B}^{\boldsymbol{\top}}-\left(1-p_{\text {idio }}\right) \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}\right] \mathbf{w} \leq 0 \tag{10.10}
 \end{equation*}
 $$
 
-Determinant Lemma. Useful in log-likelihood calculations.
+The problem is that the matrix $p_{\text {idio }} \mathbf{B} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{B}^{\boldsymbol{\top}}-\left(1-p_{\text {idio }}\right) \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$ is in general not positive definite, and therefore the constraint is not convex (exercise: prove it by providing an example).
+
+A constraint type with a similar objective is to require a minimum idiosyncratic dollar volatility: $\mathbf{w}^{\boldsymbol{\top}} \boldsymbol{\Omega}_{\boldsymbol{\epsilon}} \mathbf{W} \geq \sigma_{\text {idio }}^{2}$. This is obviously a non-convex constraint, and its proponents should be excommunicated from the Orthodox Church of Optimization. A sensible approach is to simply upper bound the factor variance, or impose bounds of factor exposures, and test the impact of the bound on the portfolio's performance.
+
+Yet another excommunicable offense is imposing a lower bound on total volatility. I would not mention it, had I not witnessed actual humans proposing it.
+
+In the same spirit, i.e., the goal of ensuring that the portfolio meets a minimum size, is a lower bound on Gross Market Value. The answer to these constraints is that they are usually ill-conceived. If, after accounting for excess return forecasts, trading costs, and risk constraints, the optimal portfolio is small, then maybe it should stay small. And if one really wants to make it bigger (again, not advisable), one could loosen the upper bounds on risk or underestimate the transaction costs.
+
+\subsection*{10.2.2. Do Constraints Improve or Worsen Performance?}
+
+The naïve answer to the title of this section is that - of course!- they worsen performance. If you reduce the feasible region of your optimization problem by adding a constraint, you will not get a better optimum. Specifically, if we maximize the Sharpe Ratio, adding constraints will degrade the Sharpe Ratio ${ }^{4}$ This is true if the data in the problem, i.e. covariance matrix and expected returns, are estimated correctly. If we take estimation error into account, however, constraints may help. The next section interprets constraints as regularization terms for parameters entering in the optimization ${ }^{5}$.
+
+\footnotetext{
+${ }^{4}$ For example, see Clarke et al. [2002].
+${ }^{5}$ The academic literature on this subject is not very large. See Jagannathan and Ma [2003] for an early contribution to the analysis of long-only constraints; The work by DeMiguel et al. [2009a,b] on trading penalties; Fan et al. [2012] on GMV constraints and Ceria et al. [2012], Saxena and Stubbs [2013] on penalties on the factor covariance matrix.
+}
+
+\subsection*{10.2.3. Constraints as Penalties}
+
+One alternative way to interpret a constraint in portfolio optimization is as a penalty term added to the objective function: given a problem
+$$
+\begin{aligned}
+& \max f(\mathrm{x}) \\
+& \text { s.t. } g(\mathrm{x}) \leq a
+\end{aligned}
+$$
+with optimal solution $\mathbf{x}^{\star}(a)$, there is a $\lambda^{\star}(a)>0$ such that
+$$
+\max f(\mathbf{x})-\lambda^{\star}(a) g(\mathbf{x})
+$$
+has the same solution $\mathbf{x}^{\star}(a)$. We used this result at the beginning of the chapter. The parameter $\lambda^{\star}(a)$ can also be interpreted as a sensitivity to the constraint's right-hand side parameter $a$. The variable $\lambda$ is the marginal change in the optimum when we increase (or "relax") $a: d f\left(\mathbf{x}^{\star}(a)\right) / d a=\lambda(a)$. Since a commercial solver returns both $\mathbf{x}^{\star}$ and $\lambda^{\star}$, this means that we get sensitivities at zero additional cost. This results also opens up a different modeling approach. What if we converted constraints into penalties? We now know that the outcome, for the appropriate penalizing coefficient, is the same. Does this mean that the approaches are equivalent? The answer is no, and the remainder of this section is devoted to illustrating the difference.
+
+First, let us focus our attention on the meaning of constraints and penalties. There are constraints that are commensurable with the objective, and that are naturally expressed as penalties. For example, you could put a constraint on maximum trading costs. However, costs and expected PnL in the objective have the same unit (dollar) and it makes more sense to express the objective function as the difference of PnL and trading cost. The penalty parameter is simply one.
+
+What about risk? If we fix the time interval, the variance constraint has the dimension of dollar squared, and is therefore not commensurable to PnL in the objective. What we could add to the objective function is $\sqrt{\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}}$. This is possible in some optimization packages ${ }^{6}$ However, if we know the approximate value $\sigma_{0}$ of final volatility, we can choose a penalty parameter such that the adding a volatility term or a variance one gives a similar result. We do so by linearizing in the region of the optimum portfolio:
+$$
+\begin{aligned}
+-\lambda \sqrt{\sigma_{0}^{2}+\left(\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\sigma_{0}^{2}\right)} & \simeq-\frac{\lambda}{\sigma_{0}}\left(\mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\sigma_{0}^{2}\right) \\
+& =\lambda \sigma_{0}-\tilde{\lambda} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \\
+\tilde{\lambda} & :=\frac{\lambda}{\sigma_{0}}
+\end{aligned}
+$$
+
+\footnotetext{
+${ }^{6} \mathrm{~A}$ volatility constraint or penalty is in practice computationally more burdensome to solve than a variance constraint or penalty.
+}
+
+The constant term is irrelevant to the optimization problem, and the volatility is locally approximated by a variance.
+
+A second class of constraints does not have an obvious interpretation. Should we add the constraint on GMV as a penalty? Or long-only constraints? The answer, somewhat surprisingly, is that adding those constraints as penalty may actually help the performance of the optimized portfolio, when the parameters in the model are not accurately estimated.
+
+Let us start with an augmented version of Problem (9.8):
+$$
+\begin{gather*}
+\max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}  \tag{10.11}\\
+\text { s.t. }\|\mathbf{w}\|^{2} \leq G
+\end{gather*}
+$$
+whose penalized version is
 $$
 \begin{equation*}
-\operatorname{det}\left(\mathbf{D}+\mathbf{B} \boldsymbol{\Omega} \mathbf{B}^{\boldsymbol{\top}}\right)=\operatorname{det}(\mathbf{D}) \operatorname{det}(\boldsymbol{\Omega}) \operatorname{det}\left(\boldsymbol{\Omega}^{-1}+\mathbf{B}^{\top} \mathbf{D}^{-1} \mathbf{B}\right) \tag{9.21}
+\max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\nu\|\mathbf{w}\|^{2} \tag{10.12}
 \end{equation*}
 $$
 
-\subsection*{9.7.2. Some Portfolio Optimization Problems}
+This problem can interpreted in many different ways. The first one is a simple rewriting of the quadratic terms as $\lambda \mathbf{w}^{\boldsymbol{\top}}\left(\boldsymbol{\Omega}_{\mathbf{r}}+(\nu / \lambda) \mathbf{I}_{n}\right) \mathbf{w}=: \mathbf{w}^{\boldsymbol{\top}} \tilde{\boldsymbol{\Omega}}_{\mathbf{r}} \mathbf{w}$. The problem then is a MVO with a modified covariance matrix. The correlations of the original covariance matrix have been reduced by a factor $\lambda /(\lambda+\nu)$. The asset variances have been increased, and are more similar to each other; in the limit $\nu \rightarrow \infty$ they are identical. The norm constraint therefore has a "regularizing" effect on the solution. There are different optimization formulations that leads to the same solution of the optimization problem (10.12).
+1. Uncertain alpha [Stubbs and Vance, 2005]. Let us start with the assumption that the vector $\boldsymbol{\alpha}$ is not known with accuracy. We make the assumption that the vector is distributed according to a multivariate Gaussian: $\boldsymbol{\alpha} \sim N\left(\boldsymbol{\alpha}_{0}, \tau^{2} \mathbf{I}_{n}\right)$. We still solve a MVO, taking into account alpha uncertainty:
+$$
+\operatorname{var}\left(\mathbf{r}^{\top} \mathbf{w}\right)=\operatorname{var}\left(\boldsymbol{\alpha}^{\top} \mathbf{w}\right)+\operatorname{var}\left[(\mathbf{r}-\boldsymbol{\alpha})^{\top} \mathbf{w}\right]=\mathbf{w}^{\top}\left(\tau^{2} \mathbf{I}_{n}+\boldsymbol{\Omega}_{\mathbf{r}}\right) \mathbf{w}
+$$
+The MVO formulation is again the same as that of Equation (9.8), but with a modified covariance matrix. As in the case of Equation (10.12), the variances are made more equal, and correlations are shrunk toward zero.
 
-Example 9.1(Maximize expected return subject to a vol constraint and linear homogeneous equalities):
+2. Robust alpha [Pedersen et al., 2021]. Instead of modeling alphas' imperfect estimation by assuming that we know their distribution, we model their error deterministically, and adversarially: we know that the true alphas
+are within a certain distance $d$ from our estimate and, as we did at the beginning of the chapter, we look at the worst case, i.e., the realized alpha is the worst possible one among the admissible realizations. In formulas, we solve
 $$
 \begin{align*}
-& \max \boldsymbol{\alpha}^{\top} \mathbf{w}  \tag{9.22}\\
-& \text { s.t. } \mathbf{B}^{\top} \mathbf{w}=0 \\
-& \quad \mathbf{w}^{\top} \boldsymbol{\Omega} \mathbf{w} \leq \sigma^{2}
+& \max \mathbf{a}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}  \tag{10.13}\\
+& \text { s.t. } \mathbf{a}=\arg \min _{\mathbf{x}}\left\{\mathbf{x}^{\top} \mathbf{w}\|\mid \mathbf{x}-\boldsymbol{\alpha}\| \leq d\right\} \tag{10.14}
+\end{align*}
+$$
+We know what the solution to the nested problem (10.14): from Insight 10.1, it is equal to $\mathbf{a}=\boldsymbol{\alpha}-d \mathbf{w} /\|\mathbf{w}\|$. Hence we solve
+$$
+\begin{equation*}
+\max \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-d\|\mathbf{w}\| \tag{10.15}
+\end{equation*}
+$$
+This is similar, but not identical, to Equation (10.12): the norm penalty term is not squared. The same argument can be made to show that the norm and the norm squared are interchangeable, once the penalty constant $d$ is rescaled: $d\|\mathbf{w}\| \simeq\left(d /\left\|\mathbf{w}_{0}\right\|\right)\|\mathbf{w}\|^{2}$, for a $\left\|\mathbf{w}_{0}\right\|$ close to $\|\mathbf{w}\|$ of the final solution.
+
+3. Robust factors [Ceria et al., 2012]. We consider another instance of constrained optimization. A recurrent theme in this book is model misspecification. Factor models can be misspecified (both in their factor structure and in their expected returns), but they also offer remedies. Consider the case of an omitted factor. As a special case of misspecification, its effect is to worsen the Sharpe Ratio of the MVO portfolio. In order to reduce the impact, let us consider again an adversarial approach. Assume that there is a hidden factor, whose loadings we do not know, but whose volatility $\tau$ is given. We use this as a parameter to quantify the importance of the
+omitted factor.
+The new factor model includes an additional factor loading $\mathbf{v}$ orthogonal to $\mathbf{B}$. The covariance matrix is
+$$
+\tilde{\boldsymbol{\Omega}}_{\mathrm{r}}=\boldsymbol{\Omega}_{\mathrm{r}}+\tau^{2} \mathbf{v v}^{\top}
+$$
+
+We solve
+$$
+\begin{aligned}
+\max _{\mathbf{w}} & \min _{\|\mathbf{v}\| \leq 1} \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\tau^{2} \mathbf{v} \mathbf{v}^{\top}\right) \mathbf{w} \\
+& \max _{\mathbf{w}} \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\frac{\tau^{2}}{\|\mathbf{w}\|^{2}} \mathbf{w w}^{\boldsymbol{\top}}\right) \mathbf{w} \\
+& \max _{\mathbf{w}} \boldsymbol{\alpha}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\tau^{2} \mathbf{I}_{n}\right) \mathbf{w}
+\end{aligned}
+$$
+
+So, yet again, we are solving an optimization problem with a penalized covariance matrix.
+4. Robust asset correlations [Boyd et al., 2016]. Here we have another case of adversarial modeling that is expressed as a penalization term. Assume that we estimate the asset correlation matrix terms with some error independent of the asset pair, so that the difference between the estimated correlation and the true correlation is at most $\left|\rho_{i, j}-\hat{\rho}_{i, j}\right| \leq d$. The adversarial model looks for a solution to the MVO problem, where Nature chooses the covariance matrix with the highest variance compatible with the error bound:
+$$
+\begin{align*}
+\max & \mathbf{a}^{\top} \mathbf{w}-  \tag{10.16}\\
+\lambda & \sigma^{2}  \tag{10.17}\\
+\text { s.t. } \sigma^{2}(\mathbf{w})= & \arg \max _{\Delta \in \mathbb{R}^{n \times n}} \mathbf{w}^{\top}\left(\boldsymbol{\Omega}_{\mathbf{r}}+\boldsymbol{\Delta}\right) \mathbf{w}  \tag{10.18}\\
+& \text { s.t. }\left|[\boldsymbol{\Delta}]_{i, j}\right| \leq d \sqrt{[\boldsymbol{\Omega}]_{i, i}[\boldsymbol{\Omega}]_{j, j}}, i, j=1, \ldots, n
 \end{align*}
 $$
 
-The solution $\mathbf{w}^{\star}$ to this problem is given by
+The objective of the nested problem is equivalent to
 $$
-\begin{aligned}
-\boldsymbol{\Pi} & :=\mathbf{I}_{n}-\mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}^{-1} \mathbf{B}\right)^{-1} \mathbf{B}^{\top} \boldsymbol{\Omega}^{-1} \\
-\tilde{\boldsymbol{\alpha}} & :=\boldsymbol{\Pi} \boldsymbol{\alpha} \\
-\mathbf{w}^{\star} & =\frac{\sigma}{\sqrt{\tilde{\boldsymbol{\alpha}}^{\top} \boldsymbol{\Omega}^{-1} \tilde{\boldsymbol{\alpha}}}} \boldsymbol{\Omega}^{-1} \tilde{\boldsymbol{\alpha}}
-\end{aligned}
+\begin{equation*}
+\mathbf{w}^{\top} \boldsymbol{\Delta} \mathbf{w}=\sum_{i, j} w_{i} w_{j} \sqrt{[\boldsymbol{\Omega}]_{i, i}[\boldsymbol{\Omega}]_{j, j}} \rho_{i, j} \tag{10.19}
+\end{equation*}
 $$
 
-Example 9.2(Minimum-variance portfolio subject to linear equalities):
+Every term is maximized when $\rho_{i, j}=d \times \operatorname{sgn}\left(w_{i} w_{j}\right)$, and the objective function value is
 $$
 \begin{align*}
-& \min \mathbf{w}^{\top} \boldsymbol{\Omega} \mathbf{w}  \tag{9.23}\\
-& \text { s.t. } \mathbf{B}^{\top} \mathbf{w}=\mathbf{b} \tag{9.24}
+\left(\mathbf{w}^{\star}\right)^{\top} \boldsymbol{\Delta} \mathbf{w}^{\star} & =d \sum_{i, j}\left|w_{i} w_{j}\right| \sqrt{[\boldsymbol{\Omega}]_{i, i}[\boldsymbol{\Omega}]_{j, j}}  \tag{10.20}\\
+& =d\left(\sum_{i}\left|w_{i}\right| \sqrt{[\boldsymbol{\Omega}]_{i, i}}\right)  \tag{10.21}\\
+& =d\|\mathbf{V} \mathbf{w}\|_{1}^{2} \tag{10.22}
 \end{align*}
 $$
 
-The solution is $\mathbf{w}^{\star}=\boldsymbol{\Omega}^{-1} \mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}^{-1} \mathbf{B}\right)^{-1} \mathbf{b}$. Of special interest is the case where $\boldsymbol{\Omega}=\mathbf{B} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{B}^{\boldsymbol{\top}}+\boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$. In this case the objective is equal to $\mathbf{b}^{\top} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{b}+$ $\mathbf{w}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{W}$. The first term is constant, so the objective is $\mathbf{w}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{W}$, and the $\mathbf{w}^{\star}=$ $\boldsymbol{\Omega}_{\boldsymbol{\epsilon}}^{-1} \mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}^{-1} \mathbf{B}\right)^{-1} \mathbf{b}=\mathbf{P b}$, where $\mathbf{P}$ is the matrix whose columns are the Factor-Mimicking Portfolios associated to the factor model. These are introduced in Section 9.3.
-
-\subsection*{9.7.3. Optimality of FMPs}
-
-We now prove that FMPs emerge naturally from certain assumptions about returns and FMP composition, which we use in Section 9.3.
-
-Theorem 9.1: Consider a sequence of models $\left(\mathbf{B}, \boldsymbol{\Omega}_{\mathbf{f}}, \boldsymbol{\Omega}_{\epsilon}^{(i)}\right)$. Assume that
-1. Alpha orthogonal is zero, so that $\boldsymbol{\alpha}=\mathbf{B} \boldsymbol{\lambda}$, for some $\boldsymbol{\lambda} \in \mathbb{R}^{m}$.
-2. Idiosyncratic variance converges to zero in norm:
+Where $\mathbf{V}$ is a diagonal covariance matrix whose $i$ th diagonal term is the volatility of asset $i$. Let us plug this back in the original problem:
 $$
-\lim _{i \rightarrow \infty}\left\|\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\right\|=0
+\begin{equation*}
+\max \mathbf{a}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\lambda d\|\mathbf{V} \mathbf{w}\|_{1}^{2} \tag{10.23}
+\end{equation*}
 $$
 
-Then in the limit Sharpe-optimizing portfolio is a weighted sum of the FMPs, and the weights themselves solve a MVO in factor space
+And we have yet again a penalization term, which is, in this case, the square of an L1 norm of the portfolio weights. The function $\|\mathbf{V w}\|_{1}^{2}$ is convex, so the optimization problem is tractable. I am summarizing the penalization approaches in the table below.
+5. Robust covariance matrix [Ledoit and Wolf, 2004]. Consider a different starting point to model robust covariance optimization. We assume that the adversary has a budget for the maximum cumulative squared error of the asset covariances: $\sum_{i, j}[\boldsymbol{\Delta}]_{i, j}^{2} \leq d^{2}$. This is the same as a bound on the Frobenius norm of the error, $\|\boldsymbol{\Delta}\|_{F}$. The robust problem formulation
+is similar to the previous one:
 $$
 \begin{aligned}
-\mathbf{w}^{\star} & =\mathbf{P} \mathbf{u}^{\star} \\
-\text { where } \mathbf{u}^{\star} & =\arg \max \left\{\mathbf{u} \in \mathbb{R}^{m} \mid \boldsymbol{\lambda}^{\top} \mathbf{u}-(1 / 2 \gamma) \mathbf{u}^{\top} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{u}\right\} \\
-& =\gamma \boldsymbol{\Omega}_{\mathbf{f}}^{-1} \boldsymbol{\lambda}
-\end{aligned}
-$$
-for some $\gamma>0$. The Sharpe Ratio of the optimal portfolio is equal to $S R^{\star}=$ $\sqrt{\lambda^{\top} \Omega_{f}^{-1} \lambda}$.
-
-The second condition on idiosyncratic variance has a simple interpretation. It is easy to check that the term inside the norm is $\mathbf{P}^{\top} \boldsymbol{\Omega}_{\epsilon}^{(i)} \mathbf{P}$, i.e., the covariance matrix of the idiosyncratic PnL of the FMPs. The condition states that the idiosyncratic variance of the FMPs goes to zero. Proof. Start with the Sharpe-optimizing portfolio problem, Equation (9.8):
-$$
-\begin{aligned}
-& \max _{\mathbf{w} \in \mathbb{R}^{n}} \boldsymbol{\alpha}^{\top} \mathbf{w}-\frac{1}{2 \gamma} \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w} \\
-\Rightarrow \mathbf{w}^{\star} & =\gamma \boldsymbol{\Omega}_{\mathbf{r}}^{-1} \mathbf{B} \boldsymbol{\lambda} \\
-& =\gamma\left[\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1}-\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\left(\boldsymbol{\Omega}_{\mathbf{f}}^{-1}+\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1} \mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1}\right] \mathbf{B} \boldsymbol{\lambda}
+& \max \mathbf{a}^{\top} \mathbf{w}-\lambda \mathbf{w}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \mathbf{w}-\lambda \sigma^{2} \\
+& \text { s.t. } \sigma^{2}=\arg \max _{\Delta}\left\{\mathbf{w}^{\top} \boldsymbol{\Delta} \mathbf{w} \mid\|\boldsymbol{\Delta}\|_{F}^{2} \leq d^{2}\right\}
 \end{aligned}
 $$
 
-The second identity is Woodbury-Sherman-Morrison Lemma.
+The strategy to solve this problem is similar to previous cases: the adversary maximizes a linear objective function with a norm constraint; see Insight 10.1 for the solution. In this case, $\left(\sigma^{\star}\right)^{2}=d\|\mathbf{w}\|^{2}$, yet again, and the problem becomes an MVO with a quadratic penalization term.
+\begin{tabular}{lll}
+\hline Approach & Penalty & Parameter Interpretation \\
+\hline Uncertain Alpha & $\tau^{2}\|\mathbf{w}\|^{2}$ & std.error of $\hat{\boldsymbol{\alpha}}$ \\
+Robust Alpha & $d\|\mathbf{w}\|$ & max distance $\|\boldsymbol{\alpha}-\hat{\boldsymbol{\alpha}}\|$ \\
+Robust Factor & $\lambda \tau^{2}\|\mathbf{w}\|^{2}$ & volatility of a missing factor \\
+Robust Correlations & $\lambda d\|\mathbf{V} \mathbf{w}\|_{1}^{2}$ & max distance $\left|\rho_{i, j}-\hat{\rho}_{i, j}\right|$ \\
+Robust Covariance & $\lambda d\|\mathbf{w}\|^{2}$ & max distance $\left\|\boldsymbol{\Omega}_{\mathbf{r}}-\hat{\boldsymbol{\Omega}} \hat{\mathbf{r}}_{\mathbf{r}}\right\|$ \\
+\hline
+\end{tabular}
 
-Now we perform a first-order expansion: Notice that ${ }^{12}$
-$$
-\left\|\boldsymbol{\Omega}_{\mathbf{f}}^{-1}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\right\| \leq\left\|\boldsymbol{\Omega}_{\mathbf{f}}^{-1}\right\|\left\|\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\right\| \rightarrow 0, \quad i \rightarrow \infty
-$$
+Exercise 10.1: (30) Define the norm $\|\mathbf{x}\|_{\boldsymbol{\Lambda}, p}:=\left\|\boldsymbol{\Lambda}^{-1} \mathbf{x}\right\|_{p}$. Extend Problem (10.12) to this norm. Read [Olivares-Nadal and DeMiguel, 2018] for additional interpretations of this penalty, and discuss their applicability to real-world settings.
 
-So we perform a first-order approximation of the inverse ${ }^{13}$ :
-$$
-\begin{aligned}
-\left(\boldsymbol{\Omega}_{\mathbf{f}}^{-1}+\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1} & =\left[\left(\boldsymbol{\Omega}_{\mathbf{f}}^{-1}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}+\mathbf{I}_{m}\right)\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)\right]^{-1} \\
-& \simeq\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\left[\mathbf{I}_{m}-\boldsymbol{\Omega}_{\mathbf{f}}^{-1}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\right]
-\end{aligned}
-$$
+\subsection*{Insight 10.3: The distinction between constraints and penalties}
 
-Replace the expression in the solution of $\mathbf{w}^{\star}$ :
-$$
-\begin{aligned}
-\mathbf{w}^{\star} & =\gamma\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1}\left[\mathbf{B}-\mathbf{B}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\left[\mathbf{I}_{m}-\boldsymbol{\Omega}_{\mathbf{f}}^{-1}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\right] \mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right) \mathbf{B}\right] \boldsymbol{\lambda} \\
-& =\gamma\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1}\left[\mathbf{B}-\mathbf{B}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\left[\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right) \mathbf{B}-\boldsymbol{\Omega}_{\mathbf{f}}^{-1}\right]\right] \boldsymbol{\lambda} \\
-& =\gamma\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1} \boldsymbol{\Omega}_{\mathbf{f}}^{-1} \boldsymbol{\lambda} \\
-& =\mathbf{P u}^{\star}
-\end{aligned}
-$$
+Although they can yield the same optimal portfolio, the constrained and penalty version differ in two important ways. The first one is that the shadow price of the constraint is not known before the optimization is run. This means that the solution can be very sensitive to the choice of the right-hand side of the constraint: we don't know the trade-off between constraint limit and optimum value. This is not the case with a penalty: we set the price, and the price has often a straightforward interpretation (like the price for risk). In successive optimizations, this price is unchanged making comparisons easier. When the interpretation is clear, penalties are preferable. The second difference is almost a corollary of the first one: in the constrained formulation, we may have no feasible solution, which is, in a loose sense, like saying that the price of the constraint is infinite. This is never the case with a penalized formulation, which is always feasible.
 
-The expected PnL of the optimal solution is $\gamma \boldsymbol{\lambda}^{\top} \boldsymbol{\Omega}_{\mathbf{f}}^{-1} \boldsymbol{\lambda}$. The factor exposure of the optimal solution is $\gamma \boldsymbol{\Omega}_{\mathrm{f}}^{-1} \boldsymbol{\lambda}$. The factor variance is $\gamma^{2} \boldsymbol{\lambda}^{\top} \boldsymbol{\Omega}_{\mathrm{f}}^{-1} \boldsymbol{\lambda}$. The idiosyncratic variance is
+\section*{10.3. How Does Estimation Error Affect Sharpe Ratio?}
+
+An investor starts with estimates of expected returns and of the covariance matrix ${ }^{7}$. We denote them with $\hat{\boldsymbol{\alpha}}$ and $\hat{\boldsymbol{\Omega}}_{\mathbf{r}}$ respectively. The MVO portfolio is proportional to $\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}$; the proportionality constant is irrelevant for the Sharpe Ratio. The realized Sharpe Ratio, however, is a function of the true expected returns and covariance matrix $\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathrm{r}}$ :
 $$
-\begin{aligned}
-\left(\mathbf{w}^{\star}\right)^{\top} \boldsymbol{\Omega}_{\epsilon}^{(i)} \mathbf{w}^{\star} & =\mathbf{P}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{P} \\
-& =\left(\mathbf{u}^{\star}\right)^{\top}\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1} \mathbf{u}^{\star} \\
-& \leq\left\|\left(\mathbf{B}^{\top}\left(\boldsymbol{\Omega}_{\epsilon}^{(i)}\right)^{-1} \mathbf{B}\right)^{-1}\right\|\left\|\mathbf{u}^{\star}\right\|^{2}
-\end{aligned}
+\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathrm{r}}\right)=\frac{\boldsymbol{\alpha}^{\top}\left(\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}\right)}{\sqrt{\left(\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}\right)^{\top} \boldsymbol{\Omega}_{\mathbf{r}}\left(\hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}\right)}}
 $$
-and is zero in the limit, per the second assumption. The Sharpe Ratio is $\sqrt{\lambda^{\top} \Omega_{f}^{-1} \lambda}$.
 
 \footnotetext{
-${ }^{12}$ Given two square matrices $\mathbf{A}, \mathbf{B}$, the inequality on spectral norms $\|\mathbf{A B}\| \leq\|\mathbf{A}\|\|\mathbf{B}\|$ holds.
-${ }^{13}$ The first-order expansion (from Neumann's series) is $(\mathbf{I}+\mathbf{A})^{-1} \simeq \mathbf{I}-\mathbf{A}$.
+${ }^{7}$ The third leg of the trading stool is a model for trading cost. We will cover this in later chapters
 }
 
-\subsection*{9.7.4. Single-Factor Covariance Matrix Updating}
-
-Here we prove a basic result on the updated factor covariance matrix when adding a new factor. The analysis assumes that the parameters $\mathbf{B}, \boldsymbol{\Omega}_{\mathbf{f}}, \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$ of the factor model are constant, and so is the vector a or characteristics that we using to augment the factor model. As in Section 9.3.2.
-
-Theorem 9.2: Let the loadings, factor covariance matrix and idiosyncratic of a factor model be $\mathbf{B}, \boldsymbol{\Omega}_{\mathbf{f}}, \boldsymbol{\Omega}_{\boldsymbol{\epsilon}}$, and let $\mathbf{a} \in \mathbb{R}^{n}$ be a vector of characteristic. Define
+We compare the realized Sharpe Ratio to the best Sharpe ratio, based on the true values of $\boldsymbol{\alpha}$ and $\boldsymbol{\Omega}_{\mathbf{r}}$, given by Equation (9.5):
 $$
-\mathbf{b}_{m+1}=\left(\mathbf{I}_{n}-\mathbf{B}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{B}\right)^{-1} \mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1}\right) \mathbf{a}
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)}
 $$
 
-The factor covariance matrix associated to the model with loadings $\left[\mathbf{B} \mid \mathbf{b}_{m+1}\right]$ is given by
+We call this the Sharpe Ratio Efficiency (SRE) . It is important to study this quantity, because we want to know, at all times, whether we are losing a great deal of performance from inaccurate parameter estimation or large transaction costs. We will ask a few qualitative and quantitative questions, and see how far can the analysis take us ${ }^{8}$.
+
+First, we prove an intuitive fact: incorrect estimates worsen performance.
+
+Theorem 10.1: The Sharpe Ratio Efficiency is less or equal than one, and if it equal to one if and only if $\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}$ and $\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}$ are collinear.
+
+Proof. The SRE is
 $$
-\tilde{\boldsymbol{\Omega}}_{\mathrm{f}} \simeq\left[\begin{array}{cc}
-\boldsymbol{\Omega}_{\mathbf{f}} & \mathbf{0} \\
-\mathbf{0} & \hat{\sigma}_{m+1}^{2}
-\end{array}\right]
+\begin{equation*}
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathrm{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathrm{r}}\right)}=\frac{\boldsymbol{\alpha}^{\top} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \hat{\boldsymbol{\alpha}}}{\sqrt{\hat{\boldsymbol{\alpha}}^{\top} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \boldsymbol{\Omega}_{\mathrm{r}} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \hat{\boldsymbol{\alpha}}}} \frac{1}{\sqrt{\boldsymbol{\alpha}^{\top} \boldsymbol{\Omega}_{\mathrm{r}}^{-1} \boldsymbol{\alpha}}} \tag{10.24}
+\end{equation*}
 $$
 
-Proof. Let the factor return of the new factor be
+Let ${ }^{9}$
+$$
+\begin{align*}
+& \mathrm{a}:=\boldsymbol{\Omega}_{\mathrm{r}}^{-1 / 2} \boldsymbol{\alpha}  \tag{10.25}\\
+& \mathbf{b}:=\boldsymbol{\Omega}_{\mathrm{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathrm{r}}^{-1} \hat{\boldsymbol{\alpha}} \tag{10.26}
+\end{align*}
+$$
+
+\footnotetext{
+${ }^{8}$ Early papers on model estimation error, and the relative impact of alpha and estimation error, are Michaud [1989], Shephard [2009], Chopra and W.Ziemba [1993].
+${ }^{9}$ Let $\mathbf{H}$ be a symmetric positive definite matrix and let $\mathbf{V} \boldsymbol{\Lambda} \mathbf{V}^{\top}$ be its Singular Value Decomposition. Define $\mathbf{H}^{1 / 2}:=\mathbf{V} \boldsymbol{\Lambda}^{1 / 2} \mathbf{V}^{\top}$. Then $\mathbf{H}^{1 / 2} \mathbf{H}^{1 / 2}=\mathbf{H}$ and $\left\|\mathbf{H}^{1 / 2}\right\|_{\mathrm{op}}^{2}=\|\mathbf{H}\|_{\mathrm{op}}$.
+}
+so that
+$$
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)}=\frac{\mathbf{a}^{\top} \mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}
+$$
+
+The Sharpe Ratio efficiency is always less than one because of Cauchy-Schwartz inequality ${ }^{10}$, unless $\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}$ and $\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \hat{\boldsymbol{\alpha}}$ are collinear.
+
+
+\footnotetext{
+${ }^{10}$ Which can be found in almost any linear algebra book. If $\mathbf{x}, \mathbf{y} \in \mathbb{R}^{n}$, then $\left|\mathbf{a}^{\top} \mathbf{b}\right| \leq$ $\sqrt{\mathbf{a}^{\top} \mathbf{a}} \sqrt{\mathbf{b}^{\top} \mathbf{b}}$, with the equality holding only if $\mathbf{a}=\kappa \mathbf{b}$.
+}
+
+\subsection*{10.3.1. The Impact of Alpha Error}
+
+It is more useful to derive lower bounds on performance inefficiency, based on the estimation error of either expected returns of covariance.
+
+We need to introduce a few basic results. Let the norm of a matrix be defined as the operator norm. Define the relative alpha error as
+$$
+\left\|\frac{\boldsymbol{\alpha}}{\|\boldsymbol{\alpha}\|}-\frac{\hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|}\right\| \leq \delta_{\mathrm{alpha}}
+$$
+
+In the Appendix (Section 10.4.1) I prove the following result:
+$$
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta_{\text {alpha }}^{2}
+$$
+
+\subsection*{10.3.2. The Impact of Risk Error}
+
+If there is $\kappa>0$ such that
+$$
+\begin{equation*}
+\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}-\kappa \mathbf{I}\right\| \leq \delta_{\text {risk }} \tag{10.27}
+\end{equation*}
+$$
+
+Then
+$$
+\begin{equation*}
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-\frac{2 \delta_{\text {risk }}}{\kappa+\delta_{\text {risk }}} \tag{10.28}
+\end{equation*}
+$$
+
+This formula follows directly from the Equation (10.24). At first sight, what is interesting about this result is how weak it is. Let us consider a few special cases. We define $\mathbf{H}:=\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}$.
+1. If the estimated covariance matrix is biased, but uniformly so, i.e., $\hat{\boldsymbol{\Omega}}_{\mathbf{r}}=$ $\kappa \boldsymbol{\Omega}_{\mathbf{r}}$, then $\mathbf{H}=\kappa^{-1} \mathbf{I}$, and there is no efficiency loss. We knew this already from the previous chapter. What happens in practice is that we would deploy a portfolio with the highest Sharpe Ratio, but incorrect volatility.
+
+2. Say, however, that we really estimate the covariance matrix incorrectly, so that $\mathbf{H} \not \propto \mathbf{I}$. It can still happen that we have a SRE of one! This will happen if $\hat{\boldsymbol{\alpha}}$ is proportional to an eigenvector of $\mathbf{H}$ with a positive eigenvalue. Say the associated eigenvalue is $\gamma$. Then, use directly Equation
+$$
+\begin{equation*}
+\operatorname{SRE}=\frac{\hat{\boldsymbol{\alpha}}^{\top}(\gamma \hat{\boldsymbol{\alpha}})}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \sqrt{\frac{\|\hat{\boldsymbol{\alpha}}\|^{2}}{\hat{\boldsymbol{\alpha}}^{\top}\left(\gamma^{2} \hat{\boldsymbol{\alpha}}\right)}}=\operatorname{sgn}(\gamma) \tag{10.24}
+\end{equation*}
+$$
+Even more pathologically, though, this also implies that if our $\hat{\boldsymbol{\alpha}}$ is proportional to an eigenvector with negative eigenvalue, then the Sharpe Ratio Efficiency is -1. Incidentally, $\mathbf{H}$ is neither necessarily symmetric nor positive definite, so a negative eigenvalue is indeed a possibility.
+
+3. But, you may argue, this is an exceptional circumstance. Consider a simpler but instructive case. We make the assumption that $\hat{\boldsymbol{\Omega}}_{\mathrm{r}}$ has the same eigenvectors as $\boldsymbol{\Omega}_{\mathrm{r}}$. In other words, the Singular Value Decompositions
+only differ because of the Singular Values.
 $$
 \begin{aligned}
-\hat{f}_{m+1, t} & =\left(\frac{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1}}{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}}\right) \mathbf{r}_{t} \\
-& =\mathbf{v}_{m+1}^{\top} \mathbf{r}_{t}
+& \Omega_{\mathrm{r}}=\mathbf{U} \boldsymbol{\Lambda} \mathbf{U}^{\top} \\
+& \hat{\Omega}_{\mathrm{r}}=\mathbf{U} \hat{\boldsymbol{\Lambda}} \mathbf{U}^{\top}
 \end{aligned}
 $$
-as in Equation (9.14). We assume that the new factor does not have a big impact on the idiosyncratic returns in the sense that $\left|b_{m+1, i} \hat{f}_{m+1, t}\right| \ll\left|\epsilon_{t, i}\right|$, so that $\Omega_{\epsilon}$ is approximately unchanged by the addition of the new factor. Then the volatility of the new factor is $\hat{\sigma}_{m+1}=\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)^{-1 / 2}$.
+so that $\mathbf{H}=\mathbf{U} \boldsymbol{\Lambda}^{1 / 2} \mathbf{U}^{\top} \mathbf{U} \hat{\boldsymbol{\Lambda}}^{-1} \mathbf{U}^{\top} \mathbf{U} \boldsymbol{\Lambda}^{1 / 2} \mathbf{U}^{\boldsymbol{\top}}=\mathbf{U} \boldsymbol{\Lambda} \hat{\boldsymbol{\Lambda}}^{-1} \mathbf{U}^{\top}$; a great simplification. Denote the eigenvalue ratio $\nu_{i}:=\lambda_{i} / \hat{\lambda}_{i}$. What is the lower bound on the SRE in this case? We solve for $\kappa$ :
 $$
 \begin{aligned}
-\hat{f}_{m+1, t}^{2} & =\frac{E\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \boldsymbol{\epsilon}_{t} \epsilon_{t}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)}{\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)^{2}} \\
-\Rightarrow \hat{\sigma}_{m+1}^{2} & =\frac{\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \boldsymbol{\Omega}_{\epsilon} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}}{\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)^{2}} \\
-& =\left(\mathbf{b}_{m+1}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)^{-1}
+\delta & :=\min _{\kappa}\left\|\mathbf{U}\left(\boldsymbol{\Lambda} \hat{\boldsymbol{\Lambda}}^{-1}-\kappa \mathbf{I}\right) \mathbf{U}^{\top}\right\| \\
+& =\min _{\kappa} \sqrt{\max _{i}\left(\nu_{i}-\kappa\right)^{2}} \\
+& =\frac{1}{2}\left(\max _{i} \nu_{i}-\min _{i} \nu_{i}\right)
+\end{aligned}
+$$
+and the optimal point is $\kappa^{\star}=\left(\max _{i} \nu_{i}+\min _{i} \nu_{i}\right) / 2$. We use these values in Equation (10.28) to obtain
+$$
+\mathrm{SRE} \geq 1-\frac{\max _{i} \nu_{i}-\min _{i} \nu_{i}}{\max _{i} \nu_{i}}=\frac{\min _{i} \nu_{i}}{\max _{i} \nu_{i}}
+$$
+
+Hence the loss in efficiency arises from the fact that we estimate unevenly the volatilities of the eigenvectors of the asset covariance matrix. If we underestimate them (or overestimate them) by the same constant, then we lose nothing, as noted in the first point above. Let us think of an adverse case. Say we estimate all volatilities exactly $\left(\nu_{i}=1\right)$ except for one, which we underestimate by $50 \%$. Then the worst-case loss in Sharpe Ratio can be in $50 \%$.
+
+\section*{10.4. ×Appendix}
+
+\subsection*{10.4.1. Theorems on Sharpe Efficiency Loss}
+
+These theorems are informally introduced in Section 10.3.
+We recall that
+$$
+\left\|\mathbf{H}^{-1}\right\|^{-1}\|\mathbf{x}\| \leq\|\mathbf{H} \mathbf{x}\| \leq\|\mathbf{H}\|\|\mathbf{x}\|
+$$
+and
+$$
+\|\mathbf{H y}\| \leq\|\mathbf{H x}\|+\|\mathbf{H}(\mathbf{y}-\mathbf{x})\| \leq\|\mathbf{H} \mathbf{x}\|+\|\mathbf{H}\|\|\mathbf{x}-\mathbf{y}\|
+$$
+so that
+$$
+|\|\mathbf{H} \mathbf{x}\|-\|\mathbf{H y}\|| \leq\|\mathbf{H}\|\|\mathbf{x}-\mathbf{y}\|
+$$
+
+Also, use the cosine rule:
+$$
+\begin{aligned}
+\left\|\frac{\mathbf{a}}{\|\mathbf{a}\|}-\frac{\mathbf{b}}{\|\mathbf{b}\|}\right\|^{2} & =2\left(1-\frac{\mathbf{a}^{\top} \mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}\right) \\
+\Rightarrow \frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} & =\frac{\mathbf{a}^{\top} \mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|} \\
+& =1-\frac{1}{2}\left\|\frac{\mathbf{a}}{\|\mathbf{a}\|}-\frac{\mathbf{b}}{\|\mathbf{b}\|}\right\|^{2}
+\end{aligned}
+$$
+where $\mathbf{a}, \mathbf{b}$ are defined by Equations (10.25) and (10.26).
+
+Lemma 10.1: Let $\mathbf{H}$ be symmetric positive-definite, $\mathbf{x}, \mathbf{y} \in \mathbb{R}^{n}$, and
+$$
+\left\|\frac{\mathbf{x}}{\|\mathbf{x}\|}-\frac{\mathbf{y}}{\|\mathbf{y}\|}\right\| \leq \delta
+$$
+
+Then
+$$
+\left\|\frac{\mathbf{H x}}{\|\mathbf{H x}\|}-\frac{\mathbf{H y}}{\|\mathbf{H y}\|}\right\| \leq 2 \min \left\{\|\mathbf{H}\|\left\|\mathbf{H}^{-1}\right\| \delta, 1\right\}
+$$
+
+Proof. Let $\mathbf{a}, \mathbf{b} \in \mathbb{R}^{n}$.
+$$
+\begin{aligned}
+\left\|\frac{\mathbf{H a}}{\|\mathbf{H a}\|}-\frac{\mathbf{H b}}{\|\mathbf{H b}\|}\right\| & =\left\|\frac{\|\mathbf{H b}\| \mathbf{H a}-\|\mathbf{H a}\| \mathbf{H b}}{\|\mathbf{H a}\|\|\mathbf{H b}\|}\right\| \\
+& =\left\|\frac{\|\mathbf{H b}\| \mathbf{H}(\mathbf{a}-\mathbf{b})-(\|\mathbf{H a}\|-\|\mathbf{H b}\|) \mathbf{H b} \|}{\|\mathbf{H a}\|\|\mathbf{H b}\|}\right\| \\
+& \leq \frac{1}{\|\mathbf{H a}\|}(\|\mathbf{H}(\mathbf{a}-\mathbf{b})\|+|\|\mathbf{H a}\|-\|\mathbf{H b}\||) \\
+& \leq \frac{1}{\|\mathbf{H a}\|}(\|\mathbf{H}(\mathbf{a}-\mathbf{b})\|+\|\mathbf{H}\|\|\mathbf{a}-\mathbf{b}\|) \\
+& \leq \frac{1}{\|\mathbf{H a}\|}(\|\mathbf{H}\|\|(\mathbf{a}-\mathbf{b})\|+\|\mathbf{H}\|\|\mathbf{a}-\mathbf{b}\|) \\
+& =\frac{2}{\|\mathbf{H a}\|}\|\mathbf{H}\|\|(\mathbf{a}-\mathbf{b})\| \\
+\left(\mathbf{a}:=\frac{\mathbf{x}}{\|\mathbf{x}\|}, \mathbf{b}:=\frac{\mathbf{y}}{\|\mathbf{y}\|}\right) & =\frac{2}{\left\|\mathbf{H} \frac{\mathbf{x}}{\|\mathbf{x}\|}\right\|}\|\mathbf{H}\|\left\|\frac{\mathbf{x}}{\|\mathbf{x}\|}-\frac{\mathbf{y}}{\|\mathbf{y}\|}\right\| \\
+& \leq 2\|\mathbf{H}\|\left\|\mathbf{H}^{-1}\right\| \delta
 \end{aligned}
 $$
 
-We show that $\hat{f}_{m+1}$ is approximately uncorrelated to the first $m$ factors. The column vector of the first $m$ factor returns is $\mathbf{P}^{\top} \mathbf{r}_{t}$.
+This bound is tight, up to a constant. For an example, consider the case of diagonal ${ }^{11} \mathbf{H}:=\operatorname{diag}\left(\lambda_{1}, \ldots, \lambda_{n}\right), \mathbf{x}:=\epsilon \mathbf{e}_{1}+\mathbf{e}_{n}, \mathbf{y}:=\mathbf{e}_{n}$, with $\epsilon \leq \lambda_{n} / \lambda_{1}$. 
+
+\footnotetext{
+${ }^{11}$ We use the notation $\mathbf{e}_{1}, \ldots, \mathbf{e}_{n}$ for the standard basis in $\mathbb{R}^{n}$.
+}
+We have
+$$
+\left\|\frac{\mathbf{x}}{\|\mathbf{x}\|}-\frac{\mathbf{y}}{\|\mathbf{y}\|}\right\| \leq \sqrt{\frac{3}{2}} \epsilon=: \delta
+$$
+
 $$
 \begin{aligned}
-E\left(\mathbf{f} \hat{f}_{m+1}\right) & =E\left(\mathbf{P}^{\top} \mathbf{r}_{t} \mathbf{r}_{t}^{\top} \mathbf{v}_{m+1}\right) \\
-& =\hat{\sigma}_{m+1}^{2} \mathbf{P}^{\top} \boldsymbol{\Omega}_{\mathbf{r}} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1} \\
-& =\hat{\sigma}_{m+1}^{2} \mathbf{P}^{\top}\left(\mathbf{B} \boldsymbol{\Omega}_{\mathbf{f}} \mathbf{B}^{\top}+\boldsymbol{\Omega}_{\epsilon}\right) \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1} \\
-& =\hat{\sigma}_{m+1}^{2}\left(\boldsymbol{\Omega}_{\mathbf{f}}\left(\mathbf{B}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right)+\mathbf{P}^{\top} \boldsymbol{\Omega}_{\epsilon}^{-1} \mathbf{b}_{m+1}\right) \\
-& =\mathbf{P}^{\top} \boldsymbol{\Omega}_{\epsilon} \mathbf{v}_{m+1}
+\left\|\frac{\mathbf{H x}}{\|\mathbf{H x}\|}-\frac{\mathbf{H y}}{\|\mathbf{H y}\|}\right\| & =\left\|\frac{\lambda_{n} \mathbf{e}_{n}+\epsilon \lambda_{1} \mathbf{e}_{1}}{\sqrt{\lambda_{n}^{2}+\epsilon^{2} \lambda_{1}^{2}}}-\mathbf{e}_{n}\right\| \\
+& =\sqrt{\left(\frac{\lambda_{n}}{\sqrt{\lambda_{n}^{2}+\epsilon^{2} \lambda_{1}^{2}}}-1\right)^{2}+\frac{\left(\epsilon \lambda_{1}\right)^{2}}{\lambda_{n}^{2}+\epsilon^{2} \lambda_{1}^{2}}} \\
+& \geq \sqrt{2 \frac{-\lambda_{n}^{2}\left(\epsilon \lambda_{1} / \lambda_{n}\right)^{2} / 2+\left(\epsilon \lambda_{1}\right)^{2}}{\lambda_{n}^{2}+\left(\epsilon \lambda_{1}\right)^{2}}} \\
+& \geq \sqrt{\frac{\left(\epsilon \lambda_{1}\right)^{2}}{\lambda_{n}^{2}+\left(\epsilon \lambda_{1}\right)^{2}}} \\
+& \geq \frac{1}{\sqrt{2}} \frac{\lambda_{1}}{\lambda_{n}} \epsilon \\
+& =\frac{1}{\sqrt{3}}\|\mathbf{H}\|\left\|\mathbf{H}^{-1}\right\| \delta
 \end{aligned}
 $$
 
-The last equality follows from the orthogonality of $\mathbf{b}_{m+1}$. The correlation between FMPs is given by the idiosyncratic component of their returns, which should be small if the factors are diversified.
+Theorem 10.2(Misspecification of alpha): If
+$$
+\left\|\frac{\boldsymbol{\alpha}}{\|\boldsymbol{\alpha}\|}-\frac{\hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|}\right\| \leq \delta
+$$
+
+Then
+$$
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta^{2}
+$$
+
+Proof. From Lemma 10.1:
+$$
+\begin{aligned}
+\left\|\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}\right\|}-\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}\right\|}\right\| & \leq 2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}\right\| \delta \\
+& =2 \sqrt{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta}
+\end{aligned}
+$$
+
+Then
+$$
+\begin{aligned}
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} & =1-\frac{1}{2}\left\|\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}\right\|}-\frac{\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}}{\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \hat{\boldsymbol{\alpha}}\right\|}\right\|^{2} \\
+& \geq 1-2\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{-1}\right\|\left\|\boldsymbol{\Omega}_{\mathbf{r}}\right\| \delta^{2}
+\end{aligned}
+$$
+
+Theorem 10.3(Misspecification of Risk): If there is $\kappa>0$ such that
+$$
+\begin{equation*}
+\left\|\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}-\kappa \mathbf{I}_{n}\right\| \leq \delta \tag{10.29}
+\end{equation*}
+$$
+
+Then
+$$
+\begin{equation*}
+\frac{\operatorname{SR}\left(\hat{\boldsymbol{\alpha}}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)} \geq 1-\frac{2 \delta}{\kappa+\delta} \tag{10.30}
+\end{equation*}
+$$
+
+Proof. Let $\mathbf{H}:=\boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2} \hat{\boldsymbol{\Omega}}_{\mathbf{r}}^{-1} \boldsymbol{\Omega}_{\mathbf{r}}^{1 / 2}$ and let $\hat{\boldsymbol{\alpha}}:=\boldsymbol{\Omega}_{\mathbf{r}}^{-1 / 2} \boldsymbol{\alpha}$. Using this notation, the SRE Equation (10.24) and condition (10.29) are
+$$
+\begin{aligned}
+& \frac{\operatorname{SR}\left(\boldsymbol{\alpha}, \hat{\boldsymbol{\Omega}}_{\mathbf{r}}\right)}{\operatorname{SR}\left(\boldsymbol{\alpha}, \boldsymbol{\Omega}_{\mathbf{r}}\right)}=\frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \sqrt{\frac{\|\hat{\boldsymbol{\alpha}}\|^{2}}{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H}^{2} \hat{\boldsymbol{\alpha}}}} \\
+& \left\|\mathbf{H}-\kappa \mathbf{I}_{n}\right\| \leq \delta
+\end{aligned}
+$$
+
+Let $\lambda_{1} \geq \lambda_{2} \geq \ldots \lambda_{n}$ eigenvalues of $\mathbf{H}$. The condition $\left\|\mathbf{H}-\kappa \mathbf{I}_{n}\right\| \leq \delta$ is equivalent to $\left|\lambda_{i}-\kappa\right| \leq \delta$ for all $i=1, \ldots, n$.
+$$
+\begin{gathered}
+\frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \geq \lambda_{n} \geq \kappa-\delta \\
+\frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H}^{2} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \leq \lambda_{1}^{2} \leq(\kappa+\delta)^{2} \\
+\Rightarrow \frac{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H} \hat{\boldsymbol{\alpha}}}{\|\hat{\boldsymbol{\alpha}}\|^{2}} \sqrt{\frac{\|\hat{\boldsymbol{\alpha}}\|^{2}}{\hat{\boldsymbol{\alpha}}^{\top} \mathbf{H}^{2} \hat{\boldsymbol{\alpha}}}} \geq \frac{\kappa-\delta}{\kappa+\delta}=1-\frac{2 \delta}{\kappa+\delta}
+\end{gathered}
+$$
+
+The population covariance matrix is not known. A one-period proxy for the covariance matrix is $\mathbf{r r}^{\top}$. The next lemma presents a closed-form expression of the left-hand side of Inequality (10.29) when $\boldsymbol{\Omega}_{\mathrm{r}}$ is replaced by this proxy.
