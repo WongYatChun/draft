@@ -1,1 +1,31 @@
 
+def winsorize_array(arr, multiplier=5):
+    """
+    Winsorize a NumPy 2D array by capping values in each column
+    at a specified multiplier of the median of absolute values.
+    
+    Parameters:
+    - arr (np.ndarray): Input 2D array to be Winsorized.
+    - multiplier (float): The multiplier for the median to set the cap. Default is 5.
+    
+    Returns:
+    - np.ndarray: The Winsorized array.
+    """
+    # Ensure the input is a NumPy array
+    arr = np.array(arr)
+    
+    # Compute the median of absolute values for each column
+    median_abs = np.median(np.abs(arr), axis=0)
+    print(f"Median of absolute values for each column: {median_abs}")
+    
+    # Determine the cap for each column
+    cap = multiplier * median_abs
+    print(f"Cap values (multiplier={multiplier}): {cap}")
+    
+    # Reshape cap for broadcasting
+    cap_reshaped = cap.reshape(1, -1)
+    
+    # Apply the cap using np.clip
+    winsorized = np.clip(arr, -cap_reshaped, cap_reshaped)
+    
+    return winsorized
