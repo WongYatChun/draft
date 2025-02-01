@@ -2,31 +2,44 @@ import itertools
 import random
 import time
 from functools import lru_cache
-import concurrent.futures
 
-# -----------------------------
-# Caching: Compute the 5-subsets of a ticket (as bitmasks)
-# -----------------------------
+# ----------------------------------------------
+# 1. Generalized Caching Function for t-Subsets
+# ----------------------------------------------
 @lru_cache(maxsize=None)
-def get_ticket_5_subsets(ticket):
+def get_ticket_t_subsets(ticket, t):
     """
-    Given a ticket (a tuple of 6 sorted numbers), compute the 6 bitmask representations
-    of its 5-number subsets. A ticket is represented as a tuple (e.g., (3, 7, 11, 20, 35, 49)).
-    Returns a tuple of 6 integers (bitmasks).
+    Given a ticket (a tuple of sorted numbers), compute all bitmask representations
+    of its t-number subsets. This function is generic: it works for any t (with ticket size k >= t).
+    
+    Args:
+        ticket (tuple): A sorted tuple of numbers (e.g., (3, 7, 11, 20, 35, 49)).
+        t (int): The size of the subsets to extract.
+    
+    Returns:
+        tuple: A tuple containing the bitmask (integer) for each t-element subset.
     """
-    mask = 0
-    for num in ticket:
-        mask |= 1 << (num - 1)
-    # Each 5-set is the ticket mask with one number removed.
-    return tuple(mask & ~(1 << (num - 1)) for num in ticket)
+    subsets_bitmasks = []
+    for subset in itertools.combinations(ticket, t):
+        mask = 0
+        for num in subset:
+            mask |= 1 << (num - 1)
+        subsets_bitmasks.append(mask)
+    return tuple(subsets_bitmasks)
 
-# -----------------------------
-# Universe Generation: All 5-element subsets as bitmasks
-# -----------------------------
-def generate_universe(n=49, t=5):
+# ----------------------------------------------
+# 2. Universe Generation: All t-Subsets as Bitmasks
+# ----------------------------------------------
+def generate_universe(n, t):
     """
-    Generate the universe of all t-element subsets (as bitmasks) from numbers 1 to n.
-    For n=49 and t=5, there are binom(49,5) subsets.
+    Generate the universe of all t-element subsets (as bitmasks) from the set {1, 2, ..., n}.
+    
+    Args:
+        n (int): Total numbers (e.g., 49).
+        t (int): Size of each subset (e.g., 5).
+    
+    Returns:
+        set: A set of integers, each representing a t-subset as a bitmask.
     """
     universe = set()
     for comb in itertools.combinations(range(1, n+1), t):
@@ -36,20 +49,20 @@ def generate_universe(n=49, t=5):
         universe.add(mask)
     return universe
 
-# -----------------------------
-# Candidate Generation
-# -----------------------------
+# ----------------------------------------------
+# 3. Candidate Ticket Generation
+# ----------------------------------------------
 def random_candidate_tickets(n, k, sample_size):
     """
-    Generate a list of candidate tickets.
+    Generate a list of candidate tickets. Each candidate is a sorted tuple of k numbers chosen from 1 to n.
     
     Args:
-        n (int): Total numbers available (from 1 to n).
-        k (int): Ticket size (for lottery, k=6).
-        sample_size (int): How many random candidate tickets to generate.
-        
+        n (int): Total numbers (e.g., 49).
+        k (int): Ticket size (e.g., 6).
+        sample_size (int): Number of candidate tickets to generate in each iteration.
+    
     Returns:
-        List[tuple]: A list of candidate tickets, each represented as a sorted tuple.
+        list: A list of candidate tickets (each as a tuple).
     """
     candidates = []
     numbers = list(range(1, n+1))
@@ -58,52 +71,49 @@ def random_candidate_tickets(n, k, sample_size):
         candidates.append(candidate)
     return candidates
 
-# -----------------------------
-# Candidate Evaluation (to be parallelized)
-# -----------------------------
-def evaluate_candidate(ticket, universe):
+# ----------------------------------------------
+# 4. Candidate Evaluation
+# ----------------------------------------------
+def evaluate_candidate(ticket, universe, t):
     """
-    Evaluate a candidate ticket by checking how many of its 5-subsets
-    (obtained via the cached get_ticket_5_subsets function) are still in the universe.
+    Evaluate a candidate ticket by counting how many of its t-subsets (as bitmasks) are still present in the universe.
     
     Args:
-        ticket (tuple): A candidate ticket (a tuple of 6 sorted numbers).
-        universe (set): The current set of uncovered 5-subset bitmasks.
+        ticket (tuple): A candidate ticket (tuple of numbers).
+        universe (set): The current set of uncovered t-subset bitmasks.
+        t (int): The size of the subsets to cover.
     
     Returns:
-        A tuple (ticket, count, covered) where:
+        tuple: (ticket, count, covered)
             - ticket: the candidate ticket.
-            - count: number of 5-subsets covered by the ticket that are in the universe.
-            - covered: a list of the covered 5-subset bitmasks.
+            - count: number of t-subsets of the ticket that are in the universe.
+            - covered: list of the covered t-subset bitmasks.
     """
-    subsets = get_ticket_5_subsets(ticket)
+    subsets = get_ticket_t_subsets(ticket, t)
     covered = [subset for subset in subsets if subset in universe]
     return (ticket, len(covered), covered)
 
-# -----------------------------
-# Lottery Wheel Builder with Caching & Parallel Processing
-# -----------------------------
-def build_lottery_wheel_optimized_parallel(n=49, k=6, t=5, sample_size=10000, num_workers=8):
+# ----------------------------------------------
+# 5. Build the Lottery Wheel (Single-Threaded)
+# ----------------------------------------------
+def build_lottery_wheel(n=49, k=6, t=5, sample_size=10000):
     """
-    Build a lottery wheel that covers all t-element subsets (t=5) of {1,...,n}
-    using tickets (k=6). This version uses a greedy algorithm with:
-      - Cached computation of 5-subsets for each ticket.
-      - Parallel candidate evaluation using a ThreadPoolExecutor.
+    Build a lottery wheel that covers all t-element subsets of {1,...,n} using tickets of size k.
+    This version is single-threaded and uses a greedy algorithm with random candidate sampling.
     
     Args:
         n (int): Total numbers (default 49).
         k (int): Size of each ticket (default 6).
         t (int): Size of the subsets to cover (default 5).
         sample_size (int): Number of candidate tickets generated per iteration.
-        num_workers (int): Number of worker threads for parallel processing.
     
     Returns:
-        List[tuple]: The list of chosen tickets (each as a tuple of numbers).
+        list: A list of chosen tickets (each as a tuple of numbers).
     """
-    print(f"Generating universe of all {t}-element subsets (as bitmasks) from 1..{n}...")
+    print(f"Generating universe of all {t}-element subsets of numbers 1 to {n}...")
     start_time = time.time()
     universe = generate_universe(n, t)
-    print(f"Universe generated: {len(universe)} subsets in {time.time() - start_time:.1f} seconds.\n")
+    print(f"Universe generated: {len(universe)} subsets in {time.time() - start_time:.2f} seconds.\n")
     
     wheel = []  # List to hold our chosen tickets.
     iteration = 0
@@ -117,26 +127,23 @@ def build_lottery_wheel_optimized_parallel(n=49, k=6, t=5, sample_size=10000, nu
         # Generate a pool of candidate tickets.
         candidates = random_candidate_tickets(n, k, sample_size)
         
-        # Evaluate candidates in parallel using threads.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-            # Submit candidate evaluations.
-            futures = {executor.submit(evaluate_candidate, candidate, universe): candidate for candidate in candidates}
-            for future in concurrent.futures.as_completed(futures):
-                ticket, count, covered = future.result()
-                if count > best_count:
-                    best_count = count
-                    best_candidate = ticket
-                    best_covered = covered
-                    # Since a 6-set covers at most 6 five-subsets, we can break early.
-                    if best_count == k:
-                        break
+        for candidate in candidates:
+            ticket, count, covered = evaluate_candidate(candidate, universe, t)
+            if count > best_count:
+                best_candidate = candidate
+                best_count = count
+                best_covered = covered
+                # Maximum possible t-subsets covered by a ticket is C(k, t).
+                # If we achieve that, we can break early.
+                if best_count == len(get_ticket_t_subsets(candidate, t)):
+                    break
         
         if best_candidate is None:
             print("No candidate found that covers any new subsets. Exiting loop.")
             break
         
         wheel.append(best_candidate)
-        # Remove the covered subsets from the universe.
+        # Remove the covered t-subsets from the universe.
         for subset in best_covered:
             universe.discard(subset)
         
@@ -144,16 +151,23 @@ def build_lottery_wheel_optimized_parallel(n=49, k=6, t=5, sample_size=10000, nu
     
     return wheel
 
-# -----------------------------
-# Main execution
-# -----------------------------
-if __name__ == '__main__':
-    # Warning: Running with full parameters (n=49, k=6, t=5) may take time.
-    # You may wish to experiment with a smaller instance first.
+# ----------------------------------------------
+# 6. Main Function to Run the Code
+# ----------------------------------------------
+def main():
+    # Set parameters: For a typical lottery wheel, these might be:
+    # n = 49 (numbers 1 to 49), k = 6 (tickets have 6 numbers), t = 5 (cover all 5-element subsets)
+    n = 49
+    k = 6
+    t = 5
+    sample_size = 10000  # You may adjust this based on performance vs. solution quality.
     
-    # Build the lottery wheel with caching and parallel processing.
-    wheel = build_lottery_wheel_optimized_parallel(n=49, k=6, t=5, sample_size=10000, num_workers=8)
+    # Build the lottery wheel.
+    wheel = build_lottery_wheel(n, k, t, sample_size)
     
-    print("\nOptimized Parallel Lottery wheel generated with", len(wheel), "tickets:")
+    print("\nLottery wheel generated with", len(wheel), "tickets:")
     for ticket in wheel:
         print(ticket)
+
+if __name__ == '__main__':
+    main()
