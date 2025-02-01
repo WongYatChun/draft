@@ -1,8 +1,20 @@
+Below is a revised version of the lottery wheel builder code that meets your updated criteria but does not use frequency weighting in candidate generation. In this version, candidate tickets are generated uniformly at random and then filtered to ensure that they meet the following criteria:
+
+1. **Sum Criterion:** The sum of the ticket’s numbers is between 140 and 190 (inclusive).  
+2. **Odd Number Criterion:** The ticket contains at least 2 odd numbers and at most 4 odd numbers.  
+3. **Small Number Criterion:** The ticket contains at least 2 numbers less than 25 and at most 4 such numbers.
+
+All candidate generation is now done uniformly without any frequency weighting. The code uses a greedy algorithm to build the lottery wheel by selecting, in each iteration, the candidate ticket that covers the largest number of uncovered \(t\)-element subsets (represented as bitmasks).
+
+Below is the complete code:
+
+---
+
+```python
 import itertools
 import random
 import time
 from functools import lru_cache
-import numpy as np
 
 # ----------------------------------------------
 # 1. Generalized t‑Subset Extraction (Cached)
@@ -61,27 +73,19 @@ def is_valid_candidate(ticket):
     return True
 
 # ----------------------------------------------
-# 4. Candidate Ticket Generation with Filtering
+# 4. Uniform Candidate Ticket Generation (with Filtering)
 # ----------------------------------------------
-def weighted_valid_candidate_ticket(n, k, number_freq, max_attempts=1000):
-    """
-    Generate one candidate ticket using weighted sampling (numbers with higher frequency
-    in the uncovered universe are more likely) that meets our validity criteria.
-    """
-    numbers = np.arange(1, n+1)
-    weights = np.array([number_freq[i] for i in range(1, n+1)], dtype=float)
-    if weights.sum() == 0:
-        weights = np.ones_like(weights)
-    for _ in range(max_attempts):
-        candidate = tuple(sorted(np.random.choice(numbers, size=k, replace=False, 
-                                                      p=weights/weights.sum())))
-        if is_valid_candidate(candidate):
-            return candidate
-    return None
-
 def random_valid_candidate_ticket(n, k, max_attempts=1000):
     """
     Generate one candidate ticket uniformly at random that meets our validity criteria.
+    
+    Args:
+        n (int): Total numbers (e.g., 49).
+        k (int): Ticket size (e.g., 6).
+        max_attempts (int): Maximum attempts to generate a valid candidate.
+        
+    Returns:
+        tuple or None: A sorted tuple representing the candidate ticket if found; otherwise, None.
     """
     numbers = list(range(1, n+1))
     for _ in range(max_attempts):
@@ -90,19 +94,25 @@ def random_valid_candidate_ticket(n, k, max_attempts=1000):
             return candidate
     return None
 
-def generate_valid_candidates(n, k, sample_size, use_weighted, number_freq=None, max_total_attempts=10000):
+def generate_valid_candidates(n, k, sample_size, max_total_attempts=10000):
     """
-    Generate a list of candidate tickets (of size sample_size) that fulfill the validity criteria.
-    If use_weighted is True, use the weighted approach; otherwise use uniform random selection.
+    Generate a list of candidate tickets (of size sample_size) uniformly at random
+    that fulfill the validity criteria.
+    
+    Args:
+        n (int): Total numbers.
+        k (int): Ticket size.
+        sample_size (int): Number of candidate tickets to generate.
+        max_total_attempts (int): Maximum total attempts to generate candidates.
+    
+    Returns:
+        list: A list of candidate tickets (each as a tuple).
     """
     candidates = []
     attempts = 0
     while len(candidates) < sample_size and attempts < max_total_attempts:
         attempts += 1
-        if use_weighted and number_freq is not None:
-            candidate = weighted_valid_candidate_ticket(n, k, number_freq, max_attempts=100)
-        else:
-            candidate = random_valid_candidate_ticket(n, k, max_attempts=100)
+        candidate = random_valid_candidate_ticket(n, k, max_attempts=100)
         if candidate is not None:
             candidates.append(candidate)
     return candidates
@@ -113,7 +123,14 @@ def generate_valid_candidates(n, k, sample_size, use_weighted, number_freq=None,
 def evaluate_candidate(ticket, universe, t):
     """
     Evaluate a candidate ticket by counting how many of its t‑subsets are still in the universe.
-    Returns a tuple: (ticket, count, list of covered t‑subset bitmasks).
+    
+    Args:
+        ticket (tuple): A candidate ticket (tuple of numbers).
+        universe (set): The current set of uncovered t‑subset bitmasks.
+        t (int): The size of the subsets to cover.
+        
+    Returns:
+        tuple: (ticket, count, list of covered t‑subset bitmasks)
     """
     subsets = get_ticket_t_subsets(ticket, t)
     covered = [subset for subset in subsets if subset in universe]
@@ -136,42 +153,31 @@ def bits_set(mask):
     return result
 
 # ----------------------------------------------
-# 7. Compute Frequency of Each Number in the Universe
+# 7. Build the Lottery Wheel (Single‑Threaded, Uniform Candidate Generation)
 # ----------------------------------------------
-def compute_number_frequencies(universe, n):
-    """
-    Compute how many times each number from 1 to n appears in the uncovered universe.
-    """
-    frequencies = {i: 0 for i in range(1, n+1)}
-    for subset in universe:
-        for num in bits_set(subset):
-            frequencies[num] += 1
-    return frequencies
-
-# ----------------------------------------------
-# 8. Build the Lottery Wheel (Single‑Threaded, with Valid Candidates)
-# ----------------------------------------------
-def build_lottery_wheel(n=49, k=6, t=5, sample_size=2000, use_weighted=True):
+def build_lottery_wheel(n=49, k=6, t=5, sample_size=2000):
     """
     Build a lottery wheel that covers all t‑element subsets of {1,...,n} using tickets of size k.
-    Candidate tickets are generated only if they meet our criteria:
+    Candidate tickets are generated uniformly at random and must meet the criteria:
       - Sum between 140 and 190.
       - At least 2 odd numbers and at most 4 odd numbers.
-      - At least 2 numbers smaller than 25 and at most 4 numbers smaller than 25.
+      - At least 2 numbers less than 25 and at most 4 numbers less than 25.
       
     Parameters:
-      n: Total numbers (default 49).
-      k: Ticket size (default 6).
-      t: Subset size to cover (default 5).
-      sample_size: Number of candidate tickets generated per iteration.
-      use_weighted: If True, candidate generation is biased using uncovered frequencies.
+        n: Total numbers (default 49).
+        k: Ticket size (default 6).
+        t: Subset size to cover (default 5).
+        sample_size: Number of candidate tickets generated per iteration.
+        
+    Returns:
+        list: A list of selected tickets (each as a tuple).
     """
     print(f"Generating universe of all {t}-element subsets from 1 to {n}...")
     start_time = time.time()
     universe = generate_universe(n, t)
     print(f"Universe has {len(universe)} subsets. Generated in {time.time()-start_time:.2f} seconds.\n")
     
-    wheel = []  # List to hold selected tickets.
+    wheel = []  # List to hold the selected tickets.
     iteration = 0
     
     while universe:
@@ -180,17 +186,8 @@ def build_lottery_wheel(n=49, k=6, t=5, sample_size=2000, use_weighted=True):
         best_count = 0
         best_covered = []
         
-        # Compute frequencies to bias candidate generation if needed.
-        if use_weighted:
-            print(f"Iteration {iteration}: Computing number frequencies...", end=' ')
-            freq_start = time.time()
-            number_freq = compute_number_frequencies(universe, n)
-            print(f"done in {time.time()-freq_start:.2f} seconds.")
-        else:
-            number_freq = None
-        
         # Generate a pool of candidate tickets that meet our criteria.
-        candidates = generate_valid_candidates(n, k, sample_size, use_weighted, number_freq)
+        candidates = generate_valid_candidates(n, k, sample_size)
         
         for candidate in candidates:
             ticket, count, covered = evaluate_candidate(candidate, universe, t)
@@ -215,7 +212,7 @@ def build_lottery_wheel(n=49, k=6, t=5, sample_size=2000, use_weighted=True):
     return wheel
 
 # ----------------------------------------------
-# 9. Main Function to Run the Code
+# 8. Main Function to Run the Code
 # ----------------------------------------------
 def main():
     # Parameters for a typical lottery wheel:
@@ -223,10 +220,10 @@ def main():
     n = 49
     k = 6
     t = 5
-    sample_size = 2000  # Adjust as needed for quality vs. speed
+    sample_size = 2000  # Adjust as needed for candidate pool size
     
-    print("Building lottery wheel using candidate tickets that meet specific criteria...\n")
-    wheel = build_lottery_wheel(n, k, t, sample_size, use_weighted=True)
+    print("Building lottery wheel using uniformly generated candidate tickets that meet specific criteria...\n")
+    wheel = build_lottery_wheel(n, k, t, sample_size)
     
     print("\nFinal lottery wheel with", len(wheel), "tickets:")
     for ticket in wheel:
@@ -234,3 +231,28 @@ def main():
 
 if __name__ == '__main__':
     main()
+```
+
+---
+
+### Explanation
+
+1. **Subset Extraction & Universe Generation:**  
+   - The function `get_ticket_t_subsets` (with caching) computes all \(t\)-element subsets of a ticket and represents them as bitmasks.
+   - The function `generate_universe` builds the full set of \(t\)-element subsets (as bitmasks) from numbers 1 to \(n\).
+
+2. **Candidate Validity:**  
+   - The `is_valid_candidate` function checks that a ticket’s sum lies between 140 and 190, contains between 2 and 4 odd numbers, and between 2 and 4 numbers less than 25.
+
+3. **Candidate Generation:**  
+   - The function `random_valid_candidate_ticket` generates a single ticket uniformly at random and returns it if it meets the criteria.
+   - The function `generate_valid_candidates` repeatedly calls the above function until it collects a pool of valid candidate tickets.
+
+4. **Evaluation and Greedy Selection:**  
+   - The function `evaluate_candidate` determines how many uncovered \(t\)-subsets (bitmasks) a candidate ticket would cover.
+   - The greedy loop in `build_lottery_wheel` selects the candidate that covers the most uncovered subsets, adds it to the wheel, and removes its covered subsets from the universe.
+
+5. **Uniform Candidate Generation:**  
+   - No frequency weighting is used—the candidate tickets are generated uniformly at random.
+
+Feel free to adjust parameters such as `n`, `k`, `t`, and `sample_size` as needed. This version builds your lottery wheel using uniformly generated candidates that meet your specified criteria. Happy coding!
