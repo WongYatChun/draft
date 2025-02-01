@@ -36,29 +36,26 @@ for i in tqdm(range(number_of_generated_list)):
     generated_dict[key] = current_list
 
 
-# Create the original list of numbers (1 to 49).
-numbers_original = list(range(1, 50))
+# Dictionary to store the total score for each list.
+list_scores = {}
 
-# Dictionary to store 100 different generated lists.
-number_of_generated_list = 10000
-
-generated_dict = {}
-
-# Generate 100 different lists.
-for i in tqdm(range(number_of_generated_list)):
-    # Create a new shuffled copy of the numbers.
-    numbers = numbers_original.copy()
-    random.shuffle(numbers)
+# Evaluate each list in the generated dictionary.
+for list_key, list_of_sets in tqdm(generated_dict.items()):
+    total_score = 0
+    for combination in list_of_sets:
+        # Count the odd numbers in the combination.
+        odd_count = sum(1 for number in combination if number % 2 == 1)
+        # Count the numbers that are smaller than 25.
+        less_than_25_count = sum(1 for number in combination if number < 25)
+        
+        # Check if the combination meets both constraints.
+        if not (2 <= odd_count <= 4 and 2 <= less_than_25_count <= 4):
+            total_score += -1  # Violation detected, score -1.
+        else:
+            total_score += 0   # Meets the constraints, score 0.
     
-    # Use the schedule to pick numbers from the shuffled list.
-    current_list = []
-    for indices in schedule:
-        combination = [numbers[j-1] for j in indices]
-        current_list.append(combination)
-    
-    # Use a unique key for each generated list, e.g., 'list_1', 'list_2', etc.
-    key = f"list_{i+1:03}"
-    generated_dict[key] = current_list
+    # Store the total score for this list.
+    list_scores[list_key] = total_score
 
 
 pd.DataFrame(list_scores, index = [0]).T.sort_values(0)
