@@ -1,0 +1,514 @@
+\title{Signal Weighting ${ }^{1}$}
+
+\section*{Introduction}
+
+Active strategies face the challenge of combining information from different sources in order to maximize that information's after-cost effectiveness. ${ }^{2}$ This challenge is evident for investors who follow a systematic, structured investment process. It is also an issue, although often unrecognized, for more traditional managers who must balance top-down views, the views of in-house analysts, and sell-side analysts. In any case, a decision is made either through default, analysis, or whimsy. We favor analysis, and to that end this article presents a simple and structured approach to the task. This task is commonly called signal weighting, although risk budgeting seems to be a better description. The approach is based on standard methods of portfolio analysis and their extension to dynamic portfolio management.
+
+\footnotetext{
+1. This article originally appeared as "Signal Weighting" by Richard Grinold in the Summer 2010 issue of the Journal of Portfolio Management.
+2. We'll use the terms sources, themes, and signals as synonyms.
+}
+
+We can consider an active investment product on three levels: strategic, tactical, and operational. At the strategic level we might target clients, fee structure, level of risk, amount of gearing, level of turnover, marketing channel, decision-making structure, and so forth. At the operational level, we run the product: maintaining and replenishing data, executing trades, tracking positions and performance, informing clients, and so on. At the tactical level, we allocate resources to improve the product and its operations and do some fine tuning on parameters such as risk level and turnover level. The signalweighting decision belongs at the tactical level. Every strategy has an internal risk budget that shows how the aggregate risk is being allocated among the various sources/themes that we anticipate can add value. We should periodically, say, every six months, reexamine and possibly change that allocation. A similar reconsideration of the internal risk budget should take place if there is a significant change in the signal mix (e.g., adding a new theme) or if there is a major change in the market environment.
+
+The method we present in this article gives substance to the signalweighting process by isolating the important aspects of the decision and providing a structure that links those features to a decision. The procedure we outline mimics the investment process. Each signal is viewed as a sub, or source, portfolio that is a potential place to allocate risk. We allocate risk to the source portfolios in a manner that makes the most sense at the aggregate level. In this effort we are trying to be comprehensive enough to depict the essentials and simple enough to easily capture the link between inputs and outputs. Thus, we compromise between the desire to be reasonable and robust, on the one hand, and to provide a clear box rather than a black box on the other.
+
+To preserve transparency, we should err on the side of simplicity rather than on excessive elaboration. There is a temptation to more and more closely mimic the actual investment process (e.g., backtesting). Our unadorned approach is to assume the portfolio is run with the straightforward and easy-to-analyze method A, although we realize that we actually use the complex and impossible-to-analyze method B . We have to trade off the benefits of getting sensible, comprehensible answers against the costs of departing from the operational reality. Any effect we want to consider has to argue for a place at the table. The watchword is simplicity, and the burden of proof is against making it complicated. This focus on simplicity also argues against a profusion of sources. In our view, the number of themes should be more than two and certainly less than, say, seven. If you believe there are a larger number of significant alpha drivers of a strategy, you should: (1) look up significant and (2) aggregate the signals into broader themes.
+
+One benefit of the proposed approach is that it is based on a theory. There is a logical consistency that lets us track cause and effect. The assumptions are few and transparent. It is not a sequence of ad hoc decisions and jury-rigged improvisations where the often hidden assumptions are many and their implications are obscure. This clarity makes it easy to link cause and effect. In particular, it facilitates the use of sensitivity analysis to study the links between important inputs and outputs.
+
+Signal weighting is a forward-looking exercise. We are planning for the future not overfitting the past. Past performance of signals can, of course, inform us about each signal's presumed future strength, how fast the information dissipates, and how the signals relate to each other. However, we will usually be in a situation with old signals that are part of the implemented strategy and new signals that have only seen hypothetical implementation. In addition, we may feel strongly that some signals will lose strength since they are being arbitraged away. What we see in a backtest is one sample from a nonstationary probability distribution. By all means consider past performance, but add a large pinch of salt.
+
+A caution: the title of the paper contains a twofold misnomer. We are presenting what is generally called signal weighting. However, it's not signals and it's not weighting. What is actually happening is that we are allocating
+risk to a collection of standardized single source alphas. There is a missing step that involves moving from signals to alphas. That step is covered in Chapters 10-11 of Active Portfolio Management and makes a brief appearance in Appendix A of Chapter 10 in this volume. The risk allocations are not a set of numbers that add to one, although we will show how they can be readjusted into a set of weights that do add up to one.
+
+This chapter presents a top-down view of signal weighting. We look at each signal at the aggregate level. Chapters 10 and 11 of this volume employ a bottom-up approach where we adjust the signal weights on an asset-byasset basis depending on the forecasting power for that signal/asset pair and the rate at which we anticipate trading the asset.
+
+\section*{Preview}
+
+The paper has the following structure. We initially consider a world free of cost with one signal and then a cost-free world with multiple signals. This exercise allows us to introduce many of the terms and concepts we will use in the more difficult setting with transactions costs.
+
+Transaction costs are difficult to handle in an analytic way. Our approach is traditional: we make an assumption. We assume the portfolio is updated following a simple rebalance rule. The rebalance rule has three parts:
+- For each signal we construct a source portfolio that captures that signal in an efficient manner. We aim for the most signal per unit of risk.
+- We construct a model/target portfolio that is a mixture of the source portfolios.
+- We stipulate a rebalance rule to fix the rate at which the portfolio manager tries to close the gap between the portfolio the manager actually holds and the model portfolio.
+
+In Appendix A, we show that this type of rebalance rule is optimal under certain conditions. We feel that a rule that is optimal under one set of conditions will be good in a much wider group of situations. In Appendix B, we study the consequences of using such a decision rule.
+
+We carry a transparent three signal example through the paper to provide some context to the results.
+
+\section*{Other Work}
+
+This paper stems from the author's previous work on dynamic portfolio analysis, Grinold (2006) and (2007). ${ }^{3}$ The most directly related paper is Sneddon (2008). Similar techniques to those described in Appendix A are used by Garleanu and Pedersen (2009 working paper, subsequently published in 2013 after this paper had appeared).
+
+\footnotetext{
+3. Grinold (2007) is Chapter 8 in this book, "Dynamic Portfolio Analysis."
+}
+
+\section*{One Signal and No Transactions Costs}
+
+We start with one signal and then expand the analysis to cover multiple signals. There are $N$ assets whose return covariance is described by the $N$ by $N$ covariance matrix $\mathbf{V}$. The basic material in the weighting exercise is an $N$ element vector $\mathbf{a}_{1}$, called a source alpha. It is scaled to have (on average) an information ratio of one:
+$$
+\begin{equation*}
+\mathbf{a}_{1}^{\prime} \cdot \mathbf{V}^{-1} \cdot \mathbf{a}_{1}=1 \tag{1}
+\end{equation*}
+$$
+
+To obtain a weight we need an assessment of the strength of the signal. Let $I R$ be the information ratio of the signal, then:
+$$
+\begin{equation*}
+\alpha=I R \cdot \mathbf{a}_{1} . \tag{2}
+\end{equation*}
+$$
+
+We are done. With one signal we simply weight the source alpha to have the desired information ratio.
+
+We can get to the same place by a longer route. It approaches the problem from a portfolio perspective. This is worth the extra effort since it generalizes in a natural way when there are multiple signals and transactions costs.
+
+We associate a source portfolio $\mathbf{q}_{1}$ with our signal.
+$$
+\begin{equation*}
+\mathbf{q}_{1}=\mathrm{V}^{-1} \cdot \mathbf{a}_{1} \Rightarrow \mathrm{q}_{1}^{\prime} \cdot \mathbf{V} \cdot \mathbf{q}_{1}=1 . \tag{3}
+\end{equation*}
+$$
+
+The source portfolio is an efficient implementation of the signal; that is, among all positions $\mathbf{x}$ it maximizes the ratio $\mathbf{a}^{\prime} \cdot \mathbf{x} / \sqrt{\mathbf{x}^{\prime} \cdot V \cdot \mathbf{x}}$.
+
+As noted in Equation (3), the source portfolio has an excessive risk level of $100 \%$. Suppose we choose a more realistic risk level $\omega_{\mathrm{Q}}$. This is akin to scaling the source portfolio. If $\omega_{\mathrm{Q}}$ is the risk level, then the portfolio is $\mathbf{q}=\omega_{Q} \cdot \mathbf{q}_{1}$. This portfolio has an alpha of $I R \cdot \omega_{Q}$ and variance of $\omega_{Q}^{2}$. If we have a risk penalty $\lambda$ and we do the standard mean-variance optimization we choose the risk level $\omega_{Q}$ to maximize:
+$$
+\begin{equation*}
+I R \cdot \omega_{Q}-\frac{\lambda}{2} \cdot \omega_{Q}^{2} . \tag{4}
+\end{equation*}
+$$
+
+The solution of this is $\omega_{Q}=I R / \lambda$. If the information ratio is $I R=0.75$ and we have a risk penalty of $\lambda=18.75$, the resulting solution is $\omega_{Q}=4 \%$.
+
+The causality runs from the alpha forecast to portfolio $Q$. That portfolio is determined by the alphas:
+$$
+\begin{equation*}
+\mathrm{q}^{-1}=\frac{\mathrm{V}^{-1} \cdot \boldsymbol{\alpha}}{\lambda} \Rightarrow \alpha=\lambda \cdot \mathrm{V} \cdot \mathbf{q}_{1} \cdot \omega_{Q}=\left\{\lambda \cdot \omega_{Q}\right\} \cdot \mathbf{a}_{1} \tag{5}
+\end{equation*}
+$$
+
+This gets us to the same place as the straightforward approach, Equation (2), since $\lambda \cdot \omega_{Q}=I R$.
+
+The reasons for the portfolio optimization approach used in Equation (4) are:
+- it generalizes nicely when we have multiple signals,
+- it makes things much simpler when we introduce transactions costs.
+
+Now we'll turn to multiple signals and no transactions costs.
+
+\section*{J Signals and No Transactions Costs}
+
+Suppose we have $J$ signals (substrategies), each with a raw alpha $\mathbf{a}_{j} j=1, \cdots, J$. Each $\mathbf{a}_{j}$ is a vector with elements for each of the $N$ assets. We start with a level playing field; each $\mathbf{a}_{j}$ is standardized so that its information ratio is one. ${ }^{4}$
+$$
+\begin{equation*}
+\mathbf{a}_{j}^{\prime} \cdot \mathbf{V}^{-1} \cdot \mathbf{a}_{j}=1 . \tag{6}
+\end{equation*}
+$$
+
+We can, as above in Equation (3), associate a position with each raw alpha. These positions have, on average, $100 \%$ risk. They are the building blocks of the investment strategy.
+$$
+\begin{align*}
+& \mathbf{a}_{j}=\mathbf{V} \cdot \mathbf{q}_{j}, \quad \mathbf{q}_{j}=\mathbf{V}^{-1} \cdot \mathbf{a}_{j}  \tag{7}\\
+& \mathbf{q}_{j}^{\prime} \cdot \mathbf{V} \cdot \mathbf{q}_{j}=1
+\end{align*}
+$$
+
+With one signal the risk allocation to the signal and the resulting portfolio risk are the same. This is not the case with multiple signals. We will continue with the notation $\omega_{Q j}$ for the risk allocated to signal $j$. We will use $v_{Q}^{2}$ and $v_{Q}$ as, respectively, the variance and risk of portfolio $Q$ when we use risk allocation $\omega_{\mathcal{Q} j}$.
+
+Since we have multiple signals, we have to take into consideration any correlation between the information sources. We define that correlation in terms of the expected return covariance between any pair of positions. ${ }^{5}$
+$$
+\begin{equation*}
+\rho_{i, j} \equiv \mathbf{q}_{i}^{\prime} \cdot \mathbf{V} \cdot \mathbf{q}_{j} . \tag{8}
+\end{equation*}
+$$
+
+For example, if $i$ is a value signal and $j$ a momentum signal, they will tend to be negatively correlated. Recall that signal weighting is a forward-looking exercise; the correlations $\rho_{i, j}$ are predictions. Nonetheless, a historical analysis of past correlations should be informative. ${ }^{6}$ Often there is a fairly stable relationship. In other cases, the relationship appears to depend on the caprice of the market. As a practical matter, if any of these correlations are very large (say above 0.5 ), then it might be wise to combine the signals. If a correlation is large and negative, then you have either found a very good thing or, more likely, you have uncovered something too good to be true.
+
+We build a strategy by assigning risk levels, $\omega_{j}$ to each of $J$ substrategies. The vector representation is $\left\{\omega_{Q, j}\right\}_{j=1, j}$. The result will be a portfolio:
+$$
+\begin{equation*}
+\mathbf{q}=\sum_{j=1, j} \mathbf{q}_{j} \cdot \omega_{j} . \tag{9}
+\end{equation*}
+$$
+
+\footnotetext{
+4. It is best practice to have this standardization work in a time average fashion. This allows a natural emphasis on a theme when more information is available and, in particular, avoids trying to make something out of nothing when less information is on hand.
+5. Note this also implies that $\rho_{i, j}=\mathbf{a}_{i}^{\prime} \cdot \mathbf{V}^{-1} \cdot \mathbf{a}_{j}=\mathbf{a}_{i}^{\prime} \cdot \mathbf{q}_{j}=\mathbf{a}_{j}^{\prime} \cdot \mathbf{q}_{i}$.
+6. If there is a history of the past source portfolios $\mathrm{q}_{j}(t)$, and dated covariance matrices, $\mathrm{V}(t)$, then $\rho_{s, t}(t) \equiv \mathbf{q}_{i}^{\prime}(t) \cdot \mathbf{V}(t) \cdot \mathbf{q}_{i}(t) /\left\{\sqrt{\mathbf{q}_{i}^{\prime}(t) \cdot \mathbf{V}(t) \cdot \mathbf{q}_{i}(t)} \cdot \sqrt{\mathbf{q}_{i}^{\prime}(t) \cdot \mathbf{V}(t) \cdot \mathbf{q}_{i}(t)}\right\}$ gives a measure of the correlation at time $t$.
+}
+
+The information ratios of the $J$ substrategies are given by the $J$ element vector with elements $I R_{j}$. The $J$ by $J$ correlation matrix with elements $\rho_{i, j}$ is denoted as $\mathbf{R}$. ${ }^{7}$
+
+With this notation the alpha expected by using the weights $\omega_{\mathrm{Q}, j}$ is:
+$$
+\begin{equation*}
+\alpha_{\mathrm{Q}}=\sum_{j=1, J} I R_{j} \cdot \omega_{\mathrm{Q}, j} \tag{10}
+\end{equation*}
+$$
+
+The variance of the portfolio, $\mathbf{q}$, with these weights $\omega_{\mathcal{Q}, j}$ is:
+$$
+\begin{equation*}
+v_{\mathrm{Q}}^{2}=\sum_{i=1, J} \omega_{\mathrm{Q}, i} \cdot \sum_{j=1, J} \rho_{i, j} \cdot \omega_{\mathrm{Q}, j} \tag{11}
+\end{equation*}
+$$
+
+We choose the $\omega_{\mathrm{Q} j}$ to maximize:
+$$
+\begin{equation*}
+\alpha_{Q}-\frac{\lambda}{2} \cdot v_{Q}^{2} . \tag{12}
+\end{equation*}
+$$
+
+The solution is obtained by solving the first-order equations:
+$$
+\begin{equation*}
+I R_{i}=\lambda \cdot \sum_{j=1, J} \rho_{i, j} \cdot \omega_{\mathcal{Q}, j} \tag{13}
+\end{equation*}
+$$
+
+We will refer to the solution as the zero-cost portfolio, $Q$, with positions:
+$$
+\begin{equation*}
+\mathbf{q}=\sum_{j=1, J} \mathbf{q}_{j} \cdot \omega_{Q, j} \tag{14}
+\end{equation*}
+$$
+
+The information ratio of the zero-cost $Q$ is:
+$$
+\begin{align*}
+& I R_{Q}=\lambda \cdot v_{Q} \\
+& I R_{Q}=\frac{\alpha_{Q}}{v_{Q}} \geq I R_{P} \text { for any portfolio } P . \tag{15}
+\end{align*}
+$$
+
+We see from Equation (15) that $Q$ achieves the highest possible information ratio. The potential information ratio from all of the sources, $I R$, is independent of the risk penalty. We can therefore choose $\lambda$ to get a desired level of active risk $\omega_{Q}$ in the zero-cost portfolio.
+
+\section*{Example}
+
+Here is an example with three substrategies. In anticipation of the next section we have classified the signal by the rate of information turnover. The sources are: SLOW, INTERMEDIATE and FAST. The goal is to mix these three sources to get an ideal portfolio with $5 \%$ risk.
+7. If we let $Y_{i, j}$ be the elements of the inverse of the $J$ by $J$ signal correlation matrix with elements $\rho_{i, j}$, then the
+information ratio using all the signals is $I R^{2}=\sum I R_{i} \cdot \sum Y_{i, j} \cdot I R_{i}$. information ratio using all the signals is $I R^{2}=\sum_{i=1: J} I R_{i} \cdot \sum_{j=1: J} Y_{i, j} \cdot I R_{j}$.
+
+EXHIBIT 1 A Three Signal Example
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline \multicolumn{1}{|c|}{ SOURCE } & IR & SLOW & INT. & FAST & RISK \\
+\hline SLOW & 0.4 & 1 & -0.15 & 0.1 & $1.96 \%$ \\
+\hline INT. & 0.5 & -0.15 & 1 & -0.3 & $3.78 \%$ \\
+\hline FAST & 0.7 & 0.1 & -0.3 & 1 & $4.10 \%$ \\
+\hline
+\end{tabular}
+
+Note: The input data are the information ratios, $I R$, and the correlations. The optimal risk allocation is in the column called risk.
+
+The data in Exhibit 1 represent our best estimates of what we expect to see over a reasonably long planning horizon, say a year or more. The net effect of this data is an aggregate information ratio of $I R=1.11$. If we want an overall risk of $v_{Q}=5.00 \%$ we can set the risk penalty $\lambda=I R / v_{Q}=1.11 / 0.05=22.17$ and get the desired result. The final column is the optimal risk allocation solving the first-order equations (13). We can interpret this as running the INTERMEDIATE substrategy at $3.78 \%$ risk, the SLOW substrategy at $1.96 \%$ risk, and the FAST substrategy at $4.10 \%$ risk.
+
+\subsection*{Risk Budgeting}
+
+Signal weighting, like portfolio management, is an exercise in risk budgeting. We can express the result in terms of the resulting risk budget. The variance of the ideal portfolio $Q$ is:
+$$
+\begin{align*}
+& \text { (i.) } v_{\mathrm{Q}}^{2}=\sum_{j=1, J} \omega_{\mathrm{Q}, j} \cdot \sum_{k=1, J} \rho_{j, k} \cdot \omega_{\mathrm{Q}, k} \text { or } \\
+& \text { (ii.) } 1=\sum_{j=1, J}\left\{\frac{\omega_{\mathrm{Q}, j}}{v_{\mathrm{Q}}}\right\} \cdot \sum_{k=1, J} \rho_{j, k} \cdot\left\{\frac{\omega_{\mathrm{Q}, k}}{v_{\mathrm{Q}}}\right\} \tag{16}
+\end{align*}
+$$
+
+If we allocate a fraction $\left\{\frac{\omega_{j}}{v_{\mathrm{Q}}}\right\} \cdot \sum_{k=1, J} \rho_{i, k} \cdot\left\{\frac{\omega_{k}}{v_{\mathrm{Q}}}\right\}$ of the risk to alpha source $j$ we are in effect taking the two covariance terms for sources $j$ and $k$, $\omega_{\mathrm{Q}, j} \cdot \rho_{j, k} \cdot \omega_{\mathrm{Q}, k}+\omega_{\mathrm{Q}, k} \cdot \rho_{k, j} \cdot \omega_{\mathrm{Q}, j}$, and splitting the baby, thus attributing $\omega_{\mathrm{Q}, j} \cdot \rho_{j, k} \cdot \omega_{\mathrm{Q}, k}$ to signal $j$ and $\omega_{\mathrm{Q}, k} \cdot \rho_{k, j} \cdot \omega_{\mathrm{Q}, j}$ to signal $k$.
+
+In our example over $52 \%$ of the risk comes from the FAST signal, $34 \%$ from INTERMEDIATE, and only $14 \%$ from SLOW.
+
+\subsection*{The Alpha Perspective}
+
+We can view the result in terms of alphas as well as portfolios. According to Equation (14), the zero-cost portfolio is $Q$ with holdings $\mathbf{q}=\sum \mathbf{q}_{j} \cdot \omega_{Q, j}$.
+
+The alphas that lead to this ideal are:
+
+\subsection*{Weights}
+
+Equation (17) can be interpreted in terms of "weights," that is, numbers that sum to one.
+$$
+\begin{align*}
+& \text { (i.) } \alpha=\text { scale } \cdot\left\{\sum_{j=1, J} \mathbf{a}_{j} \cdot \text { weight }_{j}\right\}, \quad \text { where } \\
+& \text { (ii.) scale }=\lambda \cdot \sum_{j=1, J} \omega_{\mathrm{Q}, j}  \tag{18}\\
+& \text { (iii.) } \text { weight }_{j}=\omega_{\mathrm{Q}, i} / \sum_{i=1, J} \omega_{\mathrm{Q}, i}
+\end{align*}
+$$
+
+The scale factor ensures that the resulting alphas have the correct information ratio, that is:
+$$
+\begin{equation*}
+\sqrt{\alpha^{\prime} \cdot \mathrm{V}^{-1} \cdot \alpha}=I R=1.11 \tag{19}
+\end{equation*}
+$$
+
+The resulting weights in our examples are 38\% for INTERMEDIATE, 20\% for SLOW, and $42 \%$ for FAST. These weights are a scaling of the risk allocation. The ratio of Risk $Q$ and Weight $Q$ in Exhibit 2 is similar to but not equal to the risk budgeting numbers mentioned above.
+
+The three ways of presenting the results:
+- The risk of each source
+- The risk budget
+- Weights that sum to one
+are illustrated in Exhibit 2.
+EXHIBIT 2 Three Views of the Solution to the Signal/Source Weighting Problem When There Are No Transactions Costs
+\begin{tabular}{|l|c|c|c|}
+\hline \multicolumn{1}{|c|}{ IDEAL PORTFOLIO } & RISK Q & RISK BUDGET Q & WEIGHT Q \\
+\hline SLOW & $1.96 \%$ & $14.16 \%$ & $19.95 \%$ \\
+\hline INT. & $3.78 \%$ & $34.10 \%$ & $38.42 \%$ \\
+\hline Fast & $4.10 \%$ & $51.74 \%$ & $41.64 \%$ \\
+\hline
+\end{tabular}
+
+Now we turn to the more challenging and realistic situation where we consider transactions costs.
+
+\section*{Transactions Costs}
+
+The previous analysis showed how to approach the source or signal weighting problem successfully when there are no transactions costs. Transactions costs introduce three new obstacles.
+- You pay them either directly through commissions, spread, taxes, etc. or indirectly by demanding liquidity and shelling out too much for purchases and getting too little for sales, aka market impact.
+- Costs are intimidating. They keep you from fully exploiting your information. There is an opportunity loss.
+- Costs are levied on changes in positions, so the initial position is a crucial part of the analysis.
+
+The last point implies a multiperiod perspective is required. Our approach will be to look for strategies or decision rules that can, in some sense, be considered optimal in a multiperiod setting. To do this we make assumptions that allow us to abstract from the reality of the day-to-day portfolio management environment and still capture something of its essence.
+
+\subsection*{The Portfolio's Law of Motion}
+
+An active portfolio is an object in motion. Call it portfolio $P$. If we look at portfolio $P$ periodically, say, every $\Delta t$ years, then we see a sequence of positions $\cdots, \mathbf{p}(t-\Delta t), \mathbf{p}(t), \mathbf{p}(t+\Delta t), \cdots$. The changes in these positions, defined as:
+$$
+\begin{equation*}
+\Delta \mathbf{p}(t) \equiv \mathbf{p}(t)-\mathbf{p}(t-\Delta t) \tag{20}
+\end{equation*}
+$$
+determine the cost.
+The challenge is to capture these changes in a useful way. To do this we will specify a rule, called the law of motion, to show how the portfolio $P$ changes in response to changes in the source portfolios. We'll do this in two steps:
+- First, combine the source portfolios into a model portfolio M.
+- Second, show how the portfolio $P$ attempts to track the model portfolio.
+
+\subsection*{The Model Portfolio}
+
+The model portfolio is a mixture of the source portfolios. Its holdings at time $t$ are:
+$$
+\begin{equation*}
+\mathbf{m}(t) \equiv \sum_{j=1, J} \mathbf{q}_{j}(t) \cdot \omega_{M, j}, \quad \text { where } \omega_{M, j}=\omega_{\mathcal{Q}, j} \cdot \psi_{j} \tag{21}
+\end{equation*}
+$$
+
+The risk levels $\omega_{Q, j}$ are the same ones we used to define the zero-cost portfolio. See Equations (13) and (14). The parameters $\psi_{j}$ where $0<\psi_{j}<1$ are explained in detail below.
+
+\subsection*{The Tracking Rule}
+
+The changes in portfolio $P$ are governed by a linear decision rule of the form:
+$$
+\begin{align*}
+& \text { (i.) } \quad \mathbf{p}(t)=\delta \cdot \mathbf{p}(t-\Delta t)+(1-\delta) \cdot \mathbf{m}(t) \text { or } \\
+& \text { (ii.) } \frac{\Delta \mathbf{p}(t)}{\Delta t}=\frac{(1-\delta)}{\Delta t} \cdot\{\mathbf{m}(t)-\mathbf{p}(t-\Delta t)\} \tag{22}
+\end{align*}
+$$
+
+The parameter delta, $0<\delta<1$, is discussed below. In Appendix A we demonstrate that the rule described in Equations (21) and (22) is optimal under special circumstances. The leap of faith is to assume that the rule is at least "reasonable" under more general conditions.
+
+The parameters $\delta, \psi_{j}$, mentioned in Equations (21) and (22) depend on the rate of change of the signals as represented by either the raw alphas $\mathbf{a}_{j}(t)$ or the source portfolios $\mathbf{q}_{j}(t)$ and on the change in the portfolio $\mathbf{p}(t)$ itself. We now turn our attention to measuring those changes and determining values for these parameters.
+
+\subsection*{A Measure of Signal Speed}
+
+We can gauge the rate of change in the signal $j$ between times $t$ and $t-\Delta t$ by measuring the correlation of the positions $\mathbf{q}_{j}(t)$ and $\mathbf{q}_{j}(t-\Delta t)$ using the asset covariance, $\mathbf{V}(t)$, at time $t$. To do the calculation in a sensible way we should tailor the time interval, call it $\Delta t_{j}$, on a signal by signal basis so that a reasonable amount of change takes place resulting in a value for $\gamma_{j}(t)$ in Equation (23) below in the range of 0.8 to 0.975 . This will avoid spurious results if $\Delta t$ is either too long or too short. Even if we keep daily data, we might want to calculate the correlation over one week, two weeks, or a month so we can see significant changes.
+
+That past correlation is given by:
+$$
+\begin{equation*}
+\gamma_{j}(t)=\frac{\mathbf{q}_{j}^{\prime}(t) \cdot \mathbf{V}(t) \cdot \mathbf{q}_{j}\left(t-\Delta t_{j}\right)}{\sqrt{\mathbf{q}_{j}^{\prime}(t) \cdot \mathbf{V}(t) \cdot \mathbf{q}_{j}(t)} \cdot \sqrt{\mathbf{q}_{j}^{\prime}\left(t-\Delta t_{j}\right) \cdot \mathbf{V}(t) \cdot \mathbf{q}_{j}\left(t-\Delta t_{j}\right)}} \tag{23}
+\end{equation*}
+$$
+
+We can eliminate the effects of the tailored time interval selection, $\Delta t_{i}$, by calculating a rate of change:
+$$
+\begin{equation*}
+g_{j}(t)=-\frac{\ln \left(\gamma_{j}(t)\right)}{\Delta t_{j}} \text { or } e^{-g_{j}(t) \cdot \Delta t_{j}}=\gamma_{j}(t) . \tag{24}
+\end{equation*}
+$$
+
+The data will show how the signal has moved in the past. There may be seasonality, such as quarterly or semiannual release of earnings, and there may be a trend, getting faster or slower. The challenge is to use this analysis to choose a point estimate, call it $g_{j}$, that will determine how fast (on average) we believe the signal will move in the future. One way to consider this question is in terms of a half-life, that is, the time it will take for the correlation as calculated by Equation (23) to drop to 0.5 . Exhibit 3 shows how $g_{j}$ depends on the half-life.
+
+EXHIBIT 3 Values of $g_{j}$ for Various Half-Lives
+\begin{tabular}{|l|c|}
+\hline \multicolumn{1}{|c|}{ HALF-LIFE } & $\mathbf{g}$ \\
+\hline 1 week & 36.0 \\
+\hline 1 month & 8.3 \\
+\hline 2 months & 4.2 \\
+\hline 1 quarter & 2.8 \\
+\hline 6 months & 1.4 \\
+\hline 9 months & 0.9 \\
+\hline 1 year & 0.7 \\
+\hline
+\end{tabular}
+
+In the example we are following we'll use nine months as the half-life for the SLOW signal, one month for the FAST signal, and six months for the half-life of the INTERMEDIATE signal.
+
+\subsection*{The Pace of Portfolio Change}
+
+The parameter delta in Equation (22) governs the rate of change of the portfolio $P$. We will express delta as $\delta=e^{-d \cdot \Delta t}$, where $d$ measures how fast we attempt to close the gap between where we start, $\mathbf{p}(t-\Delta t)$, and where we would like to be, $\mathrm{m}(t)$. The choice of $d$, whether it is made explicitly or implicitly, is an attempt to balance two costs:
+- Transactions costs. A larger $d$ (thus lower $\delta$ ) leads to more trading and higher costs.
+- Opportunity loss. A smaller $d$ (thus higher $\delta$ ) implies a less efficient implementation. The fraction of the portfolio P's risk budget directed toward alpha declines and the amount of uncompensated risk increases.
+
+In Appendix A and in an earlier work we show how, under special circumstances, one can make an optimal choice of $d .{ }^{8}$ In what follows we first discuss the interpretation of $d$, which should isolate a reasonable range of values, and then we consider procedures that will help us discover an implied value of $d$ by examining the past behavior of the portfolio.
+
+\footnotetext{
+8. "Dynamic Portfolio Analysis," Grinold (2007). This is Chapter 8 in this book.
+}
+
+\subsection*{Interpretation of d}
+
+Portfolio $P$ chases the model $M$. It is always behind the curve. Indeed, $1 / d$ is a measure of how just how much $P$ lags $M$. Both $P$ and $M$ are based on information that has flowed in over previous periods. The age-weighted exposure of $P$ to this information is about $1 / d$ years longer than the age-weighted exposure of $M$ to the same information. Slow trading leaves $P$ underexposed to recent information and relatively overexposed to older stale information. Exhibit 4 shows lags of one to six months and the corresponding values for $d$.
+
+EXHIBIT 4 The Relationship Between the Trading Rate $d$ and the Lag Between the Average Age of Information in Model Portfolio M and Tracking Portfolio $P$
+\begin{tabular}{|l|c|}
+\hline \multicolumn{1}{|c|}{ MONTHS LAG } & $\boldsymbol{d}$ \\
+\hline 1 month & 12.0 \\
+\hline 2 months & 6.0 \\
+\hline 3 months & 4.0 \\
+\hline 4 months & 3.0 \\
+\hline 5 months & 2.4 \\
+\hline 6 months & 2.0 \\
+\hline
+\end{tabular}
+
+\section*{Estimation of d; Revealed Preference}
+
+It is possible to get a rough estimate of $d$ by examining the history of the portfolio and the source portfolios. As we indicate in Appendix B, we can use a regression/portfolio optimization approach to estimate parameters $\hat{\delta}(t)$ and $\hat{\beta}_{j}(t)$ so that:
+$$
+\begin{equation*}
+\mathbf{p}(t)=\mathbf{p}\left(t-\Delta t_{0}\right) \cdot \hat{\delta}(t)+\sum_{j=1, J} \mathbf{q}_{j}(t) \cdot \hat{\beta}_{j}(t)+\hat{\varepsilon}(t) \tag{25}
+\end{equation*}
+$$
+and the unexplained variance, $\hat{\varepsilon}^{\prime}(t) \cdot \mathbf{V}(t) \cdot \hat{\varepsilon}(t)$, is minimized. If things are going along relatively smoothly, with no radical changes of policy, and the time interval $\Delta t_{0}$ is selected in a reasonable manner, then one will tend to get estimates $\hat{\delta}(t)$ that are positive and less than one. In those cases, we get an estimate of $d$ :
+$$
+\begin{equation*}
+\hat{d}(t)=-\frac{\ln (\hat{\delta}(t))}{\Delta t_{0}}, \quad \hat{\delta}(t)=e^{-\hat{d}(t) \cdot \Delta t_{0}} \tag{26}
+\end{equation*}
+$$
+
+From these estimates of implied past policy along with the intuition that might be gained from Exhibit 4 and future policy plans we settle on values for the parameters $d$ and $g_{j}, j=1, \cdots, J$. Then for any rebalance interval $\Delta t$ we can calculate the risk adjustments $\psi_{j}$ promised in Equation (21).
+$$
+\begin{align*}
+& \text { (i.) } \delta=e^{-d \cdot \Delta t}, \gamma_{j}=e^{-g_{i} \cdot \Delta t} \\
+& \text { (ii.) } \psi_{j} \equiv \frac{1-\delta}{1-\delta \cdot \gamma_{j}}  \tag{27}\\
+& \text { (iii.) } \omega_{M, j}=\psi_{j} \cdot \omega_{Q, j}
+\end{align*}
+$$
+
+Let's examine how this would work with the example introduced above. The data in Exhibit 5 are based on a value of $d=4$ and a rebalance interval of one week, $\Delta t=1 / 52$; thus $\delta=0.926$.
+
+EXHIBIT 5 The Assumed Half-Lives of the Three Signals and Corresponding Values of $g_{j} \gamma_{j}$ and $\psi_{j}$ Based on $\Delta t=1 / 52$, and $\delta=0.926$
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline SOURCE & HL MONTHS & g \{j\} & gamma \{j\} & psi $\{$ j\} & RISK ${ }^{\text {Q }}$ & RISK M \\
+\hline SLOW & 9 & 0.92 & 0.982 & 0.819 & 1.96\% & 1.61\% \\
+\hline INT. & 6 & 1.39 & 0.974 & 0.752 & 3.78\% & 2.84\% \\
+\hline FAST & 1 & 8.32 & 0.852 & 0.351 & 4.10\% & 1.44\% \\
+\hline
+\end{tabular}
+
+In Exhibit 5 the $g_{j}$ are based on the assumed half-lives. If $H L_{j}$ is the half-life in months, then $g_{j}=12 \cdot\left\{\ln (2) / H L_{j}\right\}$. The $\gamma_{j}$ are calculated using item (i.) of Equation (27) and the $\psi_{j}$ are derived from item (ii.) of Equation (27). The column Risk $Q$ repeats the optimal risk levels, $\omega_{Q, j}$, of the ideal portfolio previously reported in Exhibits 1 and 2. The final column, risk $M$, contains the risk levels, $\psi_{j} \cdot \omega_{\mathrm{Q}, j}$, associated with the model portfolio, as per Equation (21). The risk levels decrease for every signal. The decrease, evident in the psi column, is more dramatic for the FAST signal. The risk of model portfolio $M$ is $3.06 \%$ compared to the $5 \%$ risk level for the ideal Q. To raise the risk level of $M$ to, say, $5 \%$, merely decrease the risk penalty lambda from 22.17 to $\{3.06 / 5\} \cdot 22.17=13.57$ and repeat the calculation. This scales up the risk allocation, $\omega_{M, j}$, while it keeps the risk budget allocation and weights the same.
+
+Exhibit 6 compares the results pre (ideal Q) and post (model $M$ ) adjustment for transactions costs.
+
+EXHIBIT 6 The Risk Budgets and Weights for the Zero-Cost $Q$ and the Model/Target M
+\begin{tabular}{|l|c|c|c|c|}
+\hline \multicolumn{1}{|c|}{ SOURCE } & RISK BUDGET Q & RISK BUDGET $\boldsymbol{M}$ & WEIGHT Q & WEIGHT $\boldsymbol{M}$ \\
+\hline SLOW & $14.16 \%$ & $22.72 \%$ & $19.95 \%$ & $27.30 \%$ \\
+\hline INT. & $34.10 \%$ & $65.84 \%$ & $38.42 \%$ & $48.28 \%$ \\
+\hline FAST & $51.74 \%$ & $11.43 \%$ & $41.64 \%$ & $24.41 \%$ \\
+\hline
+\end{tabular}
+
+\subsection*{Opportunity Loss: From Q to M}
+
+The adjustment from ideal $Q$ to model $M$ effectively lowers our sights from one unobtainable goal to another slightly less unobtainable goal. In the process we've left some potential value added on the table.
+
+If we measure the risk-adjusted alpha of any portfolio, say $R$, with positions $\mathbf{r}$, as:
+$$
+\begin{equation*}
+U_{R}=\alpha^{\prime} \cdot \mathbf{r}-\frac{\lambda}{2} \cdot \mathbf{r}^{\prime} \cdot \mathbf{V} \cdot \mathbf{r}=\alpha_{R}-\frac{\lambda}{2} \cdot v_{R}^{2}, \tag{28}
+\end{equation*}
+$$
+then the loss we incur by lowering our sights from $Q$ to $R$ is:
+$$
+\begin{equation*}
+U_{Q}-U_{R}=\frac{\lambda}{2} \cdot v_{Q-R}^{2} \tag{29}
+\end{equation*}
+$$
+
+In Equation (32) $v_{Q-R}$ is the risk of a position that is long the zero-cost portfolio $Q$ and short portfolio $R$. In particular, when $R$ is $M$, the model/ target, we have $v_{Q-M}=2.58 \%$ and the corresponding loss in value added is $U_{Q}-U_{M}=0.74 \% .{ }^{9}$
+
+\subsection*{The End Result}
+
+In Appendix B we examine the consequences of following the rebalancing strategy described in Equation (22). If we let $v_{i, M} \equiv \sum_{j=1, J} \rho_{i, j} \cdot \omega_{M, j}$ be the covariance of source portfolio $i$ with the model portfolio $M$ then we can easily determine the alpha, risk, and implementation efficiency of the implemented strategy $P$ :
+(i.) $\alpha_{P}=\lambda \cdot v_{M}^{2}=\lambda \cdot \sum_{i=1, J} \psi_{i} \cdot \omega_{Q, i} \cdot v_{i, M}$
+(ii.) $v_{P}^{2}=\sum_{i=1, J} \psi_{i}^{2} \cdot \omega_{\mathrm{Q}, i} \cdot v_{i, M}=\sum_{i=1, J} \psi_{i} \cdot \omega_{M, i} \cdot v_{i, M}$
+(iii.) $v_{M-P}^{2}=\sum_{i=1, J} \psi_{i} \cdot\left(1-\psi_{i}\right) \cdot \omega_{Q, i} \cdot v_{i, M}=\sum_{i=1, J}\left(1-\psi_{i}\right) \cdot \omega_{M, i} \cdot v_{i, M}$
+
+\subsection*{Additional Opportunity Lost: From M to P}
+
+The opportunity loss described above was due to dropping our sights from $Q$ to $M$. Because of trading cost the portfolio we actually hold, $P$, does not capture all the potential value added of the model portfolio $M$. It is possible to take the analysis a step further (see Appendix B) and look at the efficiency of portfolio $P$, the portfolio that results from using the updating rule described in Equations (21) and (22). In our example the portfolio $P$ has $2.58 \%$ risk. Its correlation (transfer coefficient) with $Q$ is 0.727 and with $M$ is 0.857 . The loss in potential value added moving from the ideal $Q$ to the actual $P$ is $1.43 \%$. Given that we lost $0.74 \%$ by lowering our sights from the ideal $Q$ to the model $M$ we lose another $0.69 \%$ because we cannot track $M$ exactly. That means a certain fraction of portfolio $P$ 's risk budget will be residual, that is, not correlated with any source of alpha, and thus risk taken with no expectation of return. Exhibit 7 contains the risk budgets for the three portfolios $Q, M$, and $P$.
+
+EXHIBIT 7 Risk Budgets for the Ideal Q, Model M, and Actual Portfolio $P$
+\begin{tabular}{|l|c|c|c|}
+\hline \multicolumn{1}{|c|}{ RISK BUDGET } & PORTFOLIO Q IDEAL & PORTFOLIO M MODEL & PORTFOLIO P ACTUAL \\
+\hline SLOW & $14.16 \%$ & $22.72 \%$ & $21.49 \%$ \\
+\hline INT. & $34.10 \%$ & $65.84 \%$ & $50.36 \%$ \\
+\hline FAST & $51.74 \%$ & $11.43 \%$ & $2.93 \%$ \\
+\hline Residual & $0.00 \%$ & $0.00 \%$ & $25.22 \%$ \\
+\hline
+\end{tabular}
+$\overline{\text { 9. The portfolio } Q-M}$ has positions $\mathbf{q}-\mathbf{m}=\sum_{i=1, j} \mathbf{q}_{i} \cdot \omega_{\mathrm{Q}, i} \cdot\left(1-\psi_{i}\right)$.
+
+Exhibit 7 shows the magnitude of the compromises forced on us by trading frictions. With no trading costs we would allocate $51.74 \%$ of our risk budget to the FAST signal. Taking costs into consideration, we allocate only $2.93 \%$ to the FAST signal. This is a huge shift.
+
+\section*{Reverse Engineering}
+
+If you have a target risk level for the portfolio $P$, say $4.00 \%$, then you can alter the analysis to get that outcome. Change the risk penalty lambda from 22.17 to $22.17 \cdot\{2.58 / 4.00\}=14.30$. This will scale up the risk allocations, $\omega_{\mathrm{Q}, j}, \omega_{M, j}$. However, the relative risk budget numbers in Exhibit 7 will not change.
+
+\subsection*{Estimate of Costs}
+
+We discussed the opportunity losses incurred by lowering our sights from $Q$ to $M, 0.74 \%$, and then in fact lagging behind $M, 0.69 \%$. We also will incur direct costs either fees and commissions or through market impact. We can estimate these as well (see Appendix A). We'll call the difference between portfolios $M$ and $P$ the backlog. This is the trade one would make given one period free of transactions costs. We can measure the size of this backlog by its variance, $\omega_{M-P}^{2}$. A rough estimate of annual transactions costs, $c_{P}$, for portfolio $P$ is a function of the backlog variance:
+$$
+\begin{equation*}
+c_{P} \approx \frac{\lambda}{2} \cdot \omega_{M-P}^{2} \tag{31}
+\end{equation*}
+$$
+
+For the data this cost comes out as $0.30 \%$. In addition to the $1.43 \%$ opportunity loss, this brings the total bill to $1.73 \%$ and our annual value added after cost to $1.04 \%$.
+
+\subsection*{Sensitivity Analysis}
+
+One of the attractive features of this approach to signal weighting is the ability to do sensitivity analysis. The equations used in the paper can be coded in a spreadsheet in a matter of minutes. As an example, we calculated the weights, Equation (28), of the model portfolio $M$ for various values of the trading rate parameter $d$.
+
+EXHIBIT 8 Alpha Weights for the Model Portfolio $M$ as the Trading Rate d Varies and Other Parameters Are Held Constant
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline MONTHS LAG & $\mathbf{0 . 5}$ & $\mathbf{1}$ & $\mathbf{2}$ & $\mathbf{4}$ & $\mathbf{6}$ & $\mathbf{1 2}$ \\
+\hline \multicolumn{1}{|c|}{$\boldsymbol{d}$} & $\mathbf{2 4}$ & $\mathbf{1 2}$ & $\mathbf{6}$ & $\mathbf{3}$ & $\mathbf{2}$ & $\mathbf{1}$ \\
+\hline SLOW & $21.66 \%$ & $23.32 \%$ & $25.68 \%$ & $28.52 \%$ & $30.26 \%$ & $33.09 \%$ \\
+\hline INT. & $41.13 \%$ & $43.55 \%$ & $46.56 \%$ & $49.36 \%$ & $50.55 \%$ & $51.62 \%$ \\
+\hline FAST & $37.20 \%$ & $33.12 \%$ & $27.76 \%$ & $22.12 \%$ & $19.19 \%$ & $15.30 \%$ \\
+\hline
+\end{tabular}
+
+The cases in Exhibit 8 bracket the base case with $d=4$ that is summarized in Exhibit 6. Also, we can consider the zero-cost portfolio $Q$ as the case with $d$ very large. The weight for the ideal is also in Exhibit 6, with $19.95 \%$, $38.42 \%$ and $41.64 \%$ for SLOW, INTERMEDIATE, and FAST, respectively.
+
+\section*{Conclusion}
+
+We have presented a relatively straightforward approach to the signalweighting problem in the face of transactions costs. It has several attractive attributes:
+- It is portfolio based. It looks at the signal-weighting problem as an investment problem that links each signal to an investment strategy and then looks for the optimal mix of strategies.
+- It is a natural extension of the solution of the signal-weighting problem in the absence of costs.
+- It is forward looking. It depends on three properties of the signals: the predicted information ratios, $I R_{j}$, the predicted return correlations, $\rho_{i, j}$, and the rate of change of the each signal, $g_{j}$. In addition, it depends on two investment strategy parameters: the trading rate of the portfolio, $d$, a surrogate for turnover, and a risk penalty $\lambda$ that controls the strategy's level of risk.
+- It is easy to perform sensitivity analysis. This is vitally important both to establish a firm understanding of the model and its results and to test the robustness of the answers to reasonable adjustments in the inputs.
+- It lends itself to reverse engineering. It is relatively easy to adjust the risk penalty and trading rate to attain a desired level of turnover and active variance.
+- It predicts the characteristics of the resulting strategy including its level of risk, risk budget, opportunity loss, and annual trading costs.
+- It changes perspective by thinking of each signal as a substrategy and the weights as active risk levels for the substrategy. These risk levels in turn allow the calculation of risk budgets that are a better measure of the importance of each signal.
+- It changes perspective by focusing on the dynamics of the signals and the portfolio. The measurement of the rate of change of the signals, $g_{i}$, and the trading rate $d$ of the portfolio requires a novel, dynamic look at the signals and the portfolio.
+
+\section*{References}
+
+Garleanu, Nicolae, and Lasse Heje Pedersen. 2009, 2013. "Dynamic Trading with Predictable Returns and Transactions Costs." Working paper, February 24, 2009, Haas School of Business. Published in Journal of Finance 68 (6), December 2013, 2309-2340.
+
+Grinold, Richard C. 2006. "A Dynamic Model of Portfolio Management." Journal of Investment Management 4 (2nd quarter): 5-22.
+Grinold, Richard C. 2007. "Dynamic Portfolio Analysis." Journal of Portfolio Management 34 (Fall): 12-26.
+Sneddon, Leigh. 2008. "The Tortoise and the Hare: Portfolio Dynamics for Active Managers." The Journal of Investing 17 (Winter): 106-111.
