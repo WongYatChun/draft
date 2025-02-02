@@ -113,3 +113,26 @@ for ticket_name, ticket in tqdm(generated_dict.items()):
     average_points_by_ticket[ticket_name] = avg_points  # both methods should give the same result
     
 pd.DataFrame(average_points_by_ticket, index = [0]).T.sort_values(0)
+
+
+# Lottery simulation parameters
+TOTAL_NUMBERS = 49
+TICKET_SIZE = 6
+DRAW_SIZE = 6
+WIN_THRESHOLD = 4
+NUM_SIMULATIONS = 100000
+
+
+# Helper function to simulate one lottery draw (returns a set of drawn numbers)
+def draw_numbers():
+    return set(random.sample(range(1, TOTAL_NUMBERS + 1), DRAW_SIZE))
+
+# Simulation function: returns the fraction of draws covered (i.e., at least one ticket gets WIN_THRESHOLD or more matches)
+def simulation(tickets):
+    win_count = 0
+    for _ in range(NUM_SIMULATIONS):
+        draw = draw_numbers()
+        # Check if at least one ticket has WIN_THRESHOLD or more matching numbers.
+        if any(len(ticket & draw) >= WIN_THRESHOLD for ticket in tickets):
+            win_count += 1
+    return win_count / NUM_SIMULATIONS
