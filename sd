@@ -1,258 +1,410 @@
-Below is a revised version of the lottery wheel builder code that meets your updated criteria but does not use frequency weighting in candidate generation. In this version, candidate tickets are generated uniformly at random and then filtered to ensure that they meet the following criteria:
+\title{
+Implementation Efficiency ${ }^{1}$
+}
 
-1. **Sum Criterion:** The sum of the ticket’s numbers is between 140 and 190 (inclusive).  
-2. **Odd Number Criterion:** The ticket contains at least 2 odd numbers and at most 4 odd numbers.  
-3. **Small Number Criterion:** The ticket contains at least 2 numbers less than 25 and at most 4 such numbers.
+\section*{1. Introduction}
 
-All candidate generation is now done uniformly without any frequency weighting. The code uses a greedy algorithm to build the lottery wheel by selecting, in each iteration, the candidate ticket that covers the largest number of uncovered \(t\)-element subsets (represented as bitmasks).
+Investment management relies on an ability to understand and manage three forces: return, risk, and cost. The understanding, if not the management, of risk and return is well advanced in the finance field-stemming from Markowitz's notion of mean-variance efficiency and Sharpe's economic explanation of expected return. In that risk-return landscape, any presumed potential for adding investment value can be summarized by the information ratio-that is, the expected exceptional return (alpha) divided by the amount of risk assumed in pursuit of that exceptional return.
 
-Below is the complete code:
+Alas, potential is one thing and delivery another. The ability to move the cup of investment potential to the lip of the bottom line is restricted by institutional and economic realities and, in some cases, by a lack of attention to the task. The institutional limitations are constraints either self-imposed or imposed by a principal. The economic realities are costs. These costs take many forms, but the largest costs and the costs most dependent on the investment manager's actions stem from trading. The world of return, risk, and cost is not well understood and is a significant challenge in advancing the theory of portfolio management. This chapter describes a strategic framework for thinking about and analyzing costs or, more broadly, implementation losses. I use the notions of covariance and correlation that are central in the study of risk and return and have been effectively exploited by Clarke, de Silva, and Thorley (2002,2005) in their study of implementation efficiency.
 
----
+The information ratio is key to measuring active investment potential. However, analysts should not concentrate on the information ratio to
 
-```python
-import itertools
-import random
-import time
-from functools import lru_cache
+\footnotetext{
+1. This chapter originally appeared as "Implementation Efficiency" by Richard Grinold in the September/ October 2005 issue of the Financial Analysts Journal.
+}
 
-# ----------------------------------------------
-# 1. Generalized t‑Subset Extraction (Cached)
-# ----------------------------------------------
-@lru_cache(maxsize=None)
-def get_ticket_t_subsets(ticket, t):
-    """
-    Given a ticket (a tuple of sorted numbers), compute all bitmask representations
-    of its t-number subsets. (Works for any t with ticket size k >= t.)
-    """
-    subsets_bitmasks = []
-    for subset in itertools.combinations(ticket, t):
-        mask = 0
-        for num in subset:
-            mask |= 1 << (num - 1)
-        subsets_bitmasks.append(mask)
-    return tuple(subsets_bitmasks)
+the exclusion of our investment objective. As the objective, I use the active management version of mean-variance utility that consists of portfolio alpha minus two penalties-one for active risk and one for implementation costs. This objective is variously called "risk-adjusted alpha" or "certaintyequivalent alpha." I concentrate on the effect of constraints and costs on the objective value. The objective and the information ratio are linked since the strategy that maximizes risk adjusted-alpha in a constraint- and cost-free environment also has a maximum information ratio. When there are costs and constraints, that linkage breaks down, but happily, my work can characterize the impact of costs and constraints on both the objective and the information ratio.
 
-# ----------------------------------------------
-# 2. Universe Generation: All t‑Subsets as Bitmasks
-# ----------------------------------------------
-def generate_universe(n, t):
-    """
-    Generate the universe of all t‑element subsets (as bitmasks) from numbers 1 to n.
-    """
-    universe = set()
-    for comb in itertools.combinations(range(1, n+1), t):
-        mask = 0
-        for num in comb:
-            mask |= 1 << (num - 1)
-        universe.add(mask)
-    return universe
+The two barriers to implementation efficiency are opportunity costs and implementation costs. Opportunity costs are the loss in benefits an investor would anticipate if the investor were not limited by constraints or deterred from acting by the presence of trading costs. Implementation losses are associated with the transactions that the investor attempts. These losses include the direct cost of trading, anticipated market impact, and the estimated losses associated with trades attempted but not completed. This article presents a model for the loss of value added with and without the consideration of implementation costs.
 
-# ----------------------------------------------
-# 3. Candidate Validity Check (Updated Criteria)
-# ----------------------------------------------
-def is_valid_candidate(ticket):
-    """
-    Check if a candidate ticket (a tuple of numbers) meets the following criteria:
-      1. The sum is between 140 and 190 (inclusive).
-      2. There are at least 2 odd numbers and at most 4 odd numbers.
-      3. There are at least 2 numbers smaller than 25 and at most 4 such numbers.
-    """
-    total = sum(ticket)
-    if not (140 <= total <= 190):
-        return False
+\subsection*{Preview}
 
-    odd_count = sum(1 for num in ticket if num % 2 == 1)
-    if odd_count < 2 or odd_count > 4:
-        return False
+In section 2 we introduce notation and terminology and present the general results before implementation costs. Section 3 offers one method for allocating opportunity loss between the trading costs and constraints and, in general between any number of costs or constraints. Section 4 considers results on an after-implementation cost basis. With the aid of several assumptions, section 4 describes a model that extends the general results of section 2. The exposition tends toward the technical; however, the reader can be assured that most of the theoretical development is left to the Appendix to Chapter $8 .^{2}$
 
-    small_count = sum(1 for num in ticket if num < 25)
-    if small_count < 2 or small_count > 4:
-        return False
+\footnotetext{
+2. Note that this chapter and Chapter 8, "Dynamic Portfolio Analysis," share the Appendix that follows Chapter 8.
+}
 
-    return True
+\section*{2. General Results: Before Costs}
 
-# ----------------------------------------------
-# 4. Uniform Candidate Ticket Generation (with Filtering)
-# ----------------------------------------------
-def random_valid_candidate_ticket(n, k, max_attempts=1000):
-    """
-    Generate one candidate ticket uniformly at random that meets our validity criteria.
-    
-    Args:
-        n (int): Total numbers (e.g., 49).
-        k (int): Ticket size (e.g., 6).
-        max_attempts (int): Maximum attempts to generate a valid candidate.
-        
-    Returns:
-        tuple or None: A sorted tuple representing the candidate ticket if found; otherwise, None.
-    """
-    numbers = list(range(1, n+1))
-    for _ in range(max_attempts):
-        candidate = tuple(sorted(random.sample(numbers, k)))
-        if is_valid_candidate(candidate):
-            return candidate
-    return None
+\subsection*{Notation and Terminology}
 
-def generate_valid_candidates(n, k, sample_size, max_total_attempts=10000):
-    """
-    Generate a list of candidate tickets (of size sample_size) uniformly at random
-    that fulfill the validity criteria.
-    
-    Args:
-        n (int): Total numbers.
-        k (int): Ticket size.
-        sample_size (int): Number of candidate tickets to generate.
-        max_total_attempts (int): Maximum total attempts to generate candidates.
-    
-    Returns:
-        list: A list of candidate tickets (each as a tuple).
-    """
-    candidates = []
-    attempts = 0
-    while len(candidates) < sample_size and attempts < max_total_attempts:
-        attempts += 1
-        candidate = random_valid_candidate_ticket(n, k, max_attempts=100)
-        if candidate is not None:
-            candidates.append(candidate)
-    return candidates
+We'll have a brief review of some concepts introduced in prior chapters. We consider a universe of $N$ assets and indicate active positions as holdings vectors, $\mathbf{x}=\left\{x_{1}, x_{2}, \ldots, x_{N}\right\}$ and $\mathbf{y}=\left\{y_{1}, y_{2}, \ldots, y_{N}\right\}$ respectively for positions $X$ and Y. These will be called both positions and portfolios. There is no requirement that the positions be nonnegative or to sum to either one or zero. Risk is measured with an $N$ by $N$ covariance matrix V . The risk of position $X$ is $\omega_{X}=\sqrt{\mathbf{x}^{\prime} \cdot \mathbf{V} \cdot \mathbf{x}}$, and the respective covariance and correlation of positions $X$ and $Y$ are given by by:
+$$
+\begin{equation*}
+\omega_{X, Y}=\mathbf{x}^{\prime} \cdot \mathbf{V} \cdot \mathbf{y}=\omega_{X} \cdot \rho_{X, Y} \cdot \omega_{Y} \tag{1}
+\end{equation*}
+$$
 
-# ----------------------------------------------
-# 5. Evaluation of a Candidate Ticket
-# ----------------------------------------------
-def evaluate_candidate(ticket, universe, t):
-    """
-    Evaluate a candidate ticket by counting how many of its t‑subsets are still in the universe.
-    
-    Args:
-        ticket (tuple): A candidate ticket (tuple of numbers).
-        universe (set): The current set of uncovered t‑subset bitmasks.
-        t (int): The size of the subsets to cover.
-        
-    Returns:
-        tuple: (ticket, count, list of covered t‑subset bitmasks)
-    """
-    subsets = get_ticket_t_subsets(ticket, t)
-    covered = [subset for subset in subsets if subset in universe]
-    return (ticket, len(covered), covered)
+The forecast of exceptional asset return is $\alpha=\left\{\alpha_{1}, \alpha_{2}, . ., \alpha_{N}\right\}$. With this we can calculate the alpha of any position $P$ as $\alpha_{P}=\boldsymbol{\alpha}^{\prime} \cdot \mathbf{p}$. The information ratio of the position $P$ is $I R_{P}=\alpha_{P} / \omega_{P}$.
 
-# ----------------------------------------------
-# 6. Helper: List Numbers in a Bitmask
-# ----------------------------------------------
-def bits_set(mask):
-    """
-    Return the list of numbers (1-indexed) corresponding to bits set in the given mask.
-    """
-    result = []
-    pos = 1
-    while mask:
-        if mask & 1:
-            result.append(pos)
-        mask >>= 1
-        pos += 1
-    return result
+Our precost investment criterion is risk adjusted or certainty equivalent alpha. For position $P$ it is:
+$$
+\begin{equation*}
+U_{P}=U(\alpha, \mathrm{p}) \equiv \alpha_{P}-\frac{\lambda}{2} \cdot \omega_{P}^{2} . \tag{2}
+\end{equation*}
+$$
 
-# ----------------------------------------------
-# 7. Build the Lottery Wheel (Single‑Threaded, Uniform Candidate Generation)
-# ----------------------------------------------
-def build_lottery_wheel(n=49, k=6, t=5, sample_size=2000):
-    """
-    Build a lottery wheel that covers all t‑element subsets of {1,...,n} using tickets of size k.
-    Candidate tickets are generated uniformly at random and must meet the criteria:
-      - Sum between 140 and 190.
-      - At least 2 odd numbers and at most 4 odd numbers.
-      - At least 2 numbers less than 25 and at most 4 numbers less than 25.
-      
-    Parameters:
-        n: Total numbers (default 49).
-        k: Ticket size (default 6).
-        t: Subset size to cover (default 5).
-        sample_size: Number of candidate tickets generated per iteration.
-        
-    Returns:
-        list: A list of selected tickets (each as a tuple).
-    """
-    print(f"Generating universe of all {t}-element subsets from 1 to {n}...")
-    start_time = time.time()
-    universe = generate_universe(n, t)
-    print(f"Universe has {len(universe)} subsets. Generated in {time.time()-start_time:.2f} seconds.\n")
-    
-    wheel = []  # List to hold the selected tickets.
-    iteration = 0
-    
-    while universe:
-        iteration += 1
-        best_candidate = None
-        best_count = 0
-        best_covered = []
-        
-        # Generate a pool of candidate tickets that meet our criteria.
-        candidates = generate_valid_candidates(n, k, sample_size)
-        
-        for candidate in candidates:
-            ticket, count, covered = evaluate_candidate(candidate, universe, t)
-            if count > best_count:
-                best_candidate = candidate
-                best_count = count
-                best_covered = covered
-                # Maximum possible coverage for a ticket is C(k, t)
-                if best_count == len(get_ticket_t_subsets(candidate, t)):
-                    break
-        
-        if best_candidate is None:
-            print("No candidate found that covers any new subsets. Exiting loop.")
-            break
-        
-        wheel.append(best_candidate)
-        for subset in best_covered:
-            universe.discard(subset)
-        
-        print(f"Iteration {iteration}: Selected ticket {best_candidate} covering {best_count} subsets. Universe remaining: {len(universe)}")
-    
-    return wheel
+The second term in Equation (2) is a penalty for active variance. For example, with $\lambda=20$, and risk levels, $\omega_{P}$, of $1 \%, 2 \%, 3 \%$, and $4 \%$, there would be respective adjustment to the alpha of $0.10 \%, 0.40 \%, 0.90 \%$, and $1.60 \%$.
 
-# ----------------------------------------------
-# 8. Main Function to Run the Code
-# ----------------------------------------------
-def main():
-    # Parameters for a typical lottery wheel:
-    # n = 49 (numbers 1..49), k = 6 (ticket size), t = 5 (cover all 5‑element subsets)
-    n = 49
-    k = 6
-    t = 5
-    sample_size = 2000  # Adjust as needed for candidate pool size
-    
-    print("Building lottery wheel using uniformly generated candidate tickets that meet specific criteria...\n")
-    wheel = build_lottery_wheel(n, k, t, sample_size)
-    
-    print("\nFinal lottery wheel with", len(wheel), "tickets:")
-    for ticket in wheel:
-        print(ticket)
+The ideal position attains the maximum of Equation (2). This optimal position is referred to as portfolio $Q$. The direct link between $Q$ and the forecast $\alpha$ is:
+$$
+\begin{equation*}
+\alpha=\lambda \cdot V \cdot q . \tag{3}
+\end{equation*}
+$$
 
-if __name__ == '__main__':
-    main()
-```
+Portfolio $Q$ captures the alphas in portfolio form.
+$$
+\begin{align*}
+& \text { (i.) } U_{Q}=\frac{\lambda}{2} \cdot \omega_{Q}^{2} \\
+& \text { (ii.) } I R \equiv \sqrt{\alpha \cdot V^{-1} \cdot \alpha}=I R_{Q} \geq I R_{P} \text { for any } P \\
+& \text { (iii.) } I R=\lambda \cdot \omega_{Q} \Rightarrow U_{Q}=\frac{I R^{2}}{2 \cdot \lambda} .  \tag{4}\\
+& \text { (iv.) } U_{P}=U_{Q}-\frac{\lambda}{2} \cdot \omega_{Q-P}^{2}
+\end{align*}
+$$
 
----
+\subsection*{Important Attributes}
 
-### Explanation
+Equation (4) describes properties of the ideal position Q. Our task is to determine the properties of a less than optimal position $P$. For any strategy $P$ there are two measures that help explain the level of implementation efficiency. These measures link position $P$ with the ideal position $Q$; they compare where we are with where we would like to be.
 
-1. **Subset Extraction & Universe Generation:**  
-   - The function `get_ticket_t_subsets` (with caching) computes all \(t\)-element subsets of a ticket and represents them as bitmasks.
-   - The function `generate_universe` builds the full set of \(t\)-element subsets (as bitmasks) from numbers 1 to \(n\).
+The first attribute is the transfer coefficient. In general, the correlation between any two positions, say, $X$ and $Y$, is $\rho_{X, Y}$. The transfer coefficient of portfolio $X$ is thus $\rho_{X, Q}$.
 
-2. **Candidate Validity:**  
-   - The `is_valid_candidate` function checks that a ticket’s sum lies between 140 and 190, contains between 2 and 4 odd numbers, and between 2 and 4 numbers less than 25.
+The backlog, $B$, is the difference between a favored position, in this case $Q$, and the actual implementation $P ; \mathbf{b}=\mathbf{q}-\mathbf{p}$ is the trade required to transform $P$ into $Q$. The second attribute is the variance of the backlog position:
+$$
+\begin{equation*}
+\omega_{Q-P}^{2} \equiv \omega_{Q}^{2}-2 \cdot \omega_{P, Q}+\omega_{P}^{2}=\omega_{B}^{2} . \tag{5}
+\end{equation*}
+$$
 
-3. **Candidate Generation:**  
-   - The function `random_valid_candidate_ticket` generates a single ticket uniformly at random and returns it if it meets the criteria.
-   - The function `generate_valid_candidates` repeatedly calls the above function until it collects a pool of valid candidate tickets.
+We will also use the beta of portfolio $P$ with respect to $Q$ :
+$$
+\begin{equation*}
+\beta_{P}=\frac{\omega_{P, Q}}{\omega_{Q}^{2}}=\rho_{P, Q} \cdot \frac{\omega_{P}}{\omega_{Q}} . \tag{6}
+\end{equation*}
+$$
 
-4. **Evaluation and Greedy Selection:**  
-   - The function `evaluate_candidate` determines how many uncovered \(t\)-subsets (bitmasks) a candidate ticket would cover.
-   - The greedy loop in `build_lottery_wheel` selects the candidate that covers the most uncovered subsets, adds it to the wheel, and removes its covered subsets from the universe.
+\subsection*{Results}
 
-5. **Uniform Candidate Generation:**  
-   - No frequency weighting is used—the candidate tickets are generated uniformly at random.
+The first result links the portfolio's information ratio, $I R_{P}$, to the maximal attainable information ratio, $I R$, introduced in Equation (4). For any position $P$ :
+$$
+\begin{equation*}
+I R_{P} \equiv \frac{\alpha_{P}}{\omega_{P}}=\rho_{P, Q} \cdot I R \tag{7}
+\end{equation*}
+$$
+where $\rho_{P, Q}$ is transfer coefficient. Our ability to implement effectively is proportional to our degree of alignment with $Q$.
 
-Feel free to adjust parameters such as `n`, `k`, `t`, and `sample_size` as needed. This version builds your lottery wheel using uniformly generated candidates that meet your specified criteria. Happy coding!
+We can split position $P$ into two parts, one part that is aimed directly at alpha and a second, residual part, call it $R$, that has no alpha.
+$$
+\begin{equation*}
+\mathbf{p}=\beta_{P} \cdot \mathbf{q}+\mathbf{r}, \quad \beta_{P}=\frac{\omega_{\mathrm{Q}, P}}{\omega_{\mathrm{Q}}^{2}} . \tag{8}
+\end{equation*}
+$$
+
+Position $R$ is by construction uncorrelated with $Q$, so from Equation (3) the alpha of position $R$ is zero, $\boldsymbol{\alpha}^{\prime} \cdot \mathbf{r}=0$. We also see from Equation (8) that the variance of the residual $R$ is is:
+$$
+\begin{equation*}
+\omega_{R}^{2}=\left(1-\rho_{P, Q}^{2}\right) \cdot \omega_{P}^{2} \tag{9}
+\end{equation*}
+$$
+
+Thus, a fraction $\rho_{P, Q}^{2} \cdot \omega_{P}^{2}$ of the variance of $P$ is devoted to the pursuit of alpha while the residual variance $\omega_{R}^{2}$ is risk without expected reward.
+
+The difference, $U_{Q}-U_{P}$, as the opportunity loss, is proportional to the variance of the backlog position.
+$$
+\begin{align*}
+& L_{P} \equiv \frac{\lambda}{2} \cdot \omega_{Q-P}^{2} \text { opportunity loss for portfolio } P  \tag{10}\\
+& L_{P}=U_{Q}-U_{P} .
+\end{align*}
+$$
+
+Note that Equation (10) can be rearranged as:
+$$
+\begin{equation*}
+\frac{U_{P}}{U_{Q}}=1-\frac{\omega_{Q}^{2}-P}{\omega_{Q}^{2}} \leq \rho_{P, Q}^{2} \tag{11}
+\end{equation*}
+$$
+
+The equality follows directly from Equation (10) and item (i.) in Equation (4). The inequality follows by fixing the transfer coefficient and then choosing the value of the ratio $\omega_{P} / \omega_{Q}$ that maximizes the right-hand side of Equation (12).
+
+Equation (11) is depressing news. We can think of a transfer coefficient of $\rho_{P, Q}=0.7$ as operating at $70 \%$ efficiency. However, as Equation (11) points out, the consequences of that $70 \%$ efficiency for potential added are dire; $70 \%$ efficiency limits us to at most $49 \%$ of the potential value added before dealing with transactions cost. From Equation (9) it means that 51\% of the position's variance is not linked to any expected alpha.
+
+\subsection*{Example}
+
+Exhibit 1 is based on a comparison between a portfolio $Q$ that is optimal without constraints and a portfolio $P$ that is optimal with a long-only constraint. The exhibit shows how the transfer coefficient depends on the volatility, $\omega_{p}$, of an optimal portfolio constrained to be long only. In this case we have done side-by-side comparisons with the average risk of the individual assets increasing from $15 \%$ to $35 \%$. Position sizes tend to be inversely related to volatility, thus with the high-volatility assets we bump into the long-only restriction less often.
+
+EXHIBIT 1 Transfer Coefficient Link to Long-Only Investing for Different Asset Volatility Levels and Different Levels of Active Risk
+![](https://cdn.mathpix.com/cropped/2025_02_02_0861021df5aad4db42beg-143.jpg?height=658&width=1140&top_left_y=649&top_left_x=177)
+
+\subsection*{Ex Ante and Ex Post}
+
+Our results are expressed in terms of ex ante (forecasted) information ratios and predictions of risk-adjusted returns. One can examine these criteria on an ex post (realized) basis. However, this adds considerable noise to the process and raises a host of questions such as: "Our policy limiting large active positions in growth stocks reduces efficiency on an ex ante basis but actually helps on an ex post basis; does this mean our constraint improves implementation efficiency?" Questions such as this come in infinite variety. If one tries to limit an investment process in $K$ ways it will turn out that about $K / 3$ or maybe $K / 4$ help on an ex post basis. Is this meaningful? Maybe, but this should be considered a backhanded form of data mining until proven innocent.
+
+A more judicious course is to establish a prior hypothesis, something like, "Our most extreme forecasts for growth stocks are more likely to be based on a false premise." Then take steps to dig deeper on extreme forecasts
+for growth stocks or rein in the alphas in a more formal manner; in other words, identify the problem, verify that it exists, and attack the problem at its source.
+
+\section*{3. Allocation of Opportunity Loss to Constraints and Trading Costs}
+
+In the previous section we saw how the opportunity loss was equal to the risk penalty applied to the backlog portfolio, Equation (10). That answers the aggregate question. In this section we address a more difficult question. If there are several reasons, say transactions costs and constraints, that cause the opportunity loss, then how do we parcel out the losses to the various sources? There is no totally satisfactory way to do this. We'll present one approach following the notion that it is better to light a candle than to curse the dark.
+
+The approach is general and consistent although a bit on the light side theoretically in that it uses the marginal cost of the constraints and transactions cost to calculate their total impact. In the absence of anything better we can use it while remaining aware of the potential limitations.
+
+We'll turn to a portfolio optimization process that we assume was used to produce the position $P$.
+
+Let's write the optimization problem as:
+$$
+\begin{align*}
+& \text { Maximize } \alpha^{\prime} \cdot \mathrm{p}-\frac{\lambda}{2} \cdot \mathrm{p}^{\prime} \cdot \mathrm{V} \cdot \mathrm{p}-c(\mathrm{p}, \mathrm{z})  \tag{12}\\
+& \text { subject to the constraints } \mathrm{A} \cdot \mathrm{p} \leq \mathrm{d}
+\end{align*}
+$$
+
+Where:
+- Portfolio Z with holdings $\mathbf{z}$ is the initial position,
+- $c(\mathrm{p}, \mathrm{z})$ is the cost of moving from z to p , and
+- $\mathbf{A} \cdot \mathbf{p} \leq \mathrm{d}$ are the constraints, including upper and lower bounds.
+- The objective is called $O_{P}=U_{P}-c_{P}$ for short.
+
+We can write the objective as:
+$$
+\begin{align*}
+& \mathrm{O}_{P}=U_{Q}-\left\{\frac{\lambda}{2} \cdot \omega_{Q-P}^{2}+c_{P-Z}\right\} \\
+& \Delta \mathrm{O}_{P}=\mathrm{O}_{P}-\mathrm{O}_{Z}=\frac{\lambda}{2} \cdot \omega_{Q-Z}^{2}-\left\{\frac{\lambda}{2} \cdot \omega_{Q-P}^{2}+c_{P-Z}\right\} \tag{13}
+\end{align*}
+$$
+
+We see from Equation (13) that the optimization is minimizing opportunity loss plus the direct $\operatorname{cost} c_{P-Z}$.
+
+We can with a few reservations split the opportunity loss term into losses caused by constraints and the intimidation of trading cost. If there are several constraints and multiple sources of cost (e.g., spread and market impact), then we can use the concept described below to allocate the opportunity loss among the several sources. The first-order conditions from the portfolio optimization provide the key.
+
+The first-order conditions are a valuable by-product of any optimization. They are a generalization of the rule "set the derivative equal to zero." After some manipulation the first-order conditions will yield an equation for each asset, thus $N$ equations. For problem (12) these may be written as:
+$$
+\begin{equation*}
+\alpha=\lambda \cdot \mathrm{V} \cdot \mathrm{p}+\nabla c(\mathrm{p}, \mathrm{z})+\mathrm{A}^{\prime} \cdot v \tag{14}
+\end{equation*}
+$$
+
+The expression $\nabla c(\mathbf{p}, \mathbf{z})$ represents the marginal transactions cost. ${ }^{3}$ This is positive if buying and negative if selling. The second expression, $\mathrm{A}^{\prime} \cdot v$, relates to the constraints, $\mathbf{A} \cdot \mathbf{p} \leq \mathbf{d}$. The vector $\mathbf{d}$ is a vector of scarce resources. If there are $J$ constraints, then $v \geq 0$ is a $J$ element vector, called the Lagrange multiplier or dual variable, that captures the marginal value of increasing the scarce resources. ${ }^{4}$ The expression $\mathrm{A}^{\prime} \cdot v$ is a vector, one element for each asset. Note that Equation (3) is the same as Equation (14) when there are no constraints or transactions costs.
+
+Here are three ways to interpret Equation (14):
+- If we had started with alpha equal to $\alpha-\left\{\nabla c(\mathbf{p}, \mathbf{z})+\mathbf{A}^{\prime} \cdot v\right\}$ and ignored both constraints and trading costs, we would find $P$ as our optimal position.
+- If we had started with alpha equal to $\alpha-\mathrm{A}^{\prime} \cdot v$ and ignored constraints, we would find $P$ as our optimal position.
+- If we had started with alpha equal to $\alpha-\nabla c(\mathbf{p}, \mathbf{z})$ and ignored trading costs, we would find $P$ as our optimal position.
+
+We can think of Equation (14) as an allocation of alpha. A portion of the alphas, $\mathrm{A}^{\prime} \cdot v$ is allocated to the constraints and a portion $\nabla c(\mathbf{p}, \mathbf{z})$ is allocated to the transactions costs; $\lambda \cdot \Omega \cdot \mathrm{p}$ is left for portfolio $P$.
+
+We can take a lesson from Equation (3), $\alpha=\lambda \cdot \mathbf{V} \cdot \mathbf{q}$, and express the marginal transactions costs and the marginal cost of the constraints in terms of asset positions:
+$$
+\begin{align*}
+& \nabla c(\mathrm{p}, \mathrm{z})=\lambda \cdot \mathrm{V} \cdot \mathrm{k} \\
+& \mathrm{~A}^{\prime} \cdot \mathrm{v}=\lambda \cdot \mathrm{V} \cdot \mathrm{f} \tag{15}
+\end{align*}
+$$
+
+With the definitions in Equation (15) we can associate a cost position $K$ with holdings $k$ and a constraint position $F$ (for force) with holdings $\mathbf{f}$. ${ }^{5}$ If we combine Equation (15) with Equation (3), then Equation (14) reads as:
+$$
+\begin{align*}
+& q=p+k+f \text { or } \\
+& q-p=k+f \text { the backlog. } \tag{16}
+\end{align*}
+$$
+
+\footnotetext{
+3. If the optimization also includes accounting constraints $\mathbf{p}-$ buys + sells $=\mathbf{z}$, with buys and sells required to be nonnegative, then the dual variable for the accounting constraints is the $\nabla_{c}(\mathbf{p}, \mathbf{z})$ required in Equation (22).
+4. Think of $v_{j}$ as the partial of the optimal value with respect to changes in the constraint level $d_{j} ; \frac{\partial O_{P}}{\partial d_{j}}$.
+5. There are too many c-words, cost constraint, etc. Thus, for the transactions cost we use $K$ and for the constraints, $F$, for force.
+}
+
+The positions $K$ and $F$ have alphas and risks. Indeed, the variances, $\omega_{K}^{2}=\mathbf{k}^{\prime} \cdot \mathbf{V} \cdot \mathbf{k}, \omega_{F}^{2}=\mathbf{f}^{\prime} \cdot \mathbf{V} \cdot \mathbf{f}$ and the covariance $\omega_{K, F}=\mathbf{f}^{\prime} \cdot \mathbf{V} \cdot \mathbf{k}$ are the two parts of the backlog and play a key role in the allocation of opportunity loss. Equation (16) tells us that the backlog, $B=Q-P$ is made up as a cost portion k and a constraint portion f .
+
+The opportunity loss is:
+$$
+\begin{equation*}
+L_{P}=U_{Q}-U_{P}=\frac{\lambda}{2} \cdot \omega_{Q-P}^{2}=\frac{\lambda}{2} \cdot \omega_{F+K}^{2}=\frac{\lambda}{2} \cdot\left\{\omega_{F}^{2}+2 \cdot \omega_{K, F}+\omega_{K}^{2}\right\} \tag{17}
+\end{equation*}
+$$
+
+The expression above can be conveniently split, Solomon fashion, as:
+$$
+\begin{equation*}
+L_{P}=\frac{\lambda}{2} \cdot\left\{\omega_{F}^{2}+\omega_{F, K}\right\}+\frac{\lambda}{2} \cdot\left\{\omega_{F, K}+\omega_{K}^{2}\right\} . \tag{18}
+\end{equation*}
+$$
+
+We attribute the opportunity loss $\lambda \cdot\left\{\omega_{F}^{2}+\omega_{F, K}\right\} / 2$ to the constraints and the opportunity loss $\lambda \cdot\left\{\omega_{F, K}+\omega_{K}^{2}\right\} / 2$ to the trading costs.
+
+To look at the value added by rebalancing from the initial portfolio $Z$ to $P$ we have:
+$$
+\begin{equation*}
+O_{P}-U_{Z}=\left\{L_{Z}-L_{P}\right\}-c_{P-Z} \tag{19}
+\end{equation*}
+$$
+
+The benefit of the move from $Z$ to $P$ is reducing the opportunity loss weighted against the cost, $c_{P-Z}$, of moving from $Z$ to $P$.
+
+There is an example of this approach in Chapter 12, the introduction to the section on portfolio analysis. For another example see the article "Attribution of Performance and Holdings" by Grinold and Easton (1998).
+
+\section*{4. Specific Model: After-Cost Results}
+
+Under special circumstances we can obtain analytic after-cost results for both the information ratio and the objective. This requires a few sacrifices. Since we recall that the hunter who chases two rabbits won't catch either, we'll focus on problems with transactions cost and no constraints. In addition, we'll assume that the costs have a special structure that, although reasonable, is at best an approximation of actual costs. The price we pay for this rough approximation is rewarded by the ability to see the problem completely. It is an illustrative result that shines a beam of light into an otherwise dark space. It does not turn the lights on.
+
+Trading costs influence implementation efficiency in two ways. There is the direct loss in terms of spread and market impact, and indirect opportunity loss due to intimidation. The mere threat of trading costs deters us from trading and opportunities slip by. When costs are extremely high, we don't attempt any trades, and all is lost through intimidation.
+
+To develop after-cost results requires additional notation. Let $c_{P}$ be the annual costs (more on this below) for trading position $P$. Our goal is to explore the risk-adjusted return after costs discussed above and the aftercost information ratio, ACIR.
+$$
+\begin{align*}
+& \mathrm{O}_{P}=\alpha_{P}-\frac{\lambda}{2} \cdot \omega_{P}^{2}-c_{P}=U_{P}-c_{P}=U_{Q}-\left\{L_{P}+c_{P}\right\} \\
+& \text { ACIR }_{P}=\frac{\alpha_{P}-c_{P}}{\omega_{P}} \tag{20}
+\end{align*}
+$$
+
+The ACIR is handy since it is a good metric for comparing strategies for different risk levels. The numerator is expected performance, and the larger the $A C I R$ the smaller the probability of a down year.
+
+In section 2, we compared the zero-cost strategy $Q$ that is optimal with no costs or constraints with any strategy $P$. In this section, in contrast, we compare $Q$ with a strategy $P$ that is optimal with costs considered. The results, at least with respect to the investment criterion, can be considered as an upper bound on what might be achieved by any strategy.
+
+We need four parameters to describe the environment:
+$I R$ the strength of the information
+$\lambda$ a penalty for active variance
+$g$ the arrival rate of new information
+$\chi$ a parameter to measure the cost level
+We are already familiar with the information ratio and the penalty for active variance. The new characters are the arrival rate of information, $g$, and the cost parameter, $\chi$.
+
+New information is constantly arriving, and old information is getting stale. We will assume that information flows in at more or less the same rate as it loses its forecasting power. The parameter $g$ measures this rate. Another way to think of it is that $1 / g$ is the average age of the information in the system. The half-life of the information, denoted $H L$, is related to the arrival rate $g$ by $g \cdot H L=\log (2)$.
+
+\subsection*{The Cost Model}
+
+If we slice the year up into small periods of length $\Delta t=1 / 252$ then we can measure the rate of trading at any time through the measure:
+$$
+\begin{equation*}
+\dot{\mathbf{p}}(t)=\frac{\mathbf{p}(t)-\mathbf{p}(t-\Delta t)}{\Delta t} . \tag{22}
+\end{equation*}
+$$
+
+Don't miss the dot over the $\mathbf{p}$ in the left-hand side of Equation (22). This indicates a time derivative. We measure the size of this trading rate using its expected variance that we call $\omega_{\dot{P}}^{2}$ (again note the dot) where:
+$$
+\begin{equation*}
+\omega_{\dot{P}}^{2} \equiv E\left\langle\dot{\mathbf{p}}^{\prime}(t) \cdot \mathbf{V} \cdot \dot{\mathbf{p}}(t)\right\rangle \tag{23}
+\end{equation*}
+$$
+
+Our assumption is that the annual transactions costs are proportional to the expected variance (i.e., size squared) of the trading rate.
+$$
+\begin{equation*}
+c_{P}=\frac{\chi}{2} \cdot \omega_{\dot{p}}^{2} \tag{24}
+\end{equation*}
+$$
+
+This is a crude and a convenient approximation. It is crude since it is a rough approximation of reality. It is convenient in that it affords an extraordinary harvest of insight into the dynamics of portfolio management. Rough as the assumption, Equation (24), might be, it does capture some basic points about trading costs:
+- Costs are superlinear. Double the rate of trading, and you will more than double the cost of trading.
+- Riskier assets are generally more expensive to trade than less risky assets.
+- A hedged basket of securities, say, balanced by industry, is cheaper to trade than an unhedged basket.
+- The measure compares well at the portfolio level with costs calculated with a customized transactions cost model. ${ }^{6}$
+
+What is a range of reasonable values for $\chi$ ? Is 0.001 or 1000.0 an appropriate value? For reasons that we'll explain below, $\lambda /\left\{4 \cdot g^{2}\right\}$ is a sensible starting point. Thus with $\lambda=30$ and $g=2.77$ we have $\chi=0.978$.
+
+\footnotetext{
+6. See Keim and Madhavan (1996).
+}
+
+\subsection*{Optimization}
+
+The objective in our optimization, $\mathrm{O}_{P}$, is the value added, $U_{P}$, less the annual transactions costs, $c_{P}$.
+$$
+\begin{equation*}
+\mathrm{O}_{P}=U_{P}-c_{P} . \tag{25}
+\end{equation*}
+$$
+
+The Appendix outlines the development and solution of the model. There are two decisions we have to make:
+- How risky do we want the portfolio to be, $\omega_{p}$ ?
+- How fast do we want to trade the portfolio, $\omega_{\dot{p}}$ ?
+
+If we choose the risk level and trading rate to maximize the value added net of annual costs, Equation (25), then the strategy is specified and we can examine its properties. It turns out these properties are determined by a parameter we will call psi, $\psi$. The parameter psi takes on values between zero and one.
+
+In this simple model the transfer coefficient is the square root of psi. Recall from our general discussion-see Equation (9) and the commentary that follows-that the square of the transfer coefficient is the fraction of portfolio $P$ 's variance devoted to the pursuit of alpha. In addition, in Equation (11) the square of the transfer coefficient gives us an upper bound on the fraction of value added we can attain with portfolio $P$.
+
+
+
+The optimal value of psi is:
+$$
+\begin{equation*}
+\psi=\frac{\lambda}{\lambda+g \cdot \sqrt{\lambda \cdot \chi}}=\rho_{P, Q}^{2} . \tag{26}
+\end{equation*}
+$$
+
+With this we can determine the basic properties of the optimal solution. Recall that $U_{Q}$ is the value added for the optimal strategy with no consideration of costs and that $U_{Q}=I R^{2} /(2 \cdot \lambda)$. With that in mind the return, risk, and annual cost for the optimal position P are:
+$$
+\begin{array}{ll}
+\text { (i.) } & \alpha_{P}=2 \cdot \psi^{2} \cdot U_{Q} \\
+\text { (i.) } & \omega_{P}=\psi^{3 / 2} \cdot\{I R / \lambda\}  \tag{27}\\
+\text { (iii.) } & c_{P}=\{1-\psi\} \cdot \psi^{2} \cdot U_{Q}
+\end{array}
+$$
+
+Exhibit 2 contains a graph of these basic ingredients as costs, the parameter $\chi$, are increased. For this example we have $I R=1.75, \lambda=30$, and $g=2.77$.
+
+EXHIBIT 2 Annual Alpha and Transactions Cost as the Level of Cost is Increased
+![](https://cdn.mathpix.com/cropped/2025_02_02_0861021df5aad4db42beg-149.jpg?height=684&width=1144&top_left_y=861&top_left_x=175)
+
+In Exhibit 2 our willingness to commit to the strategy in terms of risk declines monotonically as cost is increased. We start at about $5.5 \%$ with very low cost and eventually decreasing to about $2.75 \%$. The projected alpha falls as well from a bit over $9.00 \%$ to about $3.5 \%$.
+
+The annual cost of implementing the strategy (plotted on the right axis) increases sharply at first, then peaks at about $0.75 \%$ and subsequently declines slowly. The story is a familiar one. At zero or very low cost we trade rapidly. As costs become more significant, we rein in the strategy by reducing risk and slowing down the trading. Eventually the response overwhelms the increase in cost and it leads to a net reduction in cost. The point where cost reaches a maximum is where the cost parameter chi is equal to $\chi=\lambda / 4 \cdot g^{2}$.
+
+At that point the psi, $\psi$, is equal to $2 / 3$ and the costs max out at $4 / 27$ of the potential value added $U_{Q}$. Details are in the appendix.
+
+Exhibit 3 shows the information ratio, before and after cost cost:
+
+EXHIBIT 3 The Effect of an Increasing Level of Transactions Cost on the Precost and Postcost Information Ratio
+![](https://cdn.mathpix.com/cropped/2025_02_02_0861021df5aad4db42beg-150.jpg?height=765&width=1140&top_left_y=362&top_left_x=179)
+
+Exhibit 4 shows the policy response to increasing costs: a decreasing level of risk, $\omega_{P}$, and decreasing turnover. We cannot measure turnover directly in this model, but the trade risk, $\omega_{\dot{P}}$, is an excellent surrogate for turnover.
+
+EXHIBIT 4 The Response of Risk and the Rate of Trading to Increasing Costs
+![](https://cdn.mathpix.com/cropped/2025_02_02_0861021df5aad4db42beg-150.jpg?height=677&width=1142&top_left_y=1402&top_left_x=176)
+
+Note in Exhibit 4 that trading decelerates rapidly at first and then decreases in lockstep with the strategy's risk and we get to reasonable levels of cost.
+
+Finally Exhibit 5 examines the response from a loss perspective. The exhibit shows the opportunity loss, dotted line, and the sum of the transactions cost and the opportunity loss, solid line. Although the annual transactions cost incurred by the strategy stay relatively flat as the parameter $\chi$ increases, the opportunity loss continues to mount.
+
+EXHIBIT 5 Opportunity Cost and Direct Transactions Costs as a Function of the Cost of Trading, $\chi$
+![](https://cdn.mathpix.com/cropped/2025_02_02_0861021df5aad4db42beg-151.jpg?height=763&width=1138&top_left_y=564&top_left_x=178)
+
+In this section we have presented a simple model of an investment strategy with costs and no constraints. The inputs are:
+- the ability to add value measured by the information ratio,
+- the risk penalty,
+- the rate at information flows into and out of the model, and
+- the size of the transactions costs.
+
+With this unadorned structure we can specify the optimal investment strategy in terms of
+- the level of risk in the strategy and
+- the rate of trading in the strategy.
+
+Finally, with this optimal policy we can analytically describe the characteristics of the optimal policy; see Equations (26) and (27).
+
+The model allows one to explore product design directly and rapidly. It is particularly useful in seeing how policy should adjust to changing circumstances such as a speeding up/slowing down of the information available, a decrease/increase in the information's value-added potential, or an increase/ decrease in transactions cost.
+
+\section*{5. Summary}
+
+This chapter established a framework for the study of implementation efficiency. We explained implementation efficiency within the portfolio analysis framework using constructions such as the backlog risk and the transfer coefficient to capture the essential nature of implementation drag. The framework relies on a comparison between an ideal and actual implementation called, respectively, $Q$ and $P$. The standard of comparison is alpha less a penalty for active variance.
+
+The results in section 2 are general. They compare any implementation with an ideal implementation without costs or constraints. The loss in objective value depends upon the risk of the trade needed to move from position $P$ to position $Q$ called the backlog. In addition, we confirm and generalize the notion of the transfer coefficient as a measure of the fraction of the precost information ratio that is being captured. Indeed, we show that the fraction of objective value that is captured is bounded above by the square of the transfer coefficient.
+
+In section 3 we showed how one could attribute opportunity loss to multiple sources and hopefully provide a clue on how implementation might be improved. The illustration is at the aggregate level but would work down to the level of individual constraints and bounds as well as splitting transactions cost into spread and market impact components.
+
+In section 4 we look at the case where there are costs and no constraints. We assume that transaction costs are proportional to the variance of the trade under consideration. Under this and other less heroic assumptions we are able to obtain simple expressions for implementation efficiency after costs. The model has a property that we have seen in more complicated backtests and simulations. Trading costs rise due to an increase in assets under management. The costs paid however will tend to stay roughly constant over a wide range. The portfolio management process responds by reducing active risk, reducing turnover, and slowing down the trading process. Thus, the bulk of the impact is opportunity loss and not in the costs actually paid.
+
+The efficient management of investment portfolios requires an ability to understand, measure, forecast, and manage risk, return, and costs. If we presume a return forecasting advantage, then implementation becomes a task of balancing that return advantage against the risks and costs incurred. The cost dimension is particularly difficult since cost, by its nature, is a dynamic phenomenon; costs are incurred through changes in positions. Thus, any insights we gain along the cost dimension must be accompanied by a dynamic theory of portfolio management. However, dynamic theories tend
+to be so highly specialized (a single asset or rebalancing to a fixed position) or so obscure, the classic "black box," that any potential insight is limited.
+
+\section*{References}
+
+Clarke, Roger, Harindra de Silva, and Steven Thorley. 2002. "Portfolio Constraints and the Fundamental Law of Active Management." Financial Analysts Journal, September/October.
+Clarke, Roger, Harindra de Silva, and Steven Thorley. 2005. "Performance Attribution and the Fundamental Law." Financial Analysts Journal 61 (5): 70-83. doi:10.2469/faj.v61.n5.2758.
+
+Grinold, Richard C. 2006. "A Dynamic Model of Portfolio Management." Journal of Investment Management 4(2): 5-22.
+Grinold, Richard C., and Ronald N. Kahn. 1995, 2000. Active Portfolio Management: Quantitative Theory and Applications. Probus Press. 2nd ed., McGraw Hill.
+Grinold, Richard C., and Ronald N. Kahn. 2000. "The Efficiency Gains of Long-Short Investing." Financial Analysts Journal 56 (November/ December ): 40-53.
+Grinold, Richard C., and Kelly Easton. 1998. "Attribution of Performance and Holdings." In Worldwide Asset and Liability Modeling, edited by J. Mulvey and W.T. Ziemba, Chapter 5, 87-113. Cambridge University Press.
+Keim, Donald B., and Ananth Madhavan. 1996. "The Upstairs Market for Large-Block Transaction: Analysis and Measurement of Price Effects." Review of Financial Studies 9: 1-36.
+Thorley, Steven. 2003. Private communication.
