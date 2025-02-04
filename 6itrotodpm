@@ -1,0 +1,648 @@
+\title{Introduction to the Dynamic Portfolio Management Section}
+
+This introduction covers the following five articles we have included in Section 2.1:
+- Richard C. Grinold. "Implementation Efficiency." Financial Analysts Journal 61, no. 5 (September-October 2005): 52-64.
+- Richard C. Grinold, "Dynamic Portfolio Analysis,"Journal of Portfolio Management 34, no. 1 (Fall 2007): 12-26.
+- Richard C. Grinold, "Signal Weighting," Journal of Portfolio Management 36, no. 4 (Summer 2010): 24-34.
+- Richard C. Grinold. "Linear Trading Rules for Portfolio Management," Journal of Portfolio Management 44, no. 6, (2018), Special Issue Dedicated to Stephen A. Ross, 109-19.
+- Richard C. Grinold, "Nonlinear Trading Rules for Portfolio Management," Journal of Portfolio Management 45, no. 1 (Fall 2018): 62-70.
+
+The "Dynamic Portfolio Analysis" paper won the 2009 Bernstein Fabozzi/ Jacobs Levy Award for the best article appearing in volume 34 of the Journal of Portfolio Management.
+
+This introduction will also summarize results from a related article we haven't included in the book for reasons of space and overlap:
+- Richard C. Grinold, "A Dynamic Model of Portfolio Management," Journal of Investment Management 4, no. 2 (2006): 5-22.
+
+Transactions costs are the result of motion. Any analysis of the direct and indirect effects of transactions costs on performance must focus on the
+dynamics of portfolio management. This section is an attempt to understand and control a portfolio as an object in motion.
+
+The first two articles, "Implementation Efficiency" and "Dynamic Portfolio Analysis," strive for strategic understanding-the big picture. They use a simple model that yields analytical expressions for measures of portfolio risk, expected performance, cost, and more. This makes the dynamic model an excellent vehicle for investigating a strategy and asking questions such as: "What is the effect of lowering cost by $10 \%$ ?" "What is the right rate of trading for this portfolio?" "What happens if I trade too quickly or too slowly?"
+
+The second set of articles, "Signal Weighting," "Linear Trading Rules for Portfolio Management," and "Nonlinear Trading Rules for Portfolio Management," consider operational issues. The five are united by a focus on the dynamic perspective.
+
+Before we start, a warning. Reading the articles is seeing an idea develop and mature. It is not an altogether pretty picture. The notation, terminology, and author evolved along with the ideas. ${ }^{1}$ For this reason, the reader would be well advised to go through this introduction before diving into the details. We have included a series of exercises to keep the reader on course and illustrate the richness of the results.
+
+Our initial investigation into the dynamic aspects of portfolio management relies on a tool called linear-quadratic dynamic programming (LQDP). It is also known as linear-quadratic control theory. LQDP evolved roughly around 1960 out of the linear control literature: servomechanisms, feedback control systems, Kalman filters, and the like. In the same era there was a parallel development of dynamic programming, generally associated with Richard Bellman. There is a vast literature on both subjects; see the Internet for generalities and Powell's impressive volume (Powell 2011) for details.
+
+A portfolio optimization problem in its full generality is a large stochastic dynamic programming problem that can't be solved. However, if we make a host of assumptions, many of which we know are rough approximations, then we can pose the problem as a LQDP that can be solved. We must recognize that we are setting ourselves up for a classic trap known as the streetlight effect. In the streetlight story a drunken man searches for his car keys under the streetlight even though he knows he dropped them on the darkened grass some yards away. ${ }^{2}$
+
+The LQDP approach is our streetlight and lets us see very clearly, but we must keep asking if we are looking in the right place and whether we are getting the orders of magnitude and sensitivity right. The results are based on a presumption that LQDP is a large step in the right direction. This means we get the correct order of magnitude of effects and robust insights into the nature of the dynamic portfolio. We will return to the relevance issue after we describe the model and its consequences.
+
+The first three articles in this section use LQDP as a tool. In the linear trading rules article and the nonlinear trading rules article, LQDP supplies
+
+\footnotetext{
+1. We have edited the papers in an effort to get coherent notation. This has been a partial success.
+2. There a related aphorism, "For a man with a hammer, everything looks like a nail."
+}
+motivation in our search for effective dynamic policies. However, the papers are not about LQDP. Each paper seeks to answer a different investment question. Readers often focus on the technology rather than the product. This is unwise. A cabinetmaker uses a jigsaw to make beds, bureaus, and tables. Look to the beds, bureaus, and tables, not the jigsaw.
+
+\section*{Implementation Efficiency and Dynamic Portfolio Analysis}
+
+The article "Implementation Efficiency" was the first to use the LQDP framework to get at the direct and opportunity losses associated with trading costs. The paper is in three parts. The first part of "Implementation Efficiency" establishes a number of ways we can express crucial attributes of a portfolio: the risk, the alpha, the transfer coefficient, and the objective value in terms of a covariance or a correlation. The second part of "Implementation Efficiency" uses the optimization's first-order conditions to establish a linear relationship between the optimal position and the ideal no-cost, no-constraint optimal position and positions determined by the constraints and the trading costs. This approach is discussed in Chapter 12, the introductory chapter of the portfolio analysis section.
+
+The dynamic model debuts in the last part of "Implementation Efficiency." The article describes the model and presents closed form solutions of the type related below in a summary that illustrates the main ideas. These notions are carried forward in "Dynamic Portfolio Analysis" and "A Dynamic Model for Portfolio Management."
+
+\subsection*{Inputs}
+
+There are four important inputs: ${ }^{3}$
+$I R_{Q}$ the potential information ratio
+$\lambda \quad$ a risk penalty
+HLY the half-life of our information, in years
+$\chi \quad$ the level of transactions cost
+The half-life tells us how long, in years, it will take for our information to lose $1 / 2$ of its forecasting power if it is not refreshed. It easier to think in terms of half-lives but the analytics work better using the decay rate, $g$, of the information. They are related by:
+$$
+\begin{equation*}
+g=\frac{\ln (2)}{H L Y} \Rightarrow e^{-g \cdot H L Y}=0.5 . \tag{1}
+\end{equation*}
+$$
+
+\footnotetext{
+3. There is a covariance matrix $\mathbf{V}$ in the background. It facilitates calculations and provides scale.
+}
+
+There is one decision (policy) variable:
+$$
+\begin{equation*}
+d \equiv \text { the trade rate } \tag{2}
+\end{equation*}
+$$
+
+The trade rate provides a rebalancing rule and is enough for us to characterize the resulting portfolio we'll call $P$, with positions $\mathbf{p}(t)$.
+
+\subsection*{Assumptions}
+
+The main assumption is that transactions costs are proportional to the variance of the list of assets being traded. This is, at best, a rough approximation although not without some justification. There is a high correlation, say, 0.9, between volatility and transactions cost, and one can make an argument that the price an intermediary will charge to take on a trade list should be proportional to the variance of the list.
+
+The other assumptions are more conventional, concerning stationary system behavior, exact knowledge of volatilities, the forecasting ability of the signals, and the process generating the signals.
+
+\subsection*{Outputs}
+
+The outcome is a portfolio, $P$, that we would hold if we behaved optimally. Results include:
+$\alpha_{P} \quad$ the expected alpha of portfolio $P$
+$\sigma_{P} \quad$ the risk of a portfolio $P$
+$c_{P} \quad$ the expected annual transactions cost of portfolio $P$
+$O_{P} \equiv\left\{\alpha_{P}-c_{P}\right\}-\frac{\lambda}{2} \cdot \sigma_{P}^{2}$ the objective value of portfolio $P$
+$A C I R_{P}=\frac{\alpha_{P}-c_{P}}{\sigma_{P}}$ the after cost information ratio of portfolio $P$
+There are two important ways to use the model:
+- Vary the rate of trading, $d$, and see how key performance parameters change.
+- Calculate the optimal level of trading based on the four inputs, see Equation (8) to follow. See how the behavior at the optimum trade rate changes as we vary any of the inputs, $\lambda, \chi, g$.
+
+\subsection*{Portfolios Q and M}
+
+With no transactions cost we would hold a portfolio called $Q$ with holdings $\mathbf{q}(t) ; Q$ is the zero-cost portfolio. Given a trade rate $d$, the policy is to attempt to track a scaled-back version of $Q$, which we call the target or model portfolio. The target portfolio, denoted $M$, has position $\mathbf{m}(t)$.
+
+The definition of the model and of the trading rule is:
+$$
+\begin{array}{ll}
+\psi=\frac{d}{d+g} & \text { the scale-back parameter } \\
+\mathbf{m}(t)=\psi \cdot \mathbf{q}(t) & \text { the target position } \\
+\dot{\mathbf{p}}(t)=d \cdot\{\mathbf{m}(t)-\mathbf{p}(t)\} & \text { the rate of change of the portfolio } \tag{4}
+\end{array}
+$$
+where
+$$
+\dot{\mathbf{p}}(t) \equiv \operatorname{limit}_{\Delta t \searrow 0}\left\{\frac{\mathbf{p}(t)-\mathbf{p}(t-\Delta t)}{\Delta t}\right\}
+$$
+
+The trade rate $d$ plays two roles. It defines the target $M$ thorough the scaling parameter, $\psi$, and it controls the amount of pressure we exert in trying to close the gap between the target and the current position in portfolio $P$. We'll call the amount we trade per unit time the trading portfolio, $\dot{P}$, which has holdings $\dot{\mathbf{p}}(t)$ defined in Equation (4).
+
+\subsection*{Backlog}
+
+The backlog is the difference between the target $M$ and the portfolio $P$. It represents the trade necessary to get on target. Transactions costs, Equation (7), are proportional to the variance of the backlog. The backlog will continue to play a central role as we make the transition to more complicated dynamic models and trading rules.
+
+\subsection*{Results ${ }^{4}$}
+
+All of the key results can be expressed in terms of expected covariances and variances of the portfolios, $Q, M, P$ and $\dot{P}$.
+
+\footnotetext{
+4. These are results for the continuous time case. The analysis is easier in discrete time, but the results are simpler in continuous time, i.e., as the time between trades becomes very small.
+}
+
+
+\subsubsection*{Alpha}
+$$
+\begin{array}{ll}
+\alpha_{Q}=\frac{I R_{Q}^{2}}{\lambda}=\lambda \cdot \sigma_{Q, Q} & \text { zero-cost portfolio alpha } \\
+\alpha_{M}=\lambda \cdot \sigma_{Q, M}=\psi \cdot I R_{Q} \cdot \sigma_{Q} & \text { target portfolio alpha }  \tag{5}\\
+\alpha_{P}=\lambda \cdot \sigma_{Q, P}=\psi^{2} \cdot I R_{Q} \cdot \sigma_{Q} & \text { the portfolio alpha }
+\end{array}
+$$
+
+\subsubsection*{Risk}
+
+$$
+\begin{array}{ll}
+\sigma_{Q}=\frac{I R_{Q}}{\lambda} & \text { zero-cost portfolio risk } \\
+\sigma_{M}=\psi \cdot \sigma_{Q} & \text { target portfolio risk } \\
+\sigma_{P}=\sqrt{\psi} \cdot \sigma_{M}=\psi^{3 / 2} \cdot \sigma_{Q} & \text { portfolio risk }  \tag{6}\\
+\sigma_{P, M}=\psi \cdot \sigma_{M}^{2}=\sigma_{P}^{2} & \text { target-portfolio covariance } \\
+\sigma_{M-P}^{2}=\sigma_{M}^{2}-\sigma_{P}^{2}=\psi^{2} \cdot(1-\psi) \cdot \sigma_{Q}^{2} & \text { backlog variance }
+\end{array}
+$$
+
+\subsubsection*{Cost ${ }^{5}$}
+
+For the cost we need the variance $\sigma_{\dot{p}}^{2}$ of the trading portfolio, $\dot{P}$.
+$$
+\begin{align*}
+\sigma_{\dot{P}}^{2} & =d^{2} \cdot \sigma_{M-P}^{2} \quad \text { variance of the trade rate, } \frac{\Delta p}{\Delta t} \\
+c_{P} & =\frac{\chi}{2} \cdot \sigma_{\dot{P}}^{2} \quad \text { annual transaction cost }  \tag{7}\\
+\sigma_{\dot{P}}^{2} & =d^{2} \cdot \psi^{2} \cdot(1-\psi) \cdot \sigma_{Q}^{2}
+\end{align*}
+$$
+
+\footnotetext{
+5. Read this carefully and don't miss the small dot over the $P$ that indicates a time derivative.
+}
+
+**EXERCISE 1** Given the data in Exhibit 1, calculate the performance of the portfolio, $\alpha_{P}, \sigma_{P}, c_{P}, O_{P}$, and $A C I R_{P}$ as the trading rate $d$ varies from 1 to 10 in increments of 0.1 . Graph the results.
+
+**EXHIBIT 1**
+\begin{tabular}{|c|c|c|c|}
+\hline IR_Q & lambda & HLY & chi \\
+\hline 1.5 & 20 & 0.5 & 1.1 \\
+\hline
+\end{tabular}
+
+\subsubsection*{Optimization}
+
+The objective is to maximize the value, $O_{P}$ in Equation (3). The optimal trading rate is:
+$$
+\begin{align*}
+& \hat{d}=\sqrt{\frac{\lambda}{\chi}} \text { which implies } \\
+& \hat{\psi}=\frac{\hat{d}}{\hat{d}+g}=\frac{\lambda}{\lambda+g \cdot \sqrt{\lambda \cdot \chi}}, \text { and }  \tag{8}\\
+& \chi \cdot \hat{d}^{2}=\lambda
+\end{align*}
+$$
+
+**EXERCISE 2** Using the data in Exhibit 1, vary the cost parameter $\chi$ between 0.1 and 10 in steps of 0.1 . Select the optimal trade rate (Equation (8)) for each level of cost and plot the resulting values of $\hat{d}, \hat{\psi}, \alpha_{P}, \sigma_{P}, c_{P}, O_{P}$, and $A C I R_{P}$.
+
+**EXERCISE 3** (difficult) Characterize the trade rate, $\breve{d}$ that maximizes the ACIR. Is $d$ larger than, smaller than, or equal to the trade rate, $\hat{d}$, that maximizes the value, $O_{P}$ ?
+
+\subsection*{Additional Results: The Residual}
+
+We can split portfolio $P$ into a component that is correlated with portfolio $Q$ and a residual component, $R$, with holdings $\mathbf{r}(t)$, that is uncorrelated with $Q$. The residual constitutes risk with no expected reward; $\alpha_{R}=0$. The split is:
+$$
+\begin{equation*}
+\mathbf{p}(t)=\psi \cdot \mathbf{m}(t)+\mathbf{r}(t)=\psi^{2} \cdot \mathbf{q}(t)+\mathbf{r}(t) \tag{9}
+\end{equation*}
+$$
+
+\subsubsection*{Age Profile}
+
+We can establish an age profile by decomposing the portfolios into age buckets and calculating portfolios $P$ and Q's exposures to information of different vintages. The average age of the information in the zero-cost portfolio $Q$ and the target portfolio $M$ is $1 / g$ years. The average age of the information in portfolio $P$ is $(1 / g+1 / d)$ years. With trade rate $d$ we are $1 / d$ years behind. The faster we trade, the more we close the age gap.
+
+\subsubsection*{Opportunity Loss}
+
+The structure allows us to allocate the potential risk adjusted gain, $\frac{I R_{Q}^{2}}{2 \cdot \lambda} \geq O_{P}$, to various sources. In Exhibit 2, we set the trade rate at its optimal value so $\psi=\frac{\lambda}{\{\lambda+g \cdot \sqrt{\lambda \cdot \chi}\}}$.
+
+**EXHIBIT 2**
+\begin{tabular}{|l|c|}
+\hline \multicolumn{1}{|c|}{ ITEM } & FRACTION \\
+\hline Potential & 1 \\
+\hline Opportunity Loss & $1-\psi^{2}$ \\
+\hline Alpha & $2 \psi^{2}$ \\
+\hline Risk Penalty & $-\psi^{3}$ \\
+\hline Transactions Cost & $-\psi^{2}(1-\psi)$ \\
+\hline
+\end{tabular}
+
+**EXERCISE 4** Using the values for $I R_{Q}, \lambda$, and $g$ from Exhibit 1, vary the cost parameter $\chi$ from 0.1 to 10 and plot the fractions of potential value added from Exhibit 2.
+
+\subsubsection*{Cost Elasticity}
+
+As the cost of transacting, $\chi$, increases from zero the optimal trade rate will decrease. Initially the rise in unit cost outpaces the decrease in trading. Costs rise rapidly then start to plateau until:
+$$
+\begin{equation*}
+\chi^{*}=\frac{\lambda}{4 \cdot g^{2}} \Rightarrow \hat{d}=2 \cdot g \text { and } \psi=\frac{2}{3} \tag{10}
+\end{equation*}
+$$
+
+As the unit cost $\chi$ continues to increase there is a greater decrease in trading, so the total cost will gradually decline. A reader who completed Exercise 2 can see this effect. The resulting curve is sending a message. The consequences of underestimating the true cost of trading are far more severe than the consequences of overestimating the level of transactions cost.
+
+**EXERCISE 5** Suppose the true level of the cost parameter $\chi$ is 2.5 Let a mostly incorrect estimate of cost $\chi$ vary from 0.1 to 10 (as in Exercise 2) and the trade rate $d=\sqrt{\lambda / \chi}$ vary as in Equation (8). Plot the expected cost curve (based on the false assumption) and the actual cost curve based on the true level of cost 2.5 . In other words, what happens if we choose the trading rate based on the erroneous estimate of the cost parameter equal to, for example 1.3 , when it actually is 2.5 ?
+
+\subsection*{Summary of Implementation Efficiency and Dynamic Portfolio Analysis}
+
+This simple model yields a wealth of results. It serves as an excellent starting point for thinking about dynamic portfolio analysis. The results rest on an unencumbered portfolio and transactions cost that are proportional to the variance of the trade list. Are these assumptions too steep a price to pay for the results? A quote from Robert Solow provides a good metric for judging assumptions: ${ }^{6}$
+
+\footnotetext{
+6. Robert M. Solow, "A Contribution to the Theory of Economic Growth," Quarterly Journal of Economics 70, no. 1 (February 1956): 65-94.
+}
+All theory depends on assumptions which are not quite true. That is what makes it a theory. The art of successful theorizing is to make the inevitable simplifying assumptions in such way that the final results are not very sensitive.
+We believe this simplified dynamic model passes that test.
+
+\section*{Signal Weighting}
+
+Many quantitative investment strategies use multiple sources of information and, in particular, information that acts on different time horizons. There may be shorter-term technical information based on returns and data flow. There is very long-dated information based on an analyst's view of competitive forces within a sector and strategic industrial analysis of the prospects of the entire sector. Blending this information is a challenge. The signal weighting article does this based on three inputs: the anticipated strength of the signal as captured by an information ratio, the half-life of the signal, and any correlation between the signals. The approach in the signal weighting article is straightforward. It is a top-down approach; it deals with the signals at the portfolio level not the asset level.
+
+If we assume that transactions costs are proportional to the variance of the portfolio being traded, then the signal weights are a by-product of the LQDP approach. This weighting scheme may not be the ideal solution to the problem, but it establishes a standard and puts the burden of proof on any deviation from that standard.
+
+The notation has to be more complicated since there are multiple sources. In particular portfolios $Q$ and $M$ are now the mixture of $J$ source portfolios.
+
+The signal weighting regime works in two steps.
+- Step 1: Find the best mix of signals in the case where there are no transactions costs. This is a mean-variance exercise familiar to those who have read Active Portfolio Management. The zero-cost weights depend on the strength of the signals, as measured by an information ratio, and any correlation between the signals. The result $\omega_{\mathrm{Q}, j}$ is also called a risk allocation, since it has that interpretation as well as the interpretation as a weight.
+- Step 2: Adjust the weights according to how fast the information decays. This works on a signal to signal basis in exactly the manner we used above in the case of one signal. The adjusted weights are the target weights, $\omega_{M, j}$.
+If we trade the aggregate portfolio at rate $d$ and the half-life of signal $j$ in years is $H L Y j$, with corresponding decay rate $g_{j}=\log (2) / H L Y_{j}$, then the target weight for source $j$ is:
+$$
+\begin{equation*}
+\omega_{M, j}=\omega_{\mathrm{Q}, j} \cdot \frac{d}{d+g_{j}} \tag{11}
+\end{equation*}
+$$
+
+The target weights can also be viewed as a risk allocation to the target portfolio. We use the suggestive Greek notation $\omega$ to reinforce this interpretation of the weights as an allocation of risk.
+
+\subsection*{More on Step One}
+
+The signal weighting article actually involves combining alphas from various sources and skips the task of taking raw information, signals, and turning them into alpha. That task is covered in Active Portfolio Management, Chapters 10 and 11. Using those techniques, or the closely related Black-Litterman approach, we produce a collection of return forecasts. Before we weight them, we put them all on the same scale. The standardized alphas are
+denoted $\left\{\mathbf{a}_{1}, \mathbf{a}_{2}, \cdots, \mathbf{a}_{J}\right\}$; each is an $N$-element vector where $N$ is the number of assets. We use the $N$ by $N$ covariance matrix V to standardize the forecasts so that $\mathbf{a}_{j}^{\prime} \cdot \mathbf{V}^{-1} \cdot \mathbf{a}_{j}=1$.
+
+The standardized alphas can also be represented by equally standardized portfolios, $\left\{\mathbf{q}_{1}, \mathbf{q}_{2}, \cdots, \mathbf{q}_{j}\right\}$, where $\mathbf{q}_{j}=\mathbf{V}^{-1} \cdot \mathbf{a}_{j}$ so that $\mathbf{q}_{j}^{\prime} \cdot \mathbf{V} \cdot \mathbf{q}_{j}=1$.
+
+By representing each alpha source as a portfolio, we can change the signal weighting problem into a portfolio selection problem. What mix of the portfolios $\left\{\mathbf{q}_{1}, \mathbf{q}_{2}, \cdots, \mathbf{q}_{J}\right\}$ do you wish to hold? Since the risk of each portfolio is scaled to $1,100 \%$, the information ratio of each source portfolio is the same as its alpha. The simple portfolio choice problem is as follows:
+$$
+\mathrm{IR}=\left\{I R_{j}\right\}_{j=1: J} \quad \text { The source information ratio }
+$$
+
+R Correlation of sources, $R_{i, j}=\mathbf{q}_{i}^{\prime} \cdot \mathbf{V} \cdot \mathbf{q}_{j}$
+$\lambda$ A penalty for risk
+$\omega=\left\{\omega_{j}\right\}_{j=1: J} \quad$ a risk allocation
+Maximize IR $^{\prime} \cdot \omega-\frac{\lambda}{2} \cdot \omega^{\prime} \cdot \mathbf{R} \cdot \omega$
+Solution $\quad \omega_{\mathrm{Q}}=\frac{\mathbf{R}^{-1} \cdot \mathbf{I R}}{\lambda}=\left\{\omega_{\mathrm{Q}, j}\right\}_{j=1: J}$
+This is standard operating procedure, straight out of Active Portfolio Management. The resulting zero-cost portfolio and the asset alphas are:
+$$
+\begin{align*}
+& \mathbf{q}=\sum_{j=1: J} \mathbf{q}_{j} \cdot \omega_{\mathrm{Q}, j}  \tag{12}\\
+& \boldsymbol{\alpha}=\lambda \cdot \mathbf{V} \cdot \mathbf{q} \Rightarrow \boldsymbol{\alpha}=\sum_{j=1: J} \mathbf{a}_{j} \cdot\left\{\lambda \cdot \omega_{\mathrm{Q}, j}\right\}
+\end{align*}
+$$
+
+\subsection*{More on Step 2}
+
+The second step rests on a multisource version of the dynamic portfolio model. Each information source has an information decay rate, $g_{\text {. }}$. Then, with an assumed trading rate $d$, the modified risk allocations (weights) and resulting target portfolio are:
+$$
+\begin{align*}
+& \omega_{M, j}=\omega_{\mathbb{Q}, j} \cdot \psi_{j} \text { where } \\
+& \psi_{j}=\frac{d}{d+g_{j}}  \tag{13}\\
+& \mathbf{m}=\sum_{j=1: J} \mathbf{q}_{j} \cdot \omega_{M, j} \text { the target portfolio }
+\end{align*}
+$$
+
+Much of the signal weighting paper is concerned with the best way to select $d$, the assumed rate of trading. Inference, trial and error, and common sense are leading contenders. There is also a great deal of material reinforcing the interpretation of $\omega_{\mathrm{Q}, j}$ and $\omega_{M, j}$ as risk allocations.
+
+**EXERCISE 6**: With a risk penalty, $\lambda=20$, a trading rate $d=3$, and the data on signals in Exhibit 3 below, calculate the risk allocations for the zero-cost portfolio $Q$ and the target portfolio $M$. Also calculate the resulting alpha, risk, and information ratios of portfolios $Q$ and $M$.
+
+**EXHIBIT 3** Signals Strength (IR), Speed (HLY) and Correlation Ri,j
+\begin{tabular}{|c|l|c|c|c|c|}
+\hline SIGNAL & IR & HLY & $\mathbf{R}(:, 1)$ & $\mathbf{R}(;, 2)$ & $\mathbf{R}(;, 3)$ \\
+\hline FAST & 4 & 0.008 & 1 & -0.1 & 0 \\
+\hline INT. & 1.5 & 0.333 & -0.1 & 1 & 0.2 \\
+\hline SLOW & 1 & 0.750 & 0 & 0.2 & 1 \\
+\hline
+\end{tabular}
+
+\subsection*{Implementation: Toward an Optimal Trading Policy}
+
+The dynamic perspective is useful in providing strategic insight and topdown signal weighting. Now we'll move toward day-to-day implementation. This starts with abandoning the assumption that transactions costs are proportional to the variance of the portfolio of assets being traded. Instead we'll use more conventional measures of transactions cost such as we find in Equations (15) and (19).
+
+If the goal is complete generality, all signals, all costs, all assets, and all constraints, then we would attack the problem using stochastic dynamic programming. In the linear-quadratic case, it is possible to solve relatively large problems since the optimal policy results from solving a system of linear equations. Once we leave the comfort of the linear-quadratic case we face immense difficulties. Consider a general formulation using dynamic programming with $N$ assets and $J$ signals per asset. The resulting state space is $N^{*}(J+1)$ real numbers, $\mathbf{p}, \mathbf{S}$ where $\mathbf{p}$ is an $N$ element vector of current positions and $S$ is an $N$ by $J$ matrix of signal values. With 2,000 assets and 29 signals per asset, the state space is 60,000 real numbers. It we discretize these 60,000 states using 10 discrete values along each dimension we end up with $10^{60,000}$ discrete states. MATLAB calls this number Inf.
+
+If we lower our sights and choose to analyze a single asset, then the state space would be 30 real numbers. A discretization of these 30, although not quite $I n f$, would be immense. We require a fresh approach.
+
+We have settled on solving single asset problems using the sim/opt algorithm that works by restricting the class of investment policies to a promising and manageable set.
+
+A policy is a function that considers the current situation (the state) and selects an action. In our case the state is the active position in a stock plus the value of $J$ signals that we believe tell us about future returns on that stock: $p_{0}$ is the position and $\boldsymbol{s}=\left\{s_{i}\right\}_{j=1: J}$ are the signals. We call the function a trading rule:
+$$
+\begin{equation*}
+\Delta p=f\left(p_{0}, s\right) \text { is a policy/trading rule } \tag{14}
+\end{equation*}
+$$
+
+There are an infinite number of policies to consider. We will take a page from Voltaire and abandon the search for the best of all possible policies and make an educated guess at a good family of policies. We aim for good, not perfect, solutions.
+
+Our first compromise is to focus on one asset. The second compromise is to reduce the $J$ signals to a single number, the target position, $m(\mathbf{s})$, and then making the driver of our trading rule the backlog, $b\left(\mathrm{~s}, p_{0}\right)=m(\mathrm{~s})-p_{0}$, the gap between the desired and actual position.
+
+\section*{Linear Trading Rules}
+
+The linear trading rule article is an example of this approach. In the one asset linear-quadratic case the optimal policy is linear function of the current state. This is powerful motivation. If a linear trading rule is optimal in a special case, it should be good in a more general case. We call the resulting class of policies linear trading rules, or LTR. This class is based on a discrete (but small) trading interval $\Delta t$.
+$$
+\begin{aligned}
+& \operatorname{LTR}(\delta) \\
+& m(\mathbf{s})=\sum_{j=1: J} s_{j} \cdot w_{M, j} \text { the target } \\
+& b\left(\mathbf{s}, p_{0}\right) \equiv m(\mathbf{s})-p_{0} \text { the backlog } \\
+& \Delta p=(1-\delta) \cdot b\left(\mathbf{s}, p_{0}\right) \text { where } 0 \leq \delta \leq 1
+\end{aligned}
+$$
+
+The LTR is asset specific. We could have cluttered up the description with notation like $s_{n, j}, w_{M(n), j}, m_{n}\left(s_{n}\right), b_{n}\left(s_{n}, p_{n, 0}\right), \delta_{n}, \Delta p_{n}$. We omit the subscript $n$ to simplify matters to the greatest extent possible. The delta in the LTR is equivalent to what we frequently call the trading rate $d$. The link is $\delta=\exp (-d \cdot \Delta t)$.
+
+The model/target $m(\mathbf{s})$ is a weighted sum of the current signals s . In the signal weighting article, we used a top-down approach to establish the weights. Each signal was represented as a portfolio of $N$ assets and the weighting consisted of blending those portfolios. In the case of trading rules, we will work from the bottom up and customize the signal weighting for each asset. Details to follow.
+
+The LTR says you move part of the way from your current position toward the target. The LTR is straightforward. Both the signal weights,
+$\omega_{M, j}$, and $\delta$ depend on the trading rate $d$, so it is just a matter of a one-dimensional search to find the best value of $\delta$.
+
+The LTR is the first example of a simple class of policies. We'll consider three more examples and in the process fashion a general framework for defining policies.
+
+The LQDP strongly suggests that the target, $m(\mathrm{~s})$, is the best place to be in the presence of transactions costs. Any gap between your current position and the target represents an opportunity loss. Trading incurs a direct loss. Our policy strives for a proper balance between these two sources of loss.
+
+We can illustrate with a case where the transactions costs are linear plus quadratic:
+$$
+\begin{equation*}
+c(\Delta p)=c_{1} \cdot|\Delta p|+\frac{c_{2}}{2} \cdot \Delta p^{2} \text { Transactions Cost } \tag{15}
+\end{equation*}
+$$
+
+As before the backlog, $b\left(\mathrm{~s}, p_{0}\right)=m(s)-p_{0}$, will drive the trading rule.
+Suppose we try to balance the opportunity loss against the direct cost of trading with a single parameter, call it $\tau$. For any value of $\tau>0$, we select the next trade by solving:
+$$
+\begin{equation*}
+\text { Minimize: }\left\{\frac{\lambda \cdot \sigma^{2}}{2} \cdot\left(b\left(\mathbf{s}, p_{0}\right)-\Delta p\right)^{2}+\tau \cdot c(\Delta p)\right\} \tag{16}
+\end{equation*}
+$$
+
+The first term in Equation (16) is the annual loss in risk-adjusted return we incur post trade if we are a distance $b\left(s, p_{0}\right)-\Delta p$ from target. The cost of the trade, $c(\Delta p)$, is not annual, it is a one-time loss. The parameter $\tau$ transforms the transaction cost into a run rate; for example, if we have to incur this cost every four months in order to stay this close to target, then $\tau=3$ means we pay the cost three times a year. We call it a transactions cost amortization factor, tcaf for short.
+
+For each value of $\tau$, Equation (16) gives rise to a trading rule.
+$\operatorname{TCAF}(\tau)$
+$$
+\begin{aligned}
+& b \equiv m(\mathrm{~s})-p_{0} \quad \text { The backlog, current distance from target } \\
+& z(\tau) \equiv \frac{\tau \cdot c_{1}}{\lambda \cdot \sigma^{2}}, \quad k(\tau) \equiv \frac{\tau \cdot c_{2}}{\lambda \cdot \sigma^{2}}
+\end{aligned}
+$$
+$$
+\Delta p=\left\{\begin{array}{ccc}
+B U Y & \frac{b-z(\tau)}{1+k(\tau)} & \text { if } b>z(\tau) \\
+H O L D & 0 & \text { if }-z(\tau) \leq b \leq z(\tau) \\
+S E L L & \frac{b+z(\tau)}{1+k(\tau)} & \text { if } b<-z(\tau)
+\end{array}\right\}
+$$
+
+The motivation comes from the balancing that typically takes place with a single (or multi-) stage optimization. The objective will have three terms: return, risk, and cost. These will be adjusted by selecting the risk penalty $\lambda$ and also scaling the transactions costs. In the single-stage case, the parameters $(\lambda, \tau)$ are the dials used to tune into a desired level of risk and turnover. That is a top-down version of the TCAF policy. In our bottom-up version, we vary $\tau$ for each asset until we find the best performance. Details on the process for selecting $\tau$ follow.
+
+**EXERCISE 7** Suppose we use a modified alpha, $\tilde{\alpha}(s)=\lambda \cdot \sigma^{2} \cdot m(s)$ rather than the true alpha, $\alpha(s)=\lambda \cdot \sigma^{2} \cdot q(s)$, and we attempt to maximize:
+$$
+\begin{equation*}
+\tilde{\alpha}(\mathrm{s}) \cdot\left\{p_{0}+\Delta p\right\}-\frac{\lambda \cdot \sigma^{2}}{2} \cdot\left\{p_{0}+\Delta p\right\}^{2}-\tau \cdot c(\Delta p) \tag{17}
+\end{equation*}
+$$
+
+Describe the resulting trading rule.
+
+\section*{Nonlinear Trading Rules}
+
+We can go a step further than the single parameter $\tau$ and use two parameters $(z, k)$ and select the trade $\Delta p$ to minimize:
+$$
+\begin{equation*}
+\frac{\lambda \cdot \sigma^{2}}{2} \cdot(b-\Delta p)^{2}+\lambda \cdot \sigma^{2}\left\{\cdot z \cdot|\Delta p|+\frac{k}{2} \cdot \Delta p^{2}\right\} \tag{18}
+\end{equation*}
+$$
+
+In this case, we get the nonlinear trading rule, NLTR:
+$$
+\begin{aligned}
+& \operatorname{NLTR}(z, k) \\
+& \Delta p=\left\{\begin{array}{ccc}
+B U Y & \frac{b-z}{1+k} & \text { if } b>z \\
+\text { HOLD } & 0 & \text { if }-z \leq b \leq z \\
+\text { SELL } & \frac{b+z}{1+k} & \text { if } b<-z
+\end{array}\right\}
+\end{aligned}
+$$
+
+The NLTR trading rule is similar to the TCAF trading rule except there are two degrees of freedom in the parameter choice.
+
+**EXERCISE 8** Show that $\operatorname{LTR}(\delta)=\operatorname{NLTR}(0, \delta / 1-\delta)$
+As a fourth example, suppose our transactions costs use the $3 / 2$ power:
+$$
+\begin{equation*}
+c(\Delta p)=c_{1} \cdot|\Delta p|+\frac{c_{2}}{1.5} \cdot|\Delta p|^{3 / 2} 3 / 2 \text { Power Transactions Cost } \tag{19}
+\end{equation*}
+$$
+
+We can generate a policy by again selecting parameters $(z, k)$ and then minimizing:
+$$
+\begin{equation*}
+\frac{\lambda \cdot \sigma^{2}}{2} \cdot(b-\Delta p)^{2}+\lambda \cdot \sigma^{2}\left\{\cdot z \cdot|\Delta p|+\frac{k}{1.5} \cdot|\Delta p|^{1.5}\right\} \tag{20}
+\end{equation*}
+$$
+
+The result is called NLTR1.5, the nonlinear trading rule with $3 / 2$ power transactions cost. The resulting trading policy, conditional on $(z, k)$, is:
+$$
+\begin{aligned}
+& \text { NLTR1.5 }(z, k) \\
+& \Delta p=\left\{\begin{array}{ccc}
+B U Y & y \text { where } b-z=y+k \cdot \sqrt{y} & \text { if } b>z \\
+H O L D & 0 & \text { if }-z \leq b \leq z \\
+S E L L & -y \text { where }-(b+z)=y+k \cdot \sqrt{y} & \text { if } b<-z
+\end{array}\right\}
+\end{aligned}
+$$
+
+**EXHIBIT 4** The policy as a function of the backlog. The parameter values are $k=28$ and $z=0.013$.
+![](https://cdn.mathpix.com/cropped/2025_02_04_0fa07b968f4be831c570g-132.jpg?height=963&width=1148&top_left_y=792&top_left_x=175)
+
+Exhibit 4 shows how the trade size varies when there is a $3 / 2$ power market impact cost and the trading rule, NLTR1.5 is used.
+
+**EXERCISE 9** For the trading rule NLTR1.5, suppose $b=0.02, z=0.01$, and $k=10$. What is $y$ ?
+
+**EXERCISE 10** Derive a trading rule, TCAF1.5, when we have the TCAF approach and $3 / 2$ power transactions cost as in Equation (19).
+
+**EXERCISE 11** How is TCAF a special case of NLTR?
+In all four cases, LTR, TCAF, NLTR, and NLTR1.5, we derive the trading rule by solving a simple one-stage problem with modified transactions cost parameters.
+- LTR changes the nonlinear term and ignores the linear term.
+- TCAF scales both linear and quadratic terms in the same way.
+- NLTR changes the linear and quadratic terms.
+- NLTR1.5 changes the linear and 3/2 power terms.
+
+\section*{Asset Level Signal Weights}
+
+Now we turn to the problem we postponed of selecting the target signal weights at the asset level. What follows is asset specific. We are only considering one asset at a time, so we omit the $n$ notation.
+
+There are $J$ signals. Signals are standardized to have an expected mean of zero and an expected standard deviation of one. Each signal is characterized by a half-life, captured by $g_{i}$, and by information coefficients $t_{j}$. The information coefficient is the correlation between the signal and the return we are forecasting. The signals for each asset may be correlated. Let $R_{l, j}$ represent the correlation of the signals $i$ and $j$. Suppose that $\theta$ is the specific return we wish to forecast. Using the results of Active Portfolio Management, Chapters 10-11, we can write the best linear unbiased estimator of the return as:
+$$
+\begin{align*}
+& \alpha(\mathbf{s})=\operatorname{Cov}\langle\theta, \mathbf{s}\rangle \cdot \operatorname{Var}^{-1}\langle\mathbf{s}\rangle \cdot\{\mathbf{s}-E\langle\mathbf{s}\rangle\} \\
+& E\langle\mathbf{s}\rangle=0, \quad \operatorname{Var}\langle\mathbf{s}\rangle=\mathbf{R}, \text { so }  \tag{21}\\
+& \alpha(\mathbf{s})=\operatorname{Cov}\langle\theta, \mathbf{s}\rangle \cdot \mathbf{R}^{-1} \cdot \mathbf{s}
+\end{align*}
+$$
+
+The volatility of the asset is $\sigma$ and the correlations of the return and signals are contained in the information coefficient vector $\mathbf{t}=\left\{\boldsymbol{l}_{j}\right\}_{j=1: J}$. Since the signals have standard deviation equal to one, we have:
+$$
+\begin{align*}
+& \operatorname{Cov}\langle\theta, \mathbf{s}\rangle=\sigma \cdot \mathbf{v}^{\prime} \Rightarrow \\
+& \alpha(\mathbf{s})=\sigma \cdot \mathbf{v}^{\prime} \cdot \mathbf{R}^{-1} \cdot \mathbf{s} \tag{22}
+\end{align*}
+$$
+
+We prefer to represent the alpha as a position, $q(\mathrm{~s})$, where:
+$$
+\begin{equation*}
+\alpha(s)=\lambda \cdot \sigma^{2} \cdot q(s) \tag{23}
+\end{equation*}
+$$
+
+If we combine Equations (22) and (23), we find the zero-cost signal weights for the asset:
+$$
+\begin{align*}
+& \alpha(\mathbf{s})=\lambda \cdot \sigma^{2} \cdot q(\mathbf{s})=\sigma \cdot \mathbf{l}^{\prime} \cdot \mathbf{R}^{-1} \cdot \mathbf{s} \\
+& \Rightarrow q(\mathbf{s})=\frac{\mathbf{l}^{\prime} \cdot \mathbf{R}^{-1} \cdot \mathbf{s}}{\lambda \cdot \sigma}, \Rightarrow \mathbf{w}_{Q}=\frac{\mathbf{R}^{-1} \cdot \mathbf{l}}{\lambda \cdot \sigma} \tag{24}
+\end{align*}
+$$
+
+We form the target weights and target portfolio in the same manner we used when there was just one signal:
+$$
+\begin{align*}
+& \psi_{j}=\frac{d}{d+g_{j}} \\
+& w_{M, j}=w_{\mathrm{Q}, j} \cdot \psi_{j}  \tag{25}\\
+& m(\mathbf{s})=\sum_{j=1: J} w_{M, j} \cdot s_{j}
+\end{align*}
+$$
+
+The trade rate $d$ is from the optimal delta of the LTR. Thus, we must solve the LTR before proceeding with the other trading rules. Reminder, the link with $d$ and $\delta$ is the period length, $\Delta t, \delta=e^{-d \cdot \Delta t}$.
+
+**EXERCISE 12** With the data in Exhibit 5 below, use a spreadsheet to plot the target signal weights as the trade rate, $d$, moves from 0.1 to 10 in increments of 0.1.
+
+**EXHIBIT 5**
+\begin{tabular}{|c|l|l|c|c|c|}
+\hline NAME & HLY & IC & $R((; 1)$ & $R(f, 2)$ & $R(;, 3)$ \\
+\hline FAST & 0.0119 & 0.25 & 1 & -0.15 & -0.05 \\
+\hline INT. & 0.333 & 0.1 & -0.15 & 1 & 0.1 \\
+\hline SLOW & 0.666 & 0.085 & -0.05 & 0.1 & 1 \\
+\hline
+\end{tabular}
+
+\subsection*{Simulation-Optimization}
+
+In Appendix A of the linear trading rules article, we derive analytical expressions that allow us to choose the best value of $d$ or equivalently $\delta$ with transactions cost of the type in either Equation (15) or (19). In the case of TCAF, NLTR, or NLTR1.5, we must resort to a less elegant and less exact technique known as simulation/optimization, henceforth sim/opt. Here are the steps in the sim/opt algorithm for one asset.
+1. Find the optimal $\delta$ for the LTR policy. This produces an optimal linear trade rate $d$ and the signal weights $\omega_{\mathrm{Q}, j}$ and $\omega_{M, j^{*}}$
+2. Simulate the $J$ signals for each period over a long horizon. In our case, daily ( 252 trading days per year) for 100 years: the result is
+$\left\{s_{j}(t)\right\}_{j=1: J}$ for $t=1: T$.
+3. The alphas (forecast of annual return) follow from the simulated signals and the zero-cost signal weights
+$$
+\omega_{\mathrm{Q}}: \alpha(t)=\lambda \cdot \sigma^{2} \cdot \sum_{j=1: J} s_{j}(t) \cdot w_{\mathcal{Q}, j}
+$$
+4. Set the initial position to zero. ${ }^{7}$
+5. For any pair $(z, k)$, apply the relevant trading rule. This produces a sequence of positions and trades $\{p(t), \Delta p(t)\}_{t=1: T}$.
+6. Evaluate the performance of the sequence of positions and trades. This involves the following:
+$$
+\begin{equation*}
+\text { Value }=\{\text { Alpha }- \text { Cost }\}-\frac{\lambda}{2} \cdot \text { Risk }^{2} \tag{26}
+\end{equation*}
+$$
+where:
+$$
+\begin{align*}
+& \text { Alpha }=\frac{1}{T} \cdot \sum_{t=1: T} \alpha(t) \cdot p(t) \\
+& \text { Risk }^{2}=\frac{\sigma^{2}}{T} \cdot \sum_{t=1: T} p^{2}(t) \\
+& \text { Cost }=\frac{c_{1} \cdot \sum_{t=1: T}|\Delta p(t)|+\frac{c_{2}}{1 \cdot 5} \cdot \sum_{t=1: T}|\Delta p(t)|^{3 / 2}}{T \cdot \Delta t}  \tag{27}\\
+& \quad \text { or } \\
+& \text { Cost }=\frac{c_{1} \cdot \sum_{t=1: T}|\Delta p(t)|+\frac{c_{2}}{2} \cdot \sum_{t=1: T}|\Delta p(t)|^{2}}{T \cdot \Delta t}
+\end{align*}
+$$
+7. Repeat steps 5 and 6 in a systematic search for the pair $(z, k)$ whose trading rule leads to a sequence $\{p(t), \Delta p(t)\}_{t=1: T}$ with the highest value.
+
+\footnotetext{
+7. There is an elegant way to choose the initial position discussed in the nonlinear trading rules article. It does not matter. Zero is a good starting point since some assets with low volatility and high transactions cost (somewhat of an anomaly) will never trade during the 100-year simulation! Starting at zero helps to spot those outliers.
+}
+
+\subsection*{Two Important Points}
+
+When we evaluate a policy $(z, k)$, we calculate the transactions cost using the original cost parameters $\left(c_{1}, c_{2}\right)$, not the modified t -cost parameters we used to produce the trading rule. Also, the transactions cost used to calculate value is the total cost over the history divided by the number of years thus making it the same annual run rate as the alpha and variance terms. ${ }^{8}$
+
+\footnotetext{
+8. In making these calculations, we suggest that you do not include the first year (or longer) of the simulation to avoid any effects due to the initial conditions.
+}
+
+If we are forecasting uncorrelated specific returns, then the variance terms in Equation (27) add across assets, maximizing each one maximizes the total. The same is true in expectation even with correlated returns as long as the signals that generate the position for one asset are uncorrelated with the signals that generate the position for any other assetas demonstrated by Equation (28).
+$$
+\begin{align*}
+& \text { for } n \neq \ell \quad E\left\langle p_{n}(t) \cdot \sigma_{n, \ell} \cdot p_{\ell}(t)\right\rangle=0 \\
+& \text { if either } \sigma_{n, \ell}=0  \tag{28}\\
+& \text { or } E\left\langle p_{n}(t) \cdot p_{\ell}(t)\right\rangle=0
+\end{align*}
+$$
+
+In aggregate we have:
+$$
+\begin{align*}
+& \alpha_{P}=\sum_{n=1: N} \text { Alpha }_{n} \\
+& \sigma_{P}^{2}=\sum_{n=1: N} \operatorname{Risk}_{n}^{2}  \tag{29}\\
+& c_{P}=\sum_{n=1: N} \operatorname{Cost}_{n} \\
+& V_{P}=\left\{\alpha_{P}-c_{P}\right\}-\frac{\lambda}{2} \cdot \sigma_{P}^{2}
+\end{align*}
+$$
+
+A by-product of the calculation is another useful performance metric, the after-cost information ratio:
+$$
+\begin{equation*}
+\mathrm{ACIR}_{P}=\frac{\alpha_{P}-c_{P}}{\sigma_{P}} \tag{30}
+\end{equation*}
+$$
+
+The numerator of $A C I R_{P}$ is the expected performance and, under an assumption of normal active returns, the probability that a standard normal is less than minus $A C I R_{P}$ is the probability of a down year.
+
+**EXERCISE 13** If $A C I R_{p}=0.9$ and $\sigma_{P}=4 \%$, what is the probability of a down year? What alpha do we expect net of transactions costs?
+
+\subsection*{The Parameter Model}
+
+The sim/opt algorithm is a blunt instrument performing a delicate task. Errors will occur. In the nonlinear trading rule article, we propose log-log models to estimate a model of the parameters:
+$$
+\begin{align*}
+& \log \left(k_{n}\right)=\phi_{1}+\phi_{2} \cdot \log \left(c_{1, n}\right)+\phi_{3} \cdot \log \left(c_{2, n}\right)+\phi_{4} \cdot \log \left(\sigma_{n}\right)+\zeta_{n} \\
+& \log \left(z_{n}\right)=\beta_{1}+\beta_{2} \cdot \log \left(c_{1, n}\right)+\beta_{3} \cdot \log \left(c_{2, n}\right)+\beta_{4} \cdot \log \left(\sigma_{n}\right)+\xi_{n} \tag{31}
+\end{align*}
+$$
+
+It turns out that the fitted parameters, call them $\hat{z}_{n}, \hat{k}_{n}$ have, by design, a smaller cross-sectional standard deviation and, as hoped, perform just as well in terms of Value $P$ in an out-of-sample simulation.
+
+Exhibit 6 shows the regression results for a NLTR1.5 model with 3136 assets. ${ }^{9}$
+
+\footnotetext{
+9. There is considerable room for improvement in the parameter model. The regression above accomplishes little save regression to the mean. The model is included to illustrate the concept. In this sample the correlation of $c_{2, n}$ and $\sigma_{n}$ was about 0.9 and the other two correlations about 0.7 .
+}
+
+**EXHIBIT 6** Regression Coefficients for a Parameter Model Using 3,136 US Assets and the Trading Rule NLTR1.5
+\begin{tabular}{|l|c|c|}
+\hline & IMPACT $k$ & ZONE z \\
+\hline Constant & -7.86 & -8.49 \\
+\hline $\boldsymbol{c}(1, n)$ & -1.20 & -0.15 \\
+\hline $\boldsymbol{c}(\mathbf{2}, \mathbf{n})$ & 0.88 & -0.27 \\
+\hline$s(n)$ & -0.66 & -0.47 \\
+\hline R2 & $73 \%$ & $70 \%$ \\
+\hline
+\end{tabular}
+
+\subsection*{Implementation}
+
+Implementation requires a move from the asset to the portfolio level and the use of the $n$ notation to distinguish among the $N$ assets. We strive for the best of both worlds. Our goal is to capture the dynamic policy we have developed at the asset level without losing focus on portfolio level constraints and exposure control. We can do this by minimizing an objective that has two components.
+
+**Component 1**
+$$
+\begin{equation*}
+\frac{\lambda}{2} \cdot \sum_{n=1: N} \sigma_{n}^{2} \cdot\left\{\left(b_{n}-\Delta p_{n}\right)^{2}+z_{n} \cdot\left|\Delta p_{n}\right|+\frac{k_{n}}{1.5} \cdot\left|\Delta p_{n}\right|^{1.5}\right\} \tag{32}
+\end{equation*}
+$$
+
+**Component 2**
+$$
+\frac{\eta}{2} \cdot\left(\mathbf{x}_{B}-\mathbf{X} \cdot \Delta \mathbf{p}\right)^{\prime} \cdot\{\mathbf{F}+\mathbf{D}\} \cdot\left(\mathbf{x}_{B}-\mathbf{X} \cdot \Delta \mathbf{p}\right)
+$$
+
+In component $1, b_{n}=\sum_{j=1: J} s_{n, j} \cdot w_{M(n), j}-p_{n}$ is the backlog for asset $n$. Component 1 has the trading rule-in this case, NLTR1.5-hardwired. If component 2 did not exist and there were no binding constraints, minimizing component 1 would execute the optimal dynamic trading rule NLTR1.5 for every asset.
+
+Component 2 represents tugs in other directions. It presumes desired factor positions based on either risk control or a factor/smart beta tilt. The term $\mathbf{x}_{B}$ is the factor backlog measuring how far our current position is from a desired exposure. F is a factor covariance matrix, and D is a nonnegative diagonal matrix that can be used to give extra incentive to stay close to the desired exposures. In addition to this there could be constraints. ${ }^{10}$
+
+\footnotetext{
+10. There is an extended rant on the role of constraints in the linear trading rules article.
+}
+
+\section*{Summary}
+
+There is a common theme in these six articles, focused on understanding and implementing a dynamic system of portfolio management. This introduction takes the most important ideas from the six articles and presents them in an integrated fashion with a unified notation, an emphasis on the most valuable lessons, and the benefit of hindsight. The articles progress from theory to suggested implementation.
+
+\section*{References}
+
+Aside from the papers themselves and the results of Active Portfolio Management, the key additional reference is:
+
+Powell, Warren B. 2011. Approximate Dynamic Programming: Solving the Curses of Dimensionality. 2nd ed. Wiley Series in Probability and Statistics.
