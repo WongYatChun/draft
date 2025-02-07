@@ -1,0 +1,102 @@
+import numpy as np
+
+def newton_erc(Sigma, sigma, tol=1e-8, max_iter=1000, alpha=None):
+    """
+    Compute the Equal Risk Contribution (ERC) portfolio using the Newton-Raphson method.
+    
+    The optimization problem is:
+        minimize    f(y) = 0.5 * y.T @ Sigma @ y - lambda_c * sum(ln(y))
+        where y > 0 is an auxiliary variable.
+    
+    The ERC portfolio weights are then obtained as:
+        x_erc = y / sum(y)
+    
+    Parameters:
+        Sigma (np.ndarray): Covariance matrix of asset returns (n x n).
+        sigma (np.ndarray): Vector of asset volatilities (length n), typically sqrt(diag(Sigma)).
+        tol (float): Tolerance for the Newton-Raphson convergence.
+        max_iter (int): Maximum number of iterations.
+        alpha (float, optional): A scaling parameter to control the magnitude of y.
+                                 If provided, lambda_c is adjusted using:
+                                     lambda_c = n * alpha^2 * (expected_vol)^2
+                                 where expected_vol is estimated from the normalized y.
+    
+    Returns:
+        x_erc (np.ndarray): The normalized ERC portfolio weights.
+        y (np.ndarray): The final (unnormalized) solution from the Newton-Raphson iterations.
+        lambda_c (float): The final value of lambda_c used.
+    """
+    n = len(sigma)
+    
+    # 1. Initialize y^(0) using inverse volatility weights.
+    #    (Assuming that if correlations are uniform, assets with lower volatility get higher weight.)
+    y = 1.0 / sigma
+    y = y / y.sum()  # normalize so that sum(y) == 1
+    
+    # 2. Compute the initial portfolio variance using y^(0)
+    sigma2_y = y.T @ Sigma @ y
+    
+    # 3. Initialize lambda_c according to the slides:
+    #    lambda_c = sigma^2(y^(0)) / n
+    lambda_c = sigma2_y / n
+    
+    # Optionally adjust lambda_c to control the magnitude of y if alpha is provided.
+    if alpha is not None:
+        # Compute expected portfolio volatility from the normalized weights.
+        x_erc_est = y / np.sum(y)
+        sigma2_erc = x_erc_est.T @ Sigma @ x_erc_est
+        lambda_c = n * (alpha ** 2) * sigma2_erc
+    
+    # Newton-Raphson iteration
+    for iteration in range(max_iter):
+        # Compute the gradient:
+        # grad = Sigma y - lambda_c * (1/y), where division is elementwise.
+        grad = Sigma @ y - lambda_c / y
+        
+        # Compute the Hessian:
+        # Hessian = Sigma + lambda_c * diag(1 / y^2)
+        H = Sigma + lambda_c * np.diag(1.0 / (y ** 2))
+        
+        # Solve for the Newton step: delta = H^{-1} * grad.
+        try:
+            delta = np.linalg.solve(H, grad)
+        except np.linalg.LinAlgError as e:
+            print("Linear algebra error during Newton-Raphson:", e)
+            break
+        
+        # Update the variable: y_new = y - delta.
+        y_new = y - delta
+        
+        # Check convergence (using the norm of the update step).
+        if np.linalg.norm(delta) < tol:
+            y = y_new
+            print(f"Convergence reached after {iteration+1} iterations.")
+            break
+        
+        y = y_new
+    else:
+        print("Warning: Newton-Raphson did not converge within the maximum number of iterations.")
+    
+    # Normalize y to obtain the ERC portfolio weights.
+    x_erc = y / y.sum()
+    
+    return x_erc, y, lambda_c
+
+if __name__ == "__main__":
+    # Example covariance matrix for a 3-asset portfolio.
+    Sigma = np.array([[0.10, 0.02, 0.04],
+                      [0.02, 0.08, 0.03],
+                      [0.04, 0.03, 0.09]])
+    
+    # Compute asset volatilities from the diagonal of Sigma.
+    sigma = np.sqrt(np.diag(Sigma))
+    
+    # Optionally, set alpha if you wish to control the magnitude (here alpha is None)
+    alpha = None  # or, for example, alpha = 5
+    
+    # Compute the ERC portfolio weights using the Newton-Raphson approach.
+    x_erc, y_final, lambda_c = newton_erc(Sigma, sigma, tol=1e-8, max_iter=1000, alpha=alpha)
+    
+    print("Normalized ERC portfolio weights (x_erc):", x_erc)
+    print("Final unnormalized weights (y):", y_final)
+    print("Final lambda_c (gamma):", lambda_c)
