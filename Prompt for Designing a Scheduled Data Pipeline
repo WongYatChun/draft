@@ -1,0 +1,42 @@
+
+### **Prompt for Designing a Scheduled Data Pipeline**
+
+I need to design and implement a data pipeline that consolidates data from multiple sources into a single wide table. The pipeline must adhere to the following requirements:
+
+1. **Data Sources**:
+   - Multiple data sources, each providing different columns.
+   - Data arrives at different times throughout the day.
+
+2. **Cutoff Times**:
+   - There are three cutoff times: `time A`, `time B`, and `time C`.
+   - At each cutoff time:
+     - `time A`: 50% of the data is expected to be available.
+     - `time B`: 80% of the data is expected to be available.
+     - `time C`: 100% of the data is expected to be available.
+
+3. **Handling Missing Data**:
+   - If data is missing at a cutoff time, use the latest available value from the previous day’s data.
+   - Add a flag (e.g., `is_fallback_<column>`) to indicate when fallback values are used.
+
+4. **Output**:
+   - Generate a wide table containing all columns from all data sources at each cutoff time.
+   - Include metadata such as the cutoff time (`cutoff_time`) and fallback flags.
+
+5. **Logging and Monitoring**:
+   - Log missing data details: cutoff time, source name, and missing columns.
+   - Use the log to track when fallback values are applied.
+   - Notify stakeholders if critical data sources are missing or if fallback usage exceeds a threshold.
+
+6. **Scheduling**:
+   - Use **Windows Task Scheduler** to run the pipeline at each cutoff time.
+   - Trigger Python scripts (or similar executables) for data ingestion, processing, and output.
+
+7. **Tools and Frameworks**:
+   - Use **Pandas**, **SQL**, or **PySpark** for data processing.
+   - Store intermediate and final outputs in a staging area (e.g., CSV files, databases).
+   - Use Python’s `logging` module or write logs to a file for monitoring.
+
+8. **Edge Cases**:
+   - Handle scenarios where no data arrives for a particular source at a cutoff time.
+   - Log details about missing data and apply fallback logic consistently.
+
