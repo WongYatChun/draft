@@ -986,3 +986,382 @@ class CanonicalPortfolio(BaseEstimator, RegressorMixin):
 
         return weights
 
+import numpy as np
+from typing import Optional, Tuple, Dict, Literal
+
+
+class TimeSeriesTwoStagePCA:
+    """
+    General two-stage time-series PCA with time reweighting (default: equal),
+    mandatory cross-sectional standardization, and optional BBP spectrum cleaning.
+
+    Stage 1 (mandatory):
+      • Time-weighted PCA on R to obtain residuals E after removing p components
+      • Estimate idiosyncratic vols sigma_i from E and build W_sigma = diag(1/sigma_i)
+
+    Stage 2 (mandatory):
+      • Run PCA on standardized, time-weighted data  R_hat = W_sigma R W_tau
+      • Optionally clean eigen-spectrum with BBP inverse for separated spikes
+      • Reconstruct cleaned covariance in original units
+
+    Shapes
+    ------
+    R: (n x T) assets × time matrix. Time weights w (length T) multiply columns.
+
+    Key attributes (after fit_stage2/fit)
+    -------------------------------------
+    • components_: left singular vectors U (n x r)
+    • singular_values_: singular values s (length r)
+    • explained_variance_: x = s^2 / T (length r)
+    • explained_variance_ratio_: x / sum(x)
+    • Sigma_clean_: cleaned covariance (n x n) if spectrum_cleaner != 'none'
+
+    Notes
+    -----
+    • Two-stage is *not* optional in this class. Stage 1 must precede Stage 2.
+    • Default time weighting is equal weights (all ones).
+    • BBP cleaning uses effective aspect ratio computed from time weights.
+    """
+
+    def __init__(
+        self,
+        n_components: Optional[int] = None,
+        *,
+        p_stage1: int = 0,  # number of PCs removed in Stage 1 before vol estimation
+        center: Literal['none', 'row', 'row_recent'] = 'row',
+        time_weights_stage1: Optional[np.ndarray] = None,  # default equal weights
+        time_weights_stage2: Optional[np.ndarray] = None,  # default equal weights
+        spectrum_cleaner: Literal['none', 'bbp'] = 'none',
+        bulk_target: Literal['noise', 'average_bulk'] = 'noise',
+        noise_var: Optional[float] = None,   # if None, estimated from spectrum when cleaning
+        clip_negative_disc: bool = True,
+        allow_rank_deficient: bool = True,
+    ) -> None:
+        self.n_components = n_components
+        self.p_stage1 = int(p_stage1)
+        self.center = center
+        self.time_weights_stage1 = time_weights_stage1
+        self.time_weights_stage2 = time_weights_stage2
+        self.spectrum_cleaner = spectrum_cleaner
+        self.bulk_target = bulk_target
+        self.noise_var = noise_var
+        self.clip_negative_disc = clip_negative_disc
+        self.allow_rank_deficient = allow_rank_deficient
+
+        # Fitted artifacts
+        self.n_: Optional[int] = None
+        self.T_: Optional[int] = None
+        self.row_means_stage1_: Optional[np.ndarray] = None
+        self.row_means_: Optional[np.ndarray] = None
+        self.sigma_row_: Optional[np.ndarray] = None
+        self.W_sigma_inv_: Optional[np.ndarray] = None
+
+        self.components_: Optional[np.ndarray] = None
+        self.singular_values_: Optional[np.ndarray] = None
+        self.explained_variance_: Optional[np.ndarray] = None
+        self.explained_variance_ratio_: Optional[np.ndarray] = None
+
+        # Cleaning diagnostics
+        self.gamma_eff_: Optional[float] = None
+        self.Teff2_: Optional[float] = None
+        self.edge_: Optional[float] = None
+        self.is_spike_: Optional[np.ndarray] = None
+        self.lambda_clean_: Optional[np.ndarray] = None
+        self.sigma2_hat_: Optional[float] = None
+        self.Sigma_clean_: Optional[np.ndarray] = None
+
+    # ------------------------ utilities ------------------------
+    @staticmethod
+    def _ensure_weights(T: int, w: Optional[np.ndarray]) -> np.ndarray:
+        if w is None:
+            return np.ones(T, dtype=float)
+        w = np.asarray(w, dtype=float).reshape(-1)
+        if w.shape[0] != T:
+            raise ValueError(f"time weights length {w.shape[0]} != T {T}")
+        return w
+
+    @staticmethod
+    def _effective_T(w: np.ndarray) -> float:
+        w2 = w ** 2
+        num = (w2.sum()) ** 2
+        den = (w2 ** 2).sum()
+        return float(num / den)
+
+    @staticmethod
+    def _mp_edge(gamma: float, sigma2: float = 1.0) -> float:
+        return (1.0 + np.sqrt(gamma)) ** 2 * sigma2
+
+    def _bbp_inverse(self, x: np.ndarray, gamma: float) -> np.ndarray:
+        a = x + 1.0 - gamma
+        disc = a * a - 4.0 * x
+        if self.clip_negative_disc:
+            disc = np.maximum(disc, 0.0)
+        return 0.5 * (a + np.sqrt(disc))
+
+    @staticmethod
+    def _safe_svd(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return np.linalg.svd(X, full_matrices=False)
+
+    @staticmethod
+    def _demean_rows(R: np.ndarray, w: Optional[np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+        """Return demeaned R and means. If w is None → unweighted row means."""
+        if w is None:
+            mu = np.mean(R, axis=1)
+            return R - mu[:, None], mu
+        w = w.reshape(1, -1)
+        denom = w.sum(axis=1)
+        mu = (R * w).sum(axis=1) / denom
+        return R - mu[:, None], mu
+
+    # ------------------------ Stage 1 (mandatory) ------------------------
+    def fit_stage1(self, R: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Stage 1: time-weighted PCA on R, remove p_stage1 components, estimate idiosyncratic vols.
+
+        Returns a dict with keys: 'sigma_row', 'E', 'U1', 'S1', 'Vt1'.
+        """
+        R = np.asarray(R, dtype=float)
+        if np.any(~np.isfinite(R)):
+            raise ValueError("R contains NaNs or infs; please clean or impute first.")
+        n, T = R.shape
+        self.n_, self.T_ = n, T
+
+        w1 = self._ensure_weights(T, self.time_weights_stage1)
+
+        # Centering policy for Stage 1
+        if self.center == 'row_recent':
+            R0, mu = self._demean_rows(R, w1)
+        elif self.center == 'row':
+            R0, mu = self._demean_rows(R, None)
+        else:
+            R0, mu = R.copy(), np.zeros(n)
+        self.row_means_stage1_ = mu
+
+        # Time-weighted returns
+        Rw = R0 * w1[None, :]
+
+        U, s, Vt = self._safe_svd(Rw)
+
+        # Remove top p components before vol estimation
+        if self.p_stage1 > 0:
+            Up = U[:, : self.p_stage1]
+            sp = s[: self.p_stage1]
+            Vtp = Vt[: self.p_stage1, :]
+            Rw_hat = (Up * sp) @ Vtp
+            Ew = Rw - Rw_hat
+        else:
+            Ew = Rw
+
+        # Undo time weights to compute residuals E on original time scale
+        with np.errstate(divide='ignore', invalid='ignore'):
+            invw = np.where(w1 != 0.0, 1.0 / w1, 0.0)
+        E = Ew * invw[None, :]
+
+        # Idiosyncratic vol estimate per asset (unweighted time mean)
+        sigma_row = np.sqrt(np.mean(E ** 2, axis=1) + 1e-16)
+        self.sigma_row_ = sigma_row
+        self.W_sigma_inv_ = 1.0 / sigma_row
+
+        return {
+            'sigma_row': sigma_row,
+            'E': E,
+            'U1': U,
+            'S1': s,
+            'Vt1': Vt,
+        }
+
+    # ------------------------ Stage 2 (mandatory) ------------------------
+    def fit_stage2(self, R: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Stage 2: PCA on standardized, time-weighted data with optional BBP cleaning.
+
+        Requires Stage 1 to be already fitted (sigma_row_ available).
+        Returns dict with keys: 'Sigma_clean', 'U2', 'S2', 'lambda_clean', 'is_spike',
+                                'gamma_eff', 'edge', 'sigma2_hat'.
+        """
+        if self.sigma_row_ is None or self.W_sigma_inv_ is None:
+            raise RuntimeError("fit_stage1 must be called before fit_stage2.")
+
+        R = np.asarray(R, dtype=float)
+        n, T = R.shape
+        if (n, T) != (self.n_, self.T_):
+            raise ValueError("R shape differs from Stage 1. Use the same panel.")
+
+        w2 = self._ensure_weights(T, self.time_weights_stage2)
+
+        # Center Stage 2 (can choose different centering; default same semantics as Stage 1 but with w2)
+        if self.center == 'row_recent':
+            R0, mu2 = self._demean_rows(R, w2)
+        elif self.center == 'row':
+            R0, mu2 = self._demean_rows(R, None)
+        else:
+            R0, mu2 = R.copy(), np.zeros(n)
+        self.row_means_ = mu2
+
+        # Standardize rows and apply time weights
+        R_hat = (self.W_sigma_inv_[:, None] * R0) * w2[None, :]
+
+        U, s, Vt = self._safe_svd(R_hat)
+
+        # Truncate rank if requested
+        if self.n_components is not None:
+            r = int(self.n_components)
+            U = U[:, :r]
+            s = s[:r]
+            Vt = Vt[:r, :]
+        elif not self.allow_rank_deficient:
+            r = min(n, T)
+            U = U[:, :r]
+            s = s[:r]
+            Vt = Vt[:r, :]
+        # else keep all
+
+        x = (s ** 2) / T  # eigenvalues of (1/T) R_hat R_hat^T
+        total_var = x.sum() if x.sum() > 0 else 1.0
+
+        self.components_ = U
+        self.singular_values_ = s
+        self.explained_variance_ = x
+        self.explained_variance_ratio_ = x / total_var
+
+        # If no cleaning requested, return early with raw covariance in standardized units
+        if self.spectrum_cleaner == 'none':
+            Sigma_std = (U * x) @ U.T
+            Sigma_clean = (Sigma_std / self.sigma_row_[:, None]) / self.sigma_row_[None, :]
+            self.Sigma_clean_ = Sigma_clean
+            self.is_spike_ = np.zeros_like(x, dtype=bool)
+            self.lambda_clean_ = x.copy()
+            self.gamma_eff_ = None
+            self.sigma2_hat_ = None
+            self.edge_ = None
+            self.Teff2_ = None
+            return {
+                'Sigma_clean': Sigma_clean,
+                'U2': U,
+                'S2': s,
+                'lambda_clean': self.lambda_clean_,
+                'is_spike': self.is_spike_,
+                'gamma_eff': self.gamma_eff_,
+                'edge': self.edge_,
+                'sigma2_hat': self.sigma2_hat_,
+            }
+
+        # --- BBP cleaning path ---
+        Teff2 = self._effective_T(w2)
+        self.Teff2_ = Teff2
+        gamma_eff = n / Teff2
+        self.gamma_eff_ = gamma_eff
+
+        # Estimate noise variance in standardized space
+        if self.noise_var is not None:
+            sigma2_hat = float(self.noise_var)
+        else:
+            sigma2_hat = float(np.median(x))  # robust baseline
+        self.sigma2_hat_ = sigma2_hat
+
+        edge = self._mp_edge(gamma_eff, sigma2_hat)
+        self.edge_ = edge
+        is_spike = x > edge
+        self.is_spike_ = is_spike
+
+        lam = x.copy()
+        if np.any(is_spike):
+            lam_sp = self._bbp_inverse(x[is_spike] / sigma2_hat, gamma_eff) * sigma2_hat
+            lam[is_spike] = lam_sp
+
+        if self.bulk_target == 'noise':
+            lam[~is_spike] = sigma2_hat
+        elif self.bulk_target == 'average_bulk':
+            if np.any(~is_spike):
+                lam[~is_spike] = np.mean(x[~is_spike])
+            else:
+                lam[~is_spike] = sigma2_hat
+        else:
+            raise ValueError("bulk_target must be 'noise' or 'average_bulk'")
+
+        self.lambda_clean_ = lam
+
+        # Reconstruct cleaned covariance in standardized space and unscale
+        Sigma_std = (U * lam) @ U.T
+        Sigma_clean = (Sigma_std / self.sigma_row_[:, None]) / self.sigma_row_[None, :]
+        self.Sigma_clean_ = Sigma_clean
+
+        return {
+            'Sigma_clean': Sigma_clean,
+            'U2': U,
+            'S2': s,
+            'lambda_clean': lam,
+            'is_spike': is_spike,
+            'gamma_eff': gamma_eff,
+            'edge': edge,
+            'sigma2_hat': sigma2_hat,
+        }
+
+    # ------------------------ Convenience: full fit ------------------------
+    def fit(self, R: np.ndarray) -> Dict[str, np.ndarray]:
+        """Run Stage 1 then Stage 2, returning Stage 2 outputs."""
+        self.fit_stage1(R)
+        return self.fit_stage2(R)
+
+    # ------------------------ Transforms ------------------------
+    def transform(self, R: np.ndarray, n_components: Optional[int] = None) -> np.ndarray:
+        """Project returns onto Stage-2 components in standardized space. Returns (m x T)."""
+        if self.components_ is None or self.singular_values_ is None:
+            raise RuntimeError("fit_stage2/fit must be called first.")
+        U = self.components_
+        if n_components is None:
+            m = U.shape[1]
+        else:
+            m = int(n_components)
+            U = U[:, :m]
+        R = np.asarray(R, dtype=float)
+        if R.shape != (self.n_, self.T_):
+            raise ValueError("R shape differs from fitted panel.")
+        w2 = self._ensure_weights(self.T_, self.time_weights_stage2)
+        # Center and standardize like in fit_stage2
+        if self.center == 'row_recent':
+            R0, _ = self._demean_rows(R, w2)
+        elif self.center == 'row':
+            R0, _ = self._demean_rows(R, None)
+        else:
+            R0 = R.copy()
+        R_hat = (self.W_sigma_inv_[:, None] * R0) * w2[None, :]
+        F = U.T @ R_hat / np.sqrt(self.T_)
+        return F[:m, :]
+
+    def fit_transform(self, R: np.ndarray) -> np.ndarray:
+        self.fit(R)
+        return self.transform(R)
+
+    # ------------------------ Reconstruction helpers ------------------------
+    def covariance_raw(self) -> np.ndarray:
+        """Return raw covariance of standardized data used in Stage 2: U diag(x) U^T."""
+        if self.components_ is None or self.explained_variance_ is None:
+            raise RuntimeError("Model not fitted.")
+        U, x = self.components_, self.explained_variance_
+        return (U * x) @ U.T
+
+    def covariance_clean(self) -> np.ndarray:
+        if self.Sigma_clean_ is None:
+            raise RuntimeError("Cleaning not computed yet. Call fit_stage2/fit.")
+        return self.Sigma_clean_
+
+    # ------------------------ Diagnostics ------------------------
+    def summary(self) -> str:
+        if self.components_ is None:
+            return "Model not fitted."
+        lines = [
+            f"n={self.n_}, T={self.T_}",
+            f"n_components={self.components_.shape[1]}",
+            f"p_stage1={self.p_stage1}",
+            f"center={self.center}",
+            f"cleaner={self.spectrum_cleaner}",
+        ]
+        if self.spectrum_cleaner != 'none' and self.gamma_eff_ is not None:
+            lines += [
+                f"Teff2={self.Teff2_:.2f}, gamma_eff={self.gamma_eff_:.4f}",
+                f"MP edge={self.edge_:.6f}, sigma2_hat={self.sigma2_hat_:.6f}",
+                f"spikes_detected={int(self.is_spike_.sum()) if self.is_spike_ is not None else 0}",
+            ]
+        return "
+".join(lines)
