@@ -1,3 +1,211 @@
+
+
+## 🔹 ML Quantities in PPCA: A Statistically Grounded Start
+
+In the **PPCA → Varimax → Sparse Proximate** pipeline, the initial loading and noise estimates must come from **maximum likelihood (ML)** under the probabilistic model—not from ad hoc PCA choices. This ensures the entire workflow respects the Gaussian latent-variable assumptions.
+
+---
+
+### (1) Estimate sample covariance
+
+Compute the sample covariance of the centered data:
+$$
+S = \frac{1}{n} X_c^\top X_c = V \Lambda V^\top,
+$$
+where $\Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_p)$ with $\lambda_1 \ge \dots \ge \lambda_p$.
+
+---
+
+### (2) Choose latent dimension $k$
+
+Select $k < p$ via:
+- **Scree plot** (elbow in eigenvalues),
+- **Cumulative variance explained** (e.g., 90%),
+- **Cross-validated log-likelihood** (preferred under PPCA).
+
+Once $k$ is fixed, partition:
+$$
+\Lambda =
+\begin{bmatrix}
+\Lambda_k & 0 \\
+0 & \Lambda_{\text{res}}
+\end{bmatrix}, \quad
+\Lambda_k = \mathrm{diag}(\lambda_1,\dots,\lambda_k).
+$$
+
+---
+
+### (3) ML estimate of noise variance
+
+Under the PPCA log-likelihood (Tipping & Bishop, 1999), the ML estimate of isotropic noise is:
+$$
+\boxed{
+\sigma^2_{\text{ML}} = \frac{1}{p - k} \sum_{j = k+1}^{p} \lambda_j.
+}
+$$
+This is the **average of the discarded eigenvalues**—a natural estimate of unexplained, isotropic variance.
+
+> ⚠️ Only valid when $k < p$. If $k = p$, $\sigma^2_{\text{ML}} = 0$ (pure PCA).
+
+---
+
+### (4) ML estimate of loadings
+
+The ML loading matrix is:
+$$
+\boxed{
+W_{\text{ML}} = V_k (\Lambda_k - \sigma^2_{\text{ML}} I_k)^{1/2} R,
+}
+$$
+where $R \in \mathbb{R}^{k\times k}$ is any orthogonal matrix.  
+At this stage, set $R = I_k$; **Varimax will later choose an interpretable $R_{\text{var}}$**.
+
+> ✅ Note: $(\Lambda_k - \sigma^2_{\text{ML}} I_k)$ is positive definite because $\lambda_j > \sigma^2_{\text{ML}}$ for $j \le k$ (by construction).
+
+---
+
+### (5) ML posterior (scores)
+
+The posterior mean (expected latent scores) is:
+$$
+\boxed{
+Z = (X_c W_{\text{ML}})(W_{\text{ML}}^\top W_{\text{ML}} + \sigma^2_{\text{ML}} I_k)^{-1}.
+}
+$$
+In the limit $\sigma^2_{\text{ML}} \to 0$, this reduces to standard PCA scores.
+
+---
+
+## 🔹 Full Pipeline: PPCA (ML) → Varimax → Sparse Proximate
+
+### Step 1 — **PPCA (Maximum Likelihood)**
+1. Compute $S = \tfrac{1}{n}X_c^\top X_c = V \Lambda V^\top$.  
+2. Choose $k$.  
+3. Compute $\sigma^2_{\text{ML}} = \frac{1}{p-k}\sum_{j=k+1}^{p} \lambda_j$.  
+4. Compute $W_{\text{ML}} = V_k (\Lambda_k - \sigma^2_{\text{ML}} I)^{1/2}$.  
+5. Compute scores $Z = (X_c W_{\text{ML}})(W_{\text{ML}}^\top W_{\text{ML}} + \sigma^2_{\text{ML}} I)^{-1}$.
+
+### Step 2 — **Varimax rotation**
+Maximize:
+$$
+\Phi(R)=\sum_{j=1}^{k}\left[\frac{1}{p}\sum_{i=1}^{p} a_{ij}^4 - \frac{1}{p^2}\left(\sum_{i=1}^{p} a_{ij}^2\right)^2\right],\quad A=W_{\text{ML}}R.
+$$
+Then:
+$$
+W_{\text{var}} = W_{\text{ML}} R_{\text{var}}, \qquad Z_{\text{var}} = Z R_{\text{var}}.
+$$
+
+### Step 3 — **Sparse proximate (5%)**
+For each factor $j$:
+- Keep top 5% of $|W_{\text{var},:,j}|$, zero others,
+- Renormalize: $\tilde W_j = \dfrac{W_{\text{var},:,j} \odot \text{keep}_j}{\|W_{\text{var},:,j} \odot \text{keep}_j\|}$.
+
+### Step 4 — **Proximate factors & rescaling**
+$$
+\tilde Z = (X_c \tilde W)(\tilde W^\top \tilde W)^{-1}.
+$$
+Then **normalize each column of $\tilde Z$ to unit variance**, and **compensate in $\tilde W$** to preserve reconstruction:
+$$
+\tilde Z_j \leftarrow \frac{\tilde Z_j}{\mathrm{sd}(\tilde Z_j)}, \quad
+\tilde W_j \leftarrow \tilde W_j \cdot \mathrm{sd}(\tilde Z_j).
+$$
+
+### Step 5 — **Quality metrics**
+- **Generalized correlation**:
+  $$
+  \rho = \mathrm{tr}\!\left[
+  (Z_{\text{var}}^\top Z_{\text{var}}/n)^{-1}
+  (Z_{\text{var}}^\top \tilde Z/n)
+  (\tilde Z^\top \tilde Z/n)^{-1}
+  (\tilde Z^\top Z_{\text{var}}/n)
+  \right]
+  $$
+- **Reconstruction $R^2$**:
+  $$
+  R^2_{\text{prox}} = 1 - \frac{\|X_c - \tilde Z \tilde W^\top\|_F^2}{\|X_c\|_F^2}.
+  $$
+
+---
+
+### 🔹 Python Pseudocode (ML-Based Pipeline)
+
+```python
+def ppca_varimax_sparse(Xc, k, sparsity=0.05):
+    """
+    Full pipeline: PPCA (ML) → Varimax → Sparse Proximate Factors
+    """
+    import numpy as np
+    from scipy.linalg import svd
+
+    n, p = Xc.shape
+    m = max(1, int(np.floor(sparsity * p)))
+
+    # --- Step 1: PPCA ML estimates ---
+    U, s, Vt = svd(Xc, full_matrices=False)
+    Lambda = (s ** 2) / n          # eigenvalues of S = Xc'Xc / n
+    V = Vt.T
+    V_k = V[:, :k]
+    lambda_k = Lambda[:k]
+    sigma2_ML = np.mean(Lambda[k:])  # ML noise variance
+
+    # Ensure positivity (numerical safety)
+    delta = np.maximum(lambda_k - sigma2_ML, 0)
+    W_ML = V_k @ np.diag(np.sqrt(delta))
+
+    M = W_ML.T @ W_ML + sigma2_ML * np.eye(k)
+    Z = Xc @ W_ML @ np.linalg.inv(M)
+
+    # --- Step 2: Varimax rotation (assume `varimax` returns R) ---
+    R_var = varimax(W_ML)  # user-supplied or from sklearn/rotation package
+    W_var = W_ML @ R_var
+    Z_var = Z @ R_var
+
+    # --- Step 3: Sparse truncation ---
+    W_tilde = np.zeros_like(W_var)
+    for j in range(k):
+        w = W_var[:, j]
+        keep_idx = np.argpartition(np.abs(w), -m)[-m:]
+        w_sparse = np.zeros_like(w)
+        w_sparse[keep_idx] = w[keep_idx]
+        norm = np.linalg.norm(w_sparse)
+        if norm > 0:
+            w_sparse /= norm
+        W_tilde[:, j] = w_sparse
+
+    # --- Step 4: Proximate factors + variance rescaling ---
+    H = W_tilde.T @ W_tilde
+    if np.linalg.cond(H) < 1e12:
+        Z_tilde = Xc @ W_tilde @ np.linalg.inv(H)
+    else:
+        Z_tilde = Xc @ W_tilde  # fallback if ill-conditioned
+
+    # Rescale to unit variance and adjust W_tilde accordingly
+    for j in range(k):
+        sd = np.sqrt(np.mean(Z_tilde[:, j] ** 2))
+        if sd > 1e-8:
+            Z_tilde[:, j] /= sd
+            W_tilde[:, j] *= sd
+
+    # --- Step 5: Quality metrics ---
+    def generalized_correlation(Z1, Z2):
+        n = Z1.shape[0]
+        A = (Z1.T @ Z1) / n
+        B = (Z1.T @ Z2) / n
+        C = (Z2.T @ Z2) / n
+        return np.trace(np.linalg.solve(A, B) @ np.linalg.solve(C, B.T))
+
+    rho = generalized_correlation(Z_var, Z_tilde)
+    R2 = 1 - (np.linalg.norm(Xc - Z_tilde @ W_tilde.T, 'fro')**2 /
+              np.linalg.norm(Xc, 'fro')**2)
+
+    return {
+        "sigma2_ML": sigma2_ML,
+        "W_ML": W_ML, "Z": Z,
+        "W_var": W_var, "Z_var": Z_var,
+        "W_tilde": W_tilde, "Z_tilde": Z_tilde,
+        "rho": rho, "R2_prox": R2
+    }
+
 \title{
 Useful factors are fewer than you think
 }
