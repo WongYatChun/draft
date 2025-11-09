@@ -1,4 +1,479 @@
+# **Heteroskedasticity-Corrected Principal Component Analysis (HC-PCA)**
 
+
+## **1. Motivation and Model**
+
+We begin with a mean-centered dataset
+
+$$
+X_c \in \mathbb{R}^{n\times p},
+$$
+where $n$ is the number of observations and $p$ is the number of variables.
+
+The classical low-rank factor model is
+
+$$
+X_c = Z L^\top + E,
+$$
+where
+
+- $Z \in \mathbb{R}^{n\times k}$: factor (score) matrix,
+- $L \in \mathbb{R}^{p\times k}$: loading matrix,
+- $E \in \mathbb{R}^{n\times p}$: idiosyncratic residuals,
+- and $k \ll \min(n,p)$.
+
+Standard PCA estimates $Z$ and $L$ by minimizing the total squared reconstruction error
+
+$$
+\min_{Z,L} \|X_c - ZL^\top\|_F^2,
+$$
+which is equivalent to ordinary least squares (OLS) on each column of $X_c$.  
+This implicitly assumes **homoskedastic** idiosyncratic noise: each variable contributes equally to the total error.
+
+In practice, many datasets exhibit **heteroskedasticity**—variables differ substantially in noise level or measurement error.  
+High-variance variables can dominate the extracted components even when their variation is mostly idiosyncratic.  
+**Heteroskedasticity-Corrected PCA (HC-PCA)** addresses this by *whitening* each variable according to its estimated residual variance before performing PCA.
+
+
+## **2. Whitening Step**
+
+Let
+
+$$
+\Sigma_E = \mathrm{diag}(\sigma_1^2, \ldots, \sigma_p^2)
+$$
+be a diagonal matrix of **idiosyncratic variances** of the $p$ variables ($\sigma_j^2 > 0$ for all $j$).  
+These can be obtained, for instance, from an initial PCA fit, from a cross-sectional variance decomposition, or from domain knowledge.
+
+HC-PCA replaces the OLS objective with a **weighted least-squares (WLS)** objective, minimizing the sum of squared errors where each variable $j$ is inversely weighted by its idiosyncratic variance $\sigma_j^2$:
+
+$$
+\min_{Z,L} \sum_{j=1}^p \frac{1}{\sigma_j^2} \|X_{c,\cdot j} - Z L_{j\cdot}^\top\|_2^2
+$$
+
+This WLS objective can be expressed compactly using the Frobenius norm. Define the **whitened data matrix**:
+
+$$
+\boxed{X_{\mathrm{HC}} = X_c \Sigma_E^{-1/2}}
+$$
+
+The WLS objective is precisely equivalent to minimizing the OLS objective (standard Frobenius norm) in the whitened space:
+
+$$
+\min_{Z,L} \|(X_c - ZL^\top)\Sigma_E^{-1/2}\|_F^2
+$$
+
+This is the correct formulation. This corresponds to the trace norm $\mathrm{tr}((X_c - ZL^\top)^\top (X_c - ZL^\top) \Sigma_E^{-1})$, which correctly weights the columns (variables).
+
+The whitening transformation converts this weighted LS problem into an **ordinary** LS problem on $X_{\mathrm{HC}}$.
+
+
+## **3. Loadings from the SVD**
+
+Perform a rank-$k$ singular value decomposition (SVD) on the whitened data:
+
+$$
+X_{\mathrm{HC}} \approx U S V^\top,
+$$
+where
+
+- $U \in \mathbb{R}^{n\times k}$: left singular vectors (orthonormal, $U^\top U = I_k$),
+- $S \in \mathbb{R}^{k\times k}$: singular values (diagonal, $S_{11}\ge \cdots \ge S_{kk}>0$),
+- $V \in \mathbb{R}^{p\times k}$: right singular vectors (orthonormal, $V^\top V = I_k$).
+
+The columns of $V$ define the **loading directions in the whitened space**.  
+To express them on the original (unwhitened) scale, undo the whitening:
+
+$$
+\boxed{L = \Sigma_E^{1/2} V.}
+$$
+
+These loadings represent each variable’s contribution to the common factors, now properly rescaled by its reliability.
+
+A key property is the **generalized orthonormality**:
+
+$$
+L^\top \Sigma_E^{-1} L = (\Sigma_E^{1/2} V)^\top \Sigma_E^{-1} (\Sigma_E^{1/2} V) = V^\top \Sigma_E^{1/2} \Sigma_E^{-1} \Sigma_E^{1/2} V = V^\top V = I_k,
+$$
+
+so that the loadings are orthonormal under the **GLS inner product** defined by $\Sigma_E^{-1}$.
+
+
+## **4. Factor Scores**
+
+Given loadings $L$, the factor scores solve the **generalized least squares (GLS)** problem
+
+$$
+\min_Z \|(X_c - ZL^\top)\Sigma_E^{-1/2}\|_F^2.
+$$
+
+Equivalently, for each observation $x_i$ (row of $X_c$),
+
+$$
+z_i = \arg\min_z \|(x_i - zL^\top)\Sigma_E^{-1/2}\|_2^2.
+$$
+
+The row-wise solution is
+
+$$
+\boxed{Z = X_c \Sigma_E^{-1} L (L^\top \Sigma_E^{-1} L)^{-1}.}
+$$
+
+This is the natural GLS analog of the OLS formula $Z = X_c L (L^\top L)^{-1}$ used in standard PCA.
+
+### **Equivalence of GLS and Whitened-OLS Scores**
+
+This GLS solution is numerically identical to the OLS solution in the whitened space.  
+The OLS solution in the whitened space is:
+
+$$
+Z_{\mathrm{HC}} = X_{\mathrm{HC}} V (V^\top V)^{-1}
+$$
+
+Since $V^\top V = I_k$ from the SVD:
+
+$$
+\boxed{Z_{\mathrm{HC}} = X_{\mathrm{HC}} V = X_c \Sigma_E^{-1/2} V.}
+$$
+
+We can prove $Z = Z_{\mathrm{HC}}$ by substituting $L = \Sigma_E^{1/2} V$ into the GLS formula:
+
+$$
+Z = X_c \Sigma_E^{-1} (\Sigma_E^{1/2} V) \left( (\Sigma_E^{1/2} V)^\top \Sigma_E^{-1} (\Sigma_E^{1/2} V) \right)^{-1}
+$$
+$$
+= X_c \Sigma_E^{-1/2} V \left( V^\top \Sigma_E^{1/2} \Sigma_E^{-1} \Sigma_E^{1/2} V \right)^{-1}
+$$
+$$
+= X_c \Sigma_E^{-1/2} V (V^\top V)^{-1} = X_c \Sigma_E^{-1/2} V (I_k)^{-1} = X_c \Sigma_E^{-1/2} V
+$$
+$$
+\therefore Z = Z_{\mathrm{HC}}
+$$
+
+The **GLS factor scores** in the original metric equal the **OLS scores** in the whitened metric.
+
+
+
+## **5. Reconstruction**
+
+In the whitened coordinates:
+
+$$
+\widehat{X}_{\mathrm{HC}} = Z_{\mathrm{HC}} V^\top = (U S) V^\top = U S V^\top.
+$$
+
+Returning to the original scale gives
+
+$$
+\boxed{\widehat{X}_c = \widehat{X}_{\mathrm{HC}} \Sigma_E^{1/2} = Z_{\mathrm{HC}} V^\top \Sigma_E^{1/2} = Z L^\top.}
+$$
+
+Thus, the fitted component of $X_c$ captures the systematic variation while respecting the heteroskedastic noise structure.
+
+
+## **6. Regularized Variant**
+
+To prevent overfitting or to smooth the factor scores, one can regularize the GLS objective:
+
+$$
+\min_Z \|(X_c - ZL^\top)\Sigma_E^{-1/2}\|_F^2 + \alpha \|Z\|_F^2,
+\qquad \alpha > 0.
+$$
+
+This is standard **matrix ridge regression** in the whitened space:
+
+$$
+\min_Z \|X_{\mathrm{HC}} - ZV^\top\|_F^2 + \alpha \|Z\|_F^2.
+$$
+
+The solution is
+
+$$
+\boxed{Z = X_{\mathrm{HC}} V (V^\top V + \alpha I_k)^{-1}.}
+$$
+
+For orthonormal $V$ (as in HC-PCA),
+
+$$
+\boxed{Z^{(\alpha)} = \frac{1}{1+\alpha} \, X_{\mathrm{HC}} V = \frac{1}{1+\alpha} \, X_c \Sigma_E^{-1/2} V.}
+$$
+
+
+## **7. Dimension and Formula Summary**
+
+| Quantity | Description | Dimension | Formula / Relation |
+| :--- | :--- | :--- | :--- |
+| $X_c$ | Mean-centered data | $n\times p$ | — |
+| $\Sigma_E$ | Diagonal matrix of idiosyncratic variances | $p\times p$ | $\mathrm{diag}(\sigma_1^2,\ldots,\sigma_p^2)$ |
+| $X_{\mathrm{HC}}$ | Whitened data | $n\times p$ | $X_c \Sigma_E^{-1/2}$ |
+| $V$ | Orthonormal loadings in whitened space | $p\times k$ | from SVD of $X_{\mathrm{HC}}$ |
+| $L$ | Loadings in original scale | $p\times k$ | $\Sigma_E^{1/2} V$ |
+| $Z_{\mathrm{HC}}$ | Whitened (GLS) factor scores | $n\times k$ | $X_{\mathrm{HC}} V = X_c \Sigma_E^{-1/2}V$ |
+| $Z$ | GLS scores in raw scale | $n\times k$ | $X_c \Sigma_E^{-1}L (L^\top \Sigma_E^{-1}L)^{-1}$; = $Z_{\mathrm{HC}}$ |
+| $\widehat{X}_c$ | Reconstructed centered data | $n\times p$ | $Z L^\top = Z_{\mathrm{HC}} V^\top \Sigma_E^{1/2}$ |
+
+
+## **8. Standardized Factor Scores in HC-PCA**
+
+In the construction above, the factor scores $Z_{\mathrm{HC}} = X_c \Sigma_E^{-1/2} V$ inherit their scaling from the singular values $S$:
+
+$$
+X_{\mathrm{HC}} = U S V^\top, \qquad Z_{\mathrm{HC}} = U S.
+$$
+
+The sample covariance of the scores is
+
+$$
+\mathrm{Cov}(Z_{\mathrm{HC}})
+= \frac{1}{n-1} Z_{\mathrm{HC}}^\top Z_{\mathrm{HC}}
+= \frac{1}{n-1} S^2,
+$$
+
+The factors are **uncorrelated**, but not standardized: their variances equal the (scaled) squared singular values. In many downstream tasks (e.g., regression, risk premia), we prefer **standardized factors** with unit variance.
+
+### **8.1. Rescaling**
+
+Define the diagonal matrix of factor standard deviations:
+
+$$
+\Sigma_Z = \mathrm{diag}\left(\sigma_{Z,1}, \dots, \sigma_{Z,k}\right),
+\qquad
+\sigma_{Z,i}^2 = \frac{S_{ii}^2}{n-1}.
+$$
+
+Then the **standardized scores** are
+
+$$
+\boxed{Z_s = Z_{\mathrm{HC}} \Sigma_Z^{-1} = U S \Sigma_Z^{-1}.}
+$$
+
+and the corresponding **rescaled loadings** are defined to preserve the reconstruction $X_c \approx Z_s L_s^\top$:
+
+$$
+\boxed{L_s = L \Sigma_Z = \Sigma_E^{1/2} V \Sigma_Z.}
+$$
+
+### **8.2. Properties**
+
+1. **Unit variance of scores**
+
+$$
+\frac{1}{n-1} Z_s^\top Z_s
+= \Sigma_Z^{-1} \left( \frac{1}{n-1} Z_{\mathrm{HC}}^\top Z_{\mathrm{HC}} \right) \Sigma_Z^{-1}
+= \Sigma_Z^{-1} \left( \frac{1}{n-1} S^2 \right) \Sigma_Z^{-1} = I_k.
+$$
+
+2. **Reconstruction preserved**
+
+$$
+Z_s L_s^\top = (Z_{\mathrm{HC}} \Sigma_Z^{-1}) (L \Sigma_Z)^\top = Z_{\mathrm{HC}} \Sigma_Z^{-1} \Sigma_Z L^\top = Z_{\mathrm{HC}} L^\top = \widehat{X}_c.
+$$
+
+Rescaling only affects the internal normalization, not the fitted data.
+
+3. **Cross-factor orthogonality**
+
+The standardized scores are orthogonal. The corresponding loadings satisfy
+
+$$
+L_s^\top \Sigma_E^{-1} L_s = (L \Sigma_Z)^\top \Sigma_E^{-1} (L \Sigma_Z) = \Sigma_Z (L^\top \Sigma_E^{-1} L) \Sigma_Z = \Sigma_Z I_k \Sigma_Z = \Sigma_Z^2,
+$$
+
+so the generalized orthonormality is scaled by the factor variances.
+
+
+
+
+## **9. Rotations for Interpretation** 
+
+After standardizing the factor scores so that $\mathrm{Cov}(Z_s) = I_k$, the representation $X_c \approx Z_s L_s^\top$ is not unique. Any orthogonal transformation of the factor space preserves this product, allowing for **rotations** to find a more interpretable loading structure.
+
+### **9.1. The Target: $L_s$, the Interpretable Loadings**
+
+The entire purpose of rotation (e.g., Varimax, Promax) is to achieve a **"simple structure"**—where each factor is primarily defined by a small, distinct set of variables—which makes the latent factors interpretable (e.g., identifying "Growth Factor" vs. "Value Factor").
+
+Crucially, **we must rotate $L_s$ (Loadings in the Original Scale)**, not $V$ (Loadings in the Whitened Scale), because $L_s$ holds the meaningful, unscaled relationships:
+
+* **$L_s$:** The element $(L_s)_{ij}$ tells you how much **original variable $i$** (e.g., 'Apple stock') contributes to **factor $j$**. This is the matrix used for interpretation.
+* **$V$:** The elements of $V$ define the factor relationships in the **whitened space** ($X_c \Sigma_E^{-1/2}$), which is a mathematical construct without direct economic meaning. Rotating $V$ would yield a simplified structure in an artificial space.
+
+Therefore, the rotation algorithm is applied directly to $L_s$ to simplify the relationships we care about.
+
+### **9.2. Rotating the Loadings and Adjusting the Scores**
+
+Let $R \in \mathbb{R}^{k\times k}$ be an invertible **rotation matrix** determined by maximizing the chosen simplicity criterion applied to $L_s$.
+
+We define the rotated loadings and the corresponding adjusted scores as:
+$$
+\boxed{
+L_r = L_s R,
+\qquad
+Z_r = Z_s (R^{-1})^\top.
+}
+$$
+The reconstruction is mathematically preserved:
+$$
+Z_r L_r^\top
+= (Z_s (R^{-1})^\top) (L_s R)^\top
+= Z_s (R^{-1})^\top R^\top L_s^\top
+= Z_s (R (R^{-1}))^\top L_s^\top = Z_s L_s^\top.
+$$
+
+### **9.3. Factor Covariance After Rotation**
+
+The rotation affects the covariance structure of the scores. Given $\mathrm{Cov}(Z_s) = I_k$, the covariance of the new scores $Z_r = Z_s (R^{-1})^\top$ is:
+$$
+\mathrm{Cov}(Z_r) = (R^{-1}) I_k (R^{-1})^\top = (R^{-1}) (R^\top)^{-1}
+$$
+$$
+\boxed{
+\mathrm{Cov}(Z_r) = (R^\top R)^{-1}.
+}
+$$
+
+-   If $R$ is **orthogonal** ($R^\top R = I_k$), such as in **Varimax**, then $\mathrm{Cov}(Z_r) = I_k$. The rotated factors remain uncorrelated and standardized.
+-   If $R$ is **oblique** ($R^\top R \neq I_k$), such as in **Promax**, then $\mathrm{Cov}(Z_r) \neq I_k$. The rotated factors become correlated.
+
+### **9.3. Why Rotations Are Applied**
+
+The SVD/PCA solution is optimal for variance explained, but the resulting factors (e.g., PC1) are often dense "market" factors, with subsequent factors (PC2, etc.) being complex contrasts.
+
+Rotation (both orthogonal and oblique) is used to re-allocate the variance within the $k$-dimensional factor subspace to find a **"simple structure"**—where each factor loads heavily on a small, distinct subset of variables, and each variable is explained by a small number of factors—making the factors more interpretable.
+
+## **10. Sparsification of Loadings for Interpretability**
+
+Rotation (Section 9) aims for a "simple structure" to improve interpretability, but the resulting loadings $L_r$ are still **dense** (i.e., all elements are non-zero). For many applications, particularly in finance, a **sparse** loading matrix $L_t$—where factors are defined by a small, distinct set of variables—is the true goal.
+
+This can be achieved via two distinct paths: a multi-step *ad hoc* procedure (which is fast and intuitive) or a unified, rigorous optimization.
+
+### **10.1. Method 1: Post-Hoc Thresholding and Normalization (Heuristic)**
+
+This common, pragmatic approach treats sparsification as a "cleaning" step applied *after* the HC-PCA and rotation have been completed.
+
+#### **a. Step 1: Rotate for Simple Structure**
+
+First, apply a rotation $R$ (e.g., Varimax) to the standardized loadings $L_s$ to maximize a "simplicity" criterion. This yields the dense, rotated loadings $L_r = L_s R$. This step is crucial as it orients the factors so that their "true" zero loadings are already close to zero.
+
+#### **b. Step 2: Hard-Thresholding**
+
+Next, define a threshold $t > 0$ and set all elements of $L_r$ with an absolute value below $t$ to exactly zero.
+
+$$
+\boxed{
+L_t = \mathcal{T}_t(L_r)
+},
+\qquad
+(\mathcal{T}_t(L_r))_{ij} =
+\begin{cases}
+(L_r)_{ij}, & |(L_r)_{ij}| \ge t, \\[4pt]
+0, & |(L_r)_{ij}| < t.
+\end{cases}
+$$
+
+The choice of $t$ is a heuristic decision, often based on visual inspection ("scree plot" of loadings) or a desired sparsity level (e.g., "keep only the top 10 loadings per factor").
+
+#### **c. Step 3: L¹ Normalization**
+
+After thresholding, the columns of $L_t$ have arbitrary scales. For instance, a factor loading on 10 variables will have a much larger column norm than a factor loading on only 2. This makes factors incomparable.
+
+To fix this, we **normalize each factor column by its L¹ norm**:
+
+$$
+\boxed{
+L_{t,\cdot j} \leftarrow \frac{L_{t,\cdot j}}{\|L_{t,\cdot j}\|_1},
+\qquad \text{for } j=1,\ldots,k
+}
+$$
+
+where $\|v\|_1 = \sum_i |v_i|$.
+
+**Econometric Justification for L¹ Norm:**
+
+- **Scale Invariance:** This step removes the arbitrary scaling, making all factors comparable.
+- **Interpretability:** Each factor column $L_{t,\cdot j}$ can now be interpreted as a **"distribution of influence"** or a **"long-short portfolio"**. The L¹ norm forces the sum of the absolute loadings to 1, as if each factor has a total "budget" of 1 to allocate across the $p$ variables.
+- **Robustness:** The L¹ norm is less sensitive to a single large outlier loading than the L² (Euclidean) norm.
+
+#### **d. Step 4: Recompute Scores (Crucial)**
+
+The heuristic steps (a–c) have created a new loading matrix $L_t$ that is no longer the optimal partner for the scores $Z_r$. To restore statistical consistency, we **must** re-compute the factor scores by finding the optimal GLS projection of the data onto the new sparse loading matrix $L_t$.
+
+As shown in Section 4, the correct and only rigorous way to do this is:
+
+$$
+\boxed{
+Z_t = X_c \Sigma_E^{-1} L_t (L_t^\top \Sigma_E^{-1} L_t)^{-1}
+}
+$$
+
+This $Z_t$ represents the time series of the sparse factors defined by $L_t$.
+
+#### **e. Summary of Heuristic Method**
+
+This multi-step procedure is popular because it is fast and transparent. However, it is statistically *ad hoc*. The final model $Z_t L_t^\top$ is no longer the best rank-$k$ approximation to the data, and the choice of $t$ and the L¹ norm are arbitrary (though justifiable) choices.
+
+---
+
+### **10.2. Method 2: Penalized Estimation (Rigorous)**
+
+A rigorous econometrician would achieve sparsity not by post-hoc cleaning, but by integrating a sparsity-inducing penalty directly into the GLS objective function. This is known as **Sparse HC-PCA**.
+
+The objective becomes a single, unified estimation problem:
+
+$$
+\min_{Z,L} \underbrace{\|(X_c - ZL^\top)\Sigma_E^{-1/2}\|_F^2}_{\text{GLS Fit}} + \underbrace{\lambda \sum_{j=1}^p \sum_{\ell=1}^k |L_{j\ell}|}_{\text{Sparsity Penalty (L¹)}}
+$$
+
+- $\lambda > 0$ is a tuning parameter (chosen via cross-validation or information criteria) that controls the trade-off between model fit and the number of non-zero loadings.
+- This problem is **convex in $Z$ for fixed $L$** and **convex in $L$ for fixed $Z$**, but **non-convex jointly**. It is typically solved via **alternating minimization**, where at each step soft-thresholding (the proximal operator of the $\ell_1$ norm) is applied to $L$.
+- The solution $(Z_t, L_t)$ is **simultaneously optimal and sparse by construction**. No rotation is needed—the $\ell_1$ penalty directly promotes the desired "simple structure."
+- The resulting loadings are **exactly sparse**, and the factor scores $Z_t$ are optimal for this sparse structure under the GLS criterion.
+
+## **11. Projection of New Data to Factor Scores**
+
+Once an HC-PCA model has been estimated, we have a fixed loading matrix $L_t$ (which may be dense, rotated, or sparse) and the fixed idiosyncratic variances $\Sigma_E$. We can now project new, out-of-sample data into this established factor space.
+
+
+Given a new centered dataset $X_{\text{new},c} \in \mathbb{R}^{m\times p}$:
+
+
+### **11.1. GLS Projection**
+
+The new factor scores $Z_{\text{new}} \in \mathbb{R}^{m\times k}$ are found by solving the same GLS projection problem as in Section 10.3. This is **not a re-estimation** of the model; it is a linear projection of new data onto the fixed, learned factor structure.
+
+$$
+Z_{\text{new}} = \arg\min_Z \|(X_{\text{new},c}-ZL_t^\top)\Sigma_E^{-1/2}\|_F^2
+$$
+
+The unique solution is the **weighted least-squares projection**:
+
+$$
+\boxed{
+Z_{\text{new}}
+= X_{\text{new},c}\Sigma_E^{-1}L_t
+\big(L_t^\top\Sigma_E^{-1}L_t\big)^{-1}
+}
+$$
+
+The matrix $P = \Sigma_E^{-1}L_t (L_t^\top\Sigma_E^{-1}L_t)^{-1}$ is a fixed $p \times k$ "scoring matrix" that can be pre-computed and applied to any new data.
+
+### **11.2. Reconstruction**
+
+The fitted **common component** of the new data is
+
+$$
+\widehat{X}_{\text{new},c} = Z_{\text{new}} L_t^\top
+$$
+
+The new residuals are
+
+$$
+E_{\text{new}} = X_{\text{new},c} - \widehat{X}_{\text{new},c}
+$$
+
+This decomposition
+$X_{\text{new},c} = Z_{\text{new}}L_t^\top + E_{\text{new}}$
+is the fundamental purpose of the factor model: to separate new information into systematic (factor) and idiosyncratic components.
 
 ## 🔹 ML Quantities in PPCA: A Statistically Grounded Start
 
