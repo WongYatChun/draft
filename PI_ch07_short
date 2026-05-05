@@ -1,0 +1,1635 @@
+# Chapter 7: Empirical Analysis of Price Impact Models
+
+## 7.0 Introduction
+
+### Purpose
+This chapter builds empirical intuition for price impact models by comparing representative models from the literature under a common methodology using public trading data.
+
+### Setup / formulation
+- Price impact is treated as a concrete liquidity measure: the price response caused by trading.
+- The chapter compares models across:
+  - data sources: proprietary order-level data and public fill-level/order-book data;
+  - asset classes: equities, fixed income, options, cryptocurrencies;
+  - timescales: tick, intraday, daily;
+  - model specifications: OFI, OW, Bouchaud-style propagators, reduced-form stochastic liquidity models, AFS-type globally concave models, and cross-impact models.
+- The empirical framework is based primarily on the methodology of Cont, Kukanov, and Stoikov.
+
+### Main result
+The chapter does **not** attempt to identify the universally best price impact model. Instead, it provides a reproducible empirical comparison and a set of diagnostics for model behavior.
+
+### Interpretation
+Different trading applications require different price impact models. A model that is strong for short-horizon prediction may be unsuitable for optimal execution or causal counterfactuals.
+
+### Notebook TODO
+- Add the introductory literature map with citations.
+- Add a table of model families, data types, asset classes, and use cases.
+- Add a warning box distinguishing statistical prediction from causal execution modeling.
+
+---
+
+## 7.1 A Pedagogical Example
+
+### Purpose
+This section states four empirical sanity checks that any serious price impact analysis should confront.
+
+### Setup / formulation
+The chapter identifies four broad empirical facts:
+
+- Out-of-sample $R^2$ from public trading tape models can exceed $10\%$ for contemporaneous return prediction.
+- Price impact magnitude for funds is roughly $30$ bps on liquid stocks.
+- Price impact is often $5$ to $10$ times larger than the bid-ask spread.
+- Price impact has strong time-of-day effects, especially near the market open.
+- Price impact is concave for sizable orders.
+
+### Main result
+A model or dataset that contradicts these broad facts may be biased, misspecified, or fitted under a non-standard methodology.
+
+### Interpretation
+These facts function as empirical diagnostics. They are not exact universal laws, but they define the approximate scale, shape, and intraday behavior that price impact models should reproduce.
+
+### Notebook TODO
+- Add a diagnostic checklist for user-supplied trade data.
+- Add examples of failures: wrong sign convention, wrong horizon, omitted order-book events, selection bias, prediction bias.
+- Add plots comparing empirical results against the four facts.
+
+---
+
+## 7.2 Methodology
+
+### Purpose
+This section defines the empirical framework used to compare price impact models under a common data-processing and validation protocol.
+
+### Setup / formulation
+The methodology has five steps:
+
+- Pre-process event-based order-book data.
+- Define base features and binned data.
+- Define the time kernel and compute impact states.
+- Define prediction horizons and training samples.
+- Define testing and validation samples.
+
+### Main result
+A single reproducible methodology makes model comparisons meaningful across model classes, horizons, clocks, stocks, and time-of-day partitions.
+
+### Interpretation
+The chapter’s empirical conclusions depend on consistent preprocessing, binning, horizon choice, and out-of-sample evaluation. Without those controls, model comparisons become unreliable.
+
+### Notebook TODO
+- Add a complete preprocessing pipeline.
+- Add walk-forward train/test/validation splits.
+- Add reusable code for all model recursions.
+- Add unit tests for sign conventions and bin aggregation.
+
+---
+
+## 7.2.1 Pre-processing the Event-Based Data
+
+### Purpose
+This subsection defines the event-level order-flow variables used to construct price impact features.
+
+### Setup / formulation
+The chapter uses level 1 order-book events from LOBSTER for S&P 500 constituents over 2019.
+
+Order-book events are classified into:
+
+- Trades.
+- Limit order submissions.
+- Limit order cancellations.
+
+Order flow imbalance uses the following signs:
+
+- Trades:
+  - contribution is $q = a - b$,
+  - where $a$ is volume filled at the ask and $b$ is volume filled at the bid.
+- Limit order submissions:
+  - contribution is $b - a$,
+  - where $a$ is ask-side submitted volume and $b$ is bid-side submitted volume.
+- Limit order cancellations:
+  - contribution is $a - b$,
+  - where $a$ is ask-side cancelled volume and $b$ is bid-side cancelled volume.
+
+### Main result
+Order flow imbalance combines trades, submissions, and cancellations into one directional order-book pressure variable.
+
+### Interpretation
+Trades at the ask and cancellations at the ask are buy-pressure events. Submissions at the bid are also buy-pressure events. The sign convention is designed so positive OFI indicates upward pressure on the midprice.
+
+### Notebook TODO
+- Add a formal event schema.
+- Add event-level examples for each sign convention.
+- Add code to construct signed OFI from raw LOBSTER messages.
+- Add validation checks for zero, missing, or malformed events.
+
+---
+
+## 7.2.2 Definition of the Base Features and Binned Data
+
+### Purpose
+This subsection defines the bin-level variables used for model fitting.
+
+### Setup / formulation
+The data are binned with bin size $\delta t = 10s$.
+
+For each bin $[t,t+\delta t]$:
+
+- $\mathrm{ofi}_t$ is the sum of all OFI event contributions in the bin.
+- $q_t$ is the trade imbalance in the bin, using trades only.
+- $P_t$ is the observed midprice at the bin start.
+- The bin return is:
+
+$$
+r_t = \frac{P_{t+\delta t}}{P_t} - 1.
+$$
+
+- $|q_t|$ is the amount of volume traded in the bin.
+- $d_t$ is the average order-book depth over the bin.
+
+### Main result
+The chapter separates all-event OFI, $\mathrm{ofi}_t$, from trade-only imbalance, $q_t$.
+
+### Interpretation
+OFI is richer and more predictive at short horizons because it uses order-book events beyond trades. Trade-only imbalance is more natural for execution models because it corresponds more directly to actions by a trading algorithm.
+
+### Notebook TODO
+- Add binning code.
+- Add handling for empty bins.
+- Add midprice construction.
+- Add rolling estimators for volatility, ADV, and depth.
+- Add a data dictionary distinguishing $\mathrm{ofi}_t$ and $q_t$.
+
+---
+
+## 7.2.3 Definition of the Time Kernel and Price Impact Computation
+
+### Purpose
+This subsection defines the time-decay mechanism used to convert order flow into an impact state.
+
+### Setup / formulation
+The chapter studies an exponential time kernel under multiple clocks.
+
+The instantaneous market activity state $v_t$ is defined as an exponentially decaying sum of traded volume:
+
+$$
+v_{t+\delta t} - v_t = -\beta v_t \delta t + |q_t|.
+$$
+
+The impact state $I_t$ is computed model-by-model using similar exponentially decaying recursions.
+
+### Main result
+The exponential kernel provides a tractable common structure for comparing transient impact models across clocks and horizons.
+
+### Interpretation
+Past trades continue to affect prices, but their effect decays over time. The decay speed is controlled by $\beta$, often expressed through the half-life $\log 2 / \beta$.
+
+### Notebook TODO
+- Add general exponential-recursion code.
+- Add clock abstractions: regular clock, volume clock, trade clock.
+- Add numerical stability checks for large $\beta \delta t$.
+- Add examples showing how half-life changes the impact path.
+
+---
+
+## 7.2.4 Definition of the Prediction Horizon and Training Samples
+
+### Purpose
+This subsection defines the prediction target and regression framework for fitting impact models.
+
+### Setup / formulation
+For horizon $h$, define the horizon return:
+
+$$
+\Delta_t^h P = \frac{P_{t+h}}{P_t} - 1.
+$$
+
+Define the horizon impact increment:
+
+$$
+\Delta_t^h I = I_{t+h} - I_t.
+$$
+
+The regression target is:
+
+$$
+\Delta^h P = \Delta^h I + \epsilon.
+$$
+
+The chapter also notes that some quantities are represented as returns while others are represented as differences. This inconsistency is treated as second-order in practice.
+
+If an alpha signal $\alpha_t^h$ predicts the unperturbed price, it satisfies:
+
+$$
+\alpha_t^h =
+\mathbb{E}\left[
+\frac{S_{t+h}}{S_t} - 1
+\mid \mathcal{F}_t
+\right].
+$$
+
+Training samples are either:
+
+- one month of data for monthly static models;
+- thirty minutes of data for dynamic intraday models.
+
+### Main result
+Impact models are fitted by choosing their free parameters so that model-implied impact increments explain realized future returns.
+
+### Interpretation
+The fitting problem is not just generic return prediction. The predicted return must come from the structure of a specific price impact model.
+
+### Notebook TODO
+- Add explicit construction of $\Delta_t^h P$ and $\Delta_t^h I$.
+- Add regression code for each model.
+- Add horizon choices $h \in \{1,15,60,120\}$ minutes.
+- Add examples comparing monthly static and thirty-minute dynamic fitting.
+
+---
+
+## 7.2.5 Definition of the Testing and Validation Samples
+
+### Purpose
+This subsection defines the out-of-sample evaluation protocol.
+
+### Setup / formulation
+Without regularization:
+
+- train on one month and validate on the following non-overlapping month;
+- or train on one thirty-minute interval and validate on the following non-overlapping interval.
+
+With regularization:
+
+- train on the initial sample;
+- use the next sample as testing data to calibrate the regularization parameter;
+- use the following sample as validation data for out-of-sample metrics.
+
+### Main result
+The chapter separates parameter fitting, regularization tuning, and out-of-sample validation.
+
+### Interpretation
+The validation sample must not be used for model selection. Otherwise, out-of-sample $R^2$ is contaminated by tuning bias.
+
+### Notebook TODO
+- Add walk-forward sample splitting.
+- Add no-overlap assertions.
+- Add regularized and unregularized workflows.
+- Add reporting for in-sample, test-sample, and validation-sample metrics.
+
+---
+
+## 7.3 Review of the Models in the Literature
+
+### Purpose
+This section reviews the representative single-stock price impact models used in the empirical comparison.
+
+### Setup / formulation
+Let:
+
+- $\sigma$ estimate daily volatility;
+- $ADV$ estimate average daily traded volume;
+- $\beta$ be the impact resilience parameter;
+- $\lambda$ be the impact scale parameter.
+
+The models normalize by $\sigma$ and $ADV$ to make coefficients more comparable across stocks and time.
+
+### Main result
+The chapter compares five model families:
+
+- OFI.
+- OW.
+- Locally concave Bouchaud.
+- Reduced-form dynamic liquidity.
+- Globally concave AFS.
+
+### Interpretation
+The models differ not only in predictive power but also in causal interpretation, tractability, and application domain.
+
+### Notebook TODO
+- Add a comparison table with formulas, inputs, strengths, weaknesses, and use cases.
+- Add code implementations for all model recursions.
+- Add tests confirming dimensional consistency.
+
+---
+
+## 7.3.1 The Order Flow Imbalance Model
+
+### Purpose
+This subsection introduces OFI as an event-based price impact and short-horizon alpha model.
+
+### Setup / formulation
+The original OFI model does not use a time-decay kernel:
+
+$$
+I_{t+h} - I_t
+=
+\lambda \sigma
+\sum_{s=t}^{t+h-\delta t}
+\frac{\mathrm{ofi}_s}{ADV}.
+$$
+
+OFI includes:
+
+- trades;
+- limit order submissions;
+- limit order cancellations.
+
+### Main result
+OFI strongly predicts short-horizon returns and often outperforms trade-only impact models in $R^2$.
+
+### Interpretation
+OFI is powerful because it summarizes all directional order-book pressure, not just executed trades. However, it is less suited to optimal execution because it does not directly answer trading counterfactuals.
+
+### Notebook TODO
+- Add OFI construction code.
+- Add regression examples comparing OFI and trade-only imbalance.
+- Add causal warning: high predictive power does not imply an executable counterfactual model.
+
+---
+
+## 7.3.2 The Original OW Model
+
+### Purpose
+This subsection introduces the linear transient Obizhaeva-Wang impact model.
+
+### Setup / formulation
+The OW model is:
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\lambda \sigma \frac{q_t}{ADV}.
+$$
+
+### Main result
+OW is simple, tractable, and useful for analytical execution problems and equilibrium models.
+
+### Interpretation
+Trades move the impact state linearly, and impact decays exponentially over time. The model is not designed for highly variable liquidity or order-size concavity.
+
+### Notebook TODO
+- Add OW recursion code.
+- Add half-life examples.
+- Add comparison against reduced-form and concave models.
+- Add warning: OW is transient, not permanent, in this formulation.
+
+---
+
+## 7.3.3 The Locally Concave Bouchaud Model
+
+### Purpose
+This subsection introduces a locally concave propagator model.
+
+### Setup / formulation
+Bouchaud-style models use a concave local impact function. Empirical studies often find:
+
+$$
+g(x) \propto x^c,
+\qquad
+c \in [0.2,0.5].
+$$
+
+The square-root version is:
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\lambda \sigma \operatorname{sign}(q_t)
+\sqrt{\frac{|q_t|}{ADV}}.
+$$
+
+### Main result
+The locally concave Bouchaud model performs well for fill-level simulation and short-horizon impact modeling.
+
+### Interpretation
+Concavity is applied to each local trade increment $q_t$. This is different from order-level concavity for a full metaorder or day order.
+
+### Notebook TODO
+- Add examples comparing $c=1$, $c=0.5$, and $c<0.5$.
+- Add a clear distinction between local and global concavity.
+- Add notes on price manipulation issues in locally concave control problems.
+
+---
+
+## 7.3.4 The Reduced-Form Model
+
+### Purpose
+This subsection introduces a tractable model with dynamic liquidity or market activity.
+
+### Setup / formulation
+The reduced-form model is:
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\frac{\lambda \sigma q_t}{\sqrt{ADV \cdot v_t}},
+$$
+
+where:
+
+$$
+v_{t+\delta t} - v_t
+=
+-\beta v_t \delta t
++
+|q_t|.
+$$
+
+### Main result
+The reduced-form model adjusts impact intensity according to market activity.
+
+### Interpretation
+When market activity is high, the same trade imbalance has less impact. This helps capture intraday liquidity variation and makes the model useful for stochastic control applications.
+
+### Notebook TODO
+- Add recursive computation of $v_t$ and $I_t$.
+- Add time-of-day examples.
+- Add comparison with explicit non-parametric time-of-day fitting.
+- Add discussion of the link to local concavity.
+
+---
+
+## 7.3.5 The Globally Concave AFS Model
+
+### Purpose
+This subsection introduces the AFS model, which captures order-level concavity.
+
+### Setup / formulation
+The AFS model defines a latent state $J_t$:
+
+$$
+J_{t+\delta t} - J_t
+=
+-\beta J_t \delta t
++
+\frac{q_t}{ADV}.
+$$
+
+Impact is then:
+
+$$
+I_t
+=
+\lambda \sigma \operatorname{sign}(J_t)
+\sqrt{|J_t|}.
+$$
+
+### Main result
+AFS applies concavity to accumulated resilient signed volume, not to each local fill.
+
+### Interpretation
+The model is better suited to sizable orders and risk-management applications than to fill-level impact simulation. It captures order-level concavity more directly than the locally concave Bouchaud model.
+
+### Notebook TODO
+- Add AFS recursion code.
+- Add examples showing local versus global concavity.
+- Add synthetic day-order experiments using public tape.
+- Add optimal-execution examples for large orders.
+
+---
+
+## 7.4 Empirical Model Comparisons
+
+### Purpose
+This section compares price impact models across empirical dimensions relevant to trading applications.
+
+### Setup / formulation
+The comparison considers:
+
+- prediction horizon;
+- time of day;
+- clock specification;
+- universal versus stock-specific fitting;
+- price impact magnitude.
+
+### Main result
+No single model dominates on all dimensions. Model choice depends on horizon, application, data type, stability requirement, and causal interpretation.
+
+### Interpretation
+A high $R^2$ is not enough. A trading team must also consider stability, implementation, causal interpretability, transaction cost magnitude, and suitability for the intended trading problem.
+
+### Notebook TODO
+- Add all empirical tables and figures.
+- Add code to reproduce model comparisons.
+- Add stock-level and month-level diagnostics.
+- Add a model selection guide by use case.
+
+---
+
+## 7.4.1 Across Timescales
+
+### Purpose
+This subsection studies how model performance changes with prediction horizon.
+
+### Setup / formulation
+The chapter considers horizons:
+
+$$
+h \in \{1,15,60,120\}
+$$
+
+in minutes.
+
+Models are fitted stock-by-stock using monthly training samples and monthly validation samples.
+
+The model $t$-stat is defined as:
+
+$$
+\frac{\operatorname{mean}(\hat{\lambda})}{\operatorname{sd}(\hat{\lambda})},
+$$
+
+where each $\hat{\lambda}$ is fitted for a given month-stock pair.
+
+The decay half-lives considered are:
+
+$$
+\frac{\log 2}{\beta}
+\in
+\{1,15,60,120\}.
+$$
+
+OFI is excluded from the half-life comparison because it has no decay parameter.
+
+### Main result
+A half-life of one minute performs poorly. Half-lives of $15$, $60$, and $120$ minutes perform comparably, with longer half-lives slightly favored at longer horizons. The chapter then fixes the half-life at $60$ minutes.
+
+Representative one-minute out-of-sample $R^2$ values are:
+
+- OFI: $31\%$.
+- Bouchaud: $18\%$.
+- Reduced-form: $14\%$.
+- OW: $10\%$.
+- AFS: $9\%$.
+
+Performance declines as the horizon increases.
+
+### Interpretation
+Price impact explains more of short-horizon returns than long-horizon returns. OFI has the strongest predictive power but is less stable and less causal for execution. Concave models tend to be more stable than linear models.
+
+### Notebook TODO
+- Add Table 7.1.
+- Add Figure 7.1 for half-life sensitivity.
+- Add Figure 7.2 for out-of-sample $R^2$ over months.
+- Add code to compute $R^2$ and model $t$-stats.
+
+---
+
+## 7.4.2 Across Time of Day
+
+### Purpose
+This subsection studies intraday variation in price impact.
+
+### Setup / formulation
+The chapter compares:
+
+- static monthly fitting;
+- non-parametric time-of-day fitting.
+
+The non-parametric method fits different model parameters by time-of-day interval.
+
+Intervals used:
+
+- $90$-minute intervals for $h=1$ minute;
+- $150$-minute intervals for $h=15$ minutes.
+
+### Main result
+Price impact is strongest and model performance improves most near the start and end of the trading day. OFI benefits the most from non-parametric time-of-day fitting. The reduced-form model benefits the least because $v_t$ already captures some dynamic liquidity effects.
+
+### Interpretation
+Liquidity varies substantially intraday. A static model misses some of this variation, while a non-parametric intraday model captures it at the cost of lower stability.
+
+### Notebook TODO
+- Add Figures 7.3 and 7.4.
+- Add Table 7.2.
+- Add intraday fitting code.
+- Add comparison between static, dynamic-liquidity, and non-parametric time-of-day approaches.
+
+---
+
+## 7.4.3 Across Clocks
+
+### Purpose
+This subsection studies whether impact models should be expressed under regular time, volume time, or another market-activity clock.
+
+### Setup / formulation
+Under a volume clock, time changes according to traded volume rather than calendar time.
+
+To compare half-lives across clocks, the chapter normalizes the clock so that average half-lives match. For example, in the volume clock, an expected one-minute half-life corresponds to:
+
+$$
+\frac{\log 2}{\beta}
+=
+\frac{ADV}{390},
+$$
+
+because there are $390$ minutes in a US trading day.
+
+The prediction horizon $h$ remains in regular time in this subsection.
+
+### Main result
+Volume-clock models perform roughly on par with regular-clock models when predicting regular-clock horizons.
+
+### Interpretation
+The right clock depends on the application. Some strategies naturally operate in regular time, while others slow down or speed up with market activity.
+
+### Notebook TODO
+- Add Table 7.3.
+- Add volume-clock implementation.
+- Add comparison between changing the model clock and changing the prediction horizon clock.
+- Add examples for trade clock and volume clock.
+
+---
+
+## 7.4.4 Across Stocks
+
+### Purpose
+This subsection compares universal models with stock-specific models and studies order-level concavity using public data.
+
+### Setup / formulation
+Two fitting approaches are compared:
+
+- Universal models pool normalized data across stocks.
+- Specialized models fit a separate model per stock.
+
+The chapter also defines the end-of-day imbalance proxy:
+
+$$
+\mathrm{imb}
+=
+\frac{\sum_t q_t}{\sum_t |q_t|}.
+$$
+
+This is used as a public-tape proxy for sizable day-order imbalance.
+
+### Main result
+Specialized models perform better in-sample by construction. For most non-OFI models, universal models perform better out-of-sample.
+
+For the imbalance diagnostic:
+
+- for all models except AFS, $\lambda$ decreases with imbalance, indicating global concavity not captured by those models;
+- AFS is too concave under this diagnostic, with $\lambda$ increasing as a function of imbalance.
+
+### Interpretation
+Universal models are stable benchmarks and allow data-intensive diagnostics that are impossible stock-by-stock. Public-tape imbalance is only a proxy for order size, so prediction bias may affect conclusions.
+
+### Notebook TODO
+- Add Table 7.4.
+- Add Figure 7.5.
+- Add universal and stock-specific fitting code.
+- Add imbalance-bucket analysis.
+- Add prediction-bias warning and cross-reference to Chapter 6.
+
+---
+
+## 7.4.5 The Magnitude of Price Impact
+
+### Purpose
+This subsection measures the economic scale of price impact, not just statistical fit.
+
+### Setup / formulation
+The chapter uses three magnitude measures.
+
+First, end-of-day impact state as a proportion of daily volatility:
+
+$$
+\mathbb{E}[|I_T|],
+\qquad
+\mathbb{E}\left[\frac{|I_T|}{\sigma}\right].
+$$
+
+Second, transaction costs for a representative agent:
+
+$$
+TC
+=
+\int_0^T I_t \, dQ_t
++
+\frac{1}{2}[I,Q]_T.
+$$
+
+Third, position inflation or trading footprint:
+
+$$
+F_T
+=
+I_T Q_T.
+$$
+
+Representative-agent estimates use the public market process as a proxy for $Q$.
+
+### Main result
+Average end-of-day impact states are roughly:
+
+- Bouchaud: $43$ bps, or $34\%$ of daily volatility.
+- Reduced-form: $25$ bps, or $20\%$ of daily volatility.
+- OW: $28$ bps, or $23\%$ of daily volatility.
+- AFS: $23$ bps, or $19\%$ of daily volatility.
+
+Representative-agent impact costs exceed one billion dollars for S&P 500 NASDAQ trades in 2019, but this is a severe underestimate of total market trading costs.
+
+### Interpretation
+Price impact is economically large. Statistical $R^2$ must be interpreted together with cost magnitude, footprint, spread costs, venue coverage, and multi-day impact.
+
+### Notebook TODO
+- Add Tables 7.5 and 7.6.
+- Add Figure 7.6.
+- Add transaction cost code.
+- Add position inflation code.
+- Add sensitivity analysis for spread, less-liquid stocks, multi-day impact, and venue coverage.
+
+---
+
+## 7.5 Cross-Impact
+
+### Purpose
+This section extends price impact from single assets to multiple assets.
+
+### Setup / formulation
+Cross-impact is motivated by two observations:
+
+- Many strategies trade correlated baskets, such as ETFs, factor portfolios, bond baskets, and options portfolios.
+- Assets that trade together tend to move together.
+
+Cross-impact applications include:
+
+- optimal execution;
+- transaction cost analysis;
+- risk management;
+- combining trading costs across portfolio teams.
+
+### Main result
+Cross-impact is empirically important, but its interpretation requires careful causal analysis because correlated order flow can create apparent cross-impact.
+
+### Interpretation
+Trading one asset can move another asset directly, indirectly through common factors, or merely appear to do so because both assets are traded together by a common strategy.
+
+### Notebook TODO
+- Add a diagram of cross-impact mechanisms.
+- Add examples for ETF baskets, factor trades, and pairs trades.
+- Add causal graphs for the competing interpretations.
+- Add cross-references to Chapters 3, 4, 5, and 6.
+
+---
+
+## 7.5.1 Causal Bias for Cross-Impact
+
+### Purpose
+This subsection explains why pairwise cross-impact estimates may be causally biased.
+
+### Setup / formulation
+For stocks $i$ and $j$, define:
+
+- returns $\Delta P_i$, $\Delta P_j$;
+- public trading tapes $Q_i$, $Q_j$;
+- underlying trading strategies $S_i$, $S_j$;
+- basket strategy $\bar S$.
+
+The pairwise cross-impact counterfactual is:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(Q_i)].
+$$
+
+Under causal structure $\mathcal{C}$, naive conditioning is biased:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(Q_i)]
+\neq
+\mathbb{E}[\Delta P_j \mid Q_i].
+$$
+
+Conditioning on the basket strategy identifies the counterfactual:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(Q_i)]
+=
+\int
+\mathbb{E}[\Delta P_j \mid Q_i, \bar S=s]
+p(\bar S=s)
+\, ds.
+$$
+
+### Main result
+The common basket strategy $\bar S$ opens a back-door path between $Q_i$ and $\Delta P_j$. Adjusting for $\bar S$ closes the path.
+
+### Interpretation
+If two stocks are traded together, observing trades in one stock may predict returns in another even without direct cross-impact. Pairwise regressions can therefore overstate causal cross-impact.
+
+### Notebook TODO
+- Add causal graph $\mathcal{C}$.
+- Add the path decomposition from Bouchaud et al.
+- Add comparison between pairwise regression and multidimensional regression.
+- Add PCA proxy construction for common order-flow factors.
+- Add Exercise 22 as a worked example.
+
+---
+
+## 7.5.2 Price Impact for Factor Trading
+
+### Purpose
+This subsection studies cross-impact in large equity universes where common factors dominate pairwise effects.
+
+### Setup / formulation
+The literature finds that factor-mediated impact dominates pairwise cross-impact.
+
+A simplified modeling idea is:
+
+- estimate impact at the factor level;
+- reduce dimensionality by using factor portfolios;
+- avoid estimating every pairwise stock-to-stock impact term.
+
+Two useful simplifications are:
+
+- estimate factor impact instead of all $N^2$ pairwise terms;
+- factor cross-impact into a static cross-impact matrix and a one-dimensional time kernel.
+
+### Main result
+Empirical studies broadly agree that factor impact explains most cross-impact in equities, while direct pairwise cross-impact is comparatively small.
+
+### Interpretation
+Most equity cross-impact appears to travel through market, sector, or factor modes rather than through isolated stock pairs.
+
+### Notebook TODO
+- Add a factor-impact model example.
+- Add dimensionality comparison: $N^2$ versus factor dimension $M$.
+- Add empirical path contribution summary.
+- Add references to EigenLiquidity.
+
+---
+
+## 7.5.2.1 Causal Graph for the EigenLiquidity Model
+
+### Purpose
+This subsection proposes an alternative causal graph $\mathcal{E}$ for factor-mediated cross-impact.
+
+### Setup / formulation
+For two stocks $i,j$ driven by a shared factor, define:
+
+- stock returns $\Delta P_i$, $\Delta P_j$;
+- factor return $\Delta \bar P$;
+- stock trading flows $Q_i$, $Q_j$;
+- factor flow $\bar Q$.
+
+Under $\mathcal{E}$, cross-impact travels through factors:
+
+$$
+Q_i \leftarrow \bar Q \rightarrow Q_j,
+$$
+
+and:
+
+$$
+\bar Q \rightarrow \Delta \bar P \rightarrow \Delta P_i,\Delta P_j.
+$$
+
+Direct pairwise links such as $Q_i \rightarrow \Delta P_j$ are removed.
+
+### Main result
+Under $\mathcal{E}$, $Q_i$ and $\Delta P_j$ are independent conditional on $\bar Q$.
+
+### Interpretation
+The absence of pairwise cross-impact does not imply the absence of cross-impact. It implies that cross-impact is factor-mediated rather than pairwise.
+
+### Notebook TODO
+- Add causal graph $\mathcal{E}$.
+- Add formal d-separation statement.
+- Add comparison between $\mathcal{C}$ and $\mathcal{E}$.
+- Add path contribution table: pairwise cross-impact, pairwise flow correlation, factor impact.
+
+---
+
+## 7.5.2.2 Distinction Between $do(Q_i,Q_j)$ and $do(\bar Q)$
+
+### Purpose
+This subsection clarifies which intervention is appropriate for factor-mediated cross-impact.
+
+### Setup / formulation
+Suppose a trade of size $q$ in stock $i$ decomposes into:
+
+$$
+q = q_i + \bar q,
+$$
+
+where:
+
+- $q_i$ is the factor-neutral component;
+- $\bar q$ is the factor component.
+
+A one-period toy model is:
+
+$$
+I^i(Q^i) = \lambda^i Q^i,
+$$
+
+$$
+\bar I(\bar Q) = \bar \lambda \bar Q,
+$$
+
+$$
+\Delta P^i = I^i + \rho^i \bar I + \epsilon.
+$$
+
+The correct intervention for a non-factor-neutral trade is:
+
+$$
+do(Q_i=q_i,\bar Q=\bar q),
+$$
+
+not:
+
+$$
+do(Q_i=q).
+$$
+
+The resulting impact is:
+
+$$
+\mathbb{E}[\Delta P^i \mid do(Q_i=q_i,\bar Q=\bar q)]
+=
+\lambda^i q_i + \rho^i \bar \lambda \bar q.
+$$
+
+### Main result
+Applying the stock-specific impact model to the full order size is inconsistent with the EigenLiquidity causal structure.
+
+### Interpretation
+A trade must be decomposed into factor-neutral and factor components. Each component has its own impact channel.
+
+### Notebook TODO
+- Add numerical example of trade decomposition.
+- Add factor projection code.
+- Add explanation using truncated causal graphs.
+- Add examples for market, sector, and style factors.
+
+---
+
+## 7.5.2.3 Counterfactuals Under $\mathcal{E}$
+
+### Purpose
+This subsection defines cross-impact counterfactuals under the factor-mediated causal graph.
+
+### Setup / formulation
+Stock-level cross-impact is:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(\bar Q)].
+$$
+
+Factor-level cross-impact is:
+
+$$
+\mathbb{E}[\Delta \bar P \mid do(\bar Q)].
+$$
+
+Because $\bar Q$ has no parents in $\mathcal{E}$, the counterfactual is naively identifiable.
+
+### Main result
+Under $\mathcal{E}$, factor-level cross-impact can be identified without back-door adjustment.
+
+### Interpretation
+The factor flow is the action variable. Once the model is expressed at the factor level, the causal interpretation becomes cleaner than pairwise stock-to-stock estimation.
+
+### Notebook TODO
+- Add formal identifiability statement.
+- Add example using market factor flow.
+- Add comparison with pairwise cross-impact under $\mathcal{C}$.
+- Add empirical factor-impact estimation example.
+
+---
+
+## 7.5.2.4 Cross-Impact for Risk Management and Factor Research
+
+### Purpose
+This subsection explains how factor-mediated cross-impact affects transaction costs and risk models.
+
+### Setup / formulation
+Factor-level impact:
+
+$$
+\bar Q \rightarrow \Delta \bar P
+$$
+
+directly models factor trading costs.
+
+For factor model estimation, trades confound the effect of factor returns on stock returns through the path:
+
+$$
+\Delta \bar P \leftarrow \bar Q \rightarrow Q_j \rightarrow \Delta P_j.
+$$
+
+The adjustment formula is:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(\Delta \bar P)]
+=
+\int
+\mathbb{E}[\Delta P_j \mid \Delta \bar P,\bar Q=q]
+p(\bar Q=q)
+\, dq.
+$$
+
+Naive identification fails:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(\Delta \bar P)]
+\neq
+\mathbb{E}[\Delta P_j \mid \Delta \bar P].
+$$
+
+### Main result
+Observed covariance matrices blend fundamental correlations and flow-based correlations.
+
+### Interpretation
+During liquidity crises, flow-based correlations can rise sharply even if fundamental relationships are unchanged. Risk models that ignore this distinction can underestimate endogenous market risk.
+
+### Notebook TODO
+- Add causal graph for factor model confounding.
+- Add risk-model example.
+- Add comparison between fundamental and flow-based correlation.
+- Add stress scenario illustration.
+
+---
+
+## 7.5.3 Price Impact for Pairs Trading
+
+### Purpose
+This subsection reviews cases where pairwise cross-impact may matter more than broad factor impact.
+
+### Setup / formulation
+Pairwise cross-impact is more relevant when:
+
+- the asset class has naturally strong pairwise links;
+- the strategy trades factor-neutral pairs;
+- the universe is small enough to estimate cross terms directly.
+
+The chapter reviews:
+
+- sovereign bonds;
+- options;
+- commodity futures;
+- equity futures;
+- sparse equity cross-impact.
+
+### Main result
+Pairwise cross-impact is usually secondary in broad equities, but it can be important in bonds, derivatives, futures, and factor-neutral pairs strategies.
+
+### Interpretation
+The relative importance of factor impact and pairwise impact depends on the asset class, trading strategy, and market structure.
+
+### Notebook TODO
+- Add one subsection per asset class.
+- Add a table of empirical methodologies.
+- Add model equations for each case.
+- Add examples of sparse cross-impact fitting.
+
+---
+
+## 7.5.3.1 Bonds in Schneider and Lillo
+
+### Purpose
+This subsection reviews cross-impact among sovereign bonds.
+
+### Setup / formulation
+Sovereign bonds of the same issuer and similar maturity are strongly connected through the yield curve.
+
+Schneider and Lillo use a combined market-order time that aggregates trade events across bonds.
+
+### Main result
+Self-impact is larger than cross-impact, but cross-impact is empirically significant. Cross-impact is partly caused by correlated trades and partly by quote revision following trades.
+
+### Interpretation
+Bond markets have strong pairwise structure because nearby maturities share economic risk and yield-curve dynamics.
+
+### Notebook TODO
+- Add combined market-order time implementation.
+- Add locally concave cross-impact model.
+- Add causal decomposition of correlated trading versus quote revision.
+- Add numerical example with two bonds.
+
+---
+
+## 7.5.3.2 Options in Said et al.
+
+### Purpose
+This subsection reviews price impact in options markets.
+
+### Setup / formulation
+Said et al. define option metaorders by grouping trades with common characteristics, including direction with respect to an implied-volatility parameter $\theta$.
+
+The signed sensitivity is based on:
+
+$$
+S^\theta = s \times Q \times \frac{\partial O}{\partial \theta},
+$$
+
+where:
+
+- $s$ is trade sign;
+- $Q$ is quantity;
+- $O$ is option price;
+- $\theta$ may represent volatility level or skew.
+
+The two main factors are:
+
+- at-the-money forward volatility level;
+- at-the-money forward skew.
+
+### Main result
+Options impact is concave at the order level, with exponents close to the square-root law.
+
+### Interpretation
+Options cross-impact is naturally factor-based: trades affect volatility-surface level and skew rather than only individual option prices.
+
+### Notebook TODO
+- Add option metaorder construction.
+- Add level/skew factor definitions.
+- Add causal graph for options impact.
+- Add comparison with EigenLiquidity.
+
+---
+
+## 7.5.3.3 Commodity Futures in Tomas, Mastromatteo, and Benzaquen
+
+### Purpose
+This subsection reviews cross-impact among related commodity futures contracts.
+
+### Setup / formulation
+The studied system includes:
+
+- front-month crude oil contract;
+- subsequent-month crude oil contract;
+- calendar spread.
+
+Liquidity is non-stationary because futures contracts approach maturity.
+
+The methodology uses local estimators for volatility and liquidity while assuming more stable correlation structure.
+
+### Main result
+Direct models explain part of market-wide moves, but cross-impact models improve explanatory power. A one-dimensional representation can be the most parsimonious for this three-instrument system.
+
+### Interpretation
+Even when liquidity is concentrated in the front contract, off-diagonal cross-impact terms can matter.
+
+### Notebook TODO
+- Add local volatility and liquidity estimators.
+- Add rolling covariance construction.
+- Add example of front-month/subsequent-month/calendar-spread decomposition.
+- Add cross-impact model comparison.
+
+---
+
+## 7.5.3.4 Equity Futures in Rosenbaum and Tomas
+
+### Purpose
+This subsection reviews cross-impact between equity futures maturities.
+
+### Setup / formulation
+The model allows separate time kernels for each self-impact and cross-impact term, rather than assuming a factorized kernel.
+
+### Main result
+Non-factorized kernels can improve realism but require extra no-price-manipulation conditions.
+
+### Interpretation
+Different maturities may have different decay patterns and cross-flow interactions. Greater flexibility increases modeling risk.
+
+### Notebook TODO
+- Add non-factorized kernel notation.
+- Add conditions for no price manipulation.
+- Add comparison with factorized kernels.
+- Add simple two-futures example.
+
+---
+
+## 7.5.3.5 Sparse Equities Cross-Impact in Cont, Cucuringu, and Zhang
+
+### Purpose
+This subsection reviews sparse pairwise cross-impact in equities using OFI.
+
+### Setup / formulation
+The model uses LASSO regularization to select a sparse set of cross-impact terms.
+
+The goal is to improve over a direct OFI model using only a stock’s own OFI.
+
+### Main result
+Sparse cross-impact can improve performance, but results are sensitive to methodology. Improvements may vanish when deeper order-book levels are included, and dynamic thirty-minute cross-impact can perform poorly out-of-sample.
+
+### Interpretation
+Pairwise cross-impact in equities exists but is fragile and usually lower priority than factor-mediated impact.
+
+### Notebook TODO
+- Add LASSO cross-impact regression.
+- Add sparse coefficient visualization.
+- Add comparison across order-book depths.
+- Add dynamic versus static sparse fitting experiment.
+
+---
+
+## 7.6 Summary of Results
+
+### Purpose
+This section summarizes the core single-stock price impact formulas and the central cross-impact idea.
+
+### Setup / formulation
+Let:
+
+- $\delta t$ be a time bin;
+- $q_t$ be traded volume imbalance;
+- $\sigma$ be a volatility estimator;
+- $ADV$ be average daily volume;
+- $v_t$ be market activity.
+
+### Main result
+The chapter preserves four single-stock model formulas and one factor-mediated cross-impact principle.
+
+### Interpretation
+The single-stock models differ mainly in whether impact is linear, locally concave, dynamically liquidity-adjusted, or globally concave. Cross-impact is most cleanly modeled through factors.
+
+### Notebook TODO
+- Add all summary formulas.
+- Add a compact model comparison table.
+- Add final empirical summary table.
+- Add EigenLiquidity graph.
+
+---
+
+## 7.6.1 Discrete Formulas for Price Impact Models
+
+### Purpose
+This subsection lists the central discrete-time model equations.
+
+### Setup / formulation
+
+#### OW model
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\lambda \sigma \frac{q_t}{ADV}.
+$$
+
+#### Locally concave Bouchaud model
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\lambda \sigma \operatorname{sign}(q_t)
+\sqrt{\frac{|q_t|}{ADV}}.
+$$
+
+#### Reduced-form model
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\frac{\lambda \sigma q_t}{\sqrt{ADV \cdot v_t}}.
+$$
+
+#### AFS model
+
+$$
+I_t
+=
+\lambda \sigma \operatorname{sign}(J_t)\sqrt{|J_t|},
+$$
+
+where:
+
+$$
+J_{t+\delta t} - J_t
+=
+-\beta J_t \delta t
++
+\frac{q_t}{ADV}.
+$$
+
+### Main result
+These four models form the chapter’s core single-stock model comparison.
+
+### Interpretation
+OW is linear and transient. Bouchaud is locally concave. Reduced-form adjusts for dynamic liquidity. AFS is globally concave through the latent state $J_t$.
+
+### Notebook TODO
+- Add implementation for each model.
+- Add synthetic examples.
+- Add side-by-side plots of impact paths.
+- Add parameter sensitivity analysis.
+
+---
+
+## 7.6.2 Summary Table
+
+### Purpose
+This subsection summarizes impact magnitude and one-minute predictive performance.
+
+### Setup / formulation
+The chapter reports average end-of-day impact magnitude and one-minute out-of-sample $R^2$.
+
+### Main result
+Representative values are:
+
+| Price Impact Model | $\mathbb{E}[|I_T|]$ | $\mathbb{E}[|I_T|/\sigma]$ | One-minute out-of-sample $R^2$ |
+|---|---:|---:|---:|
+| Bouchaud | $43$ bps | $34\%$ | $18\%$ |
+| Reduced-form | $25$ bps | $20\%$ | $14\%$ |
+| OW | $28$ bps | $23\%$ | $10\%$ |
+| AFS | $23$ bps | $19\%$ | $9\%$ |
+
+### Interpretation
+Bouchaud has the highest one-minute predictive performance among the four non-OFI models and estimates the largest end-of-day impact states. AFS is more conservative in daily impact state magnitude but is designed for order-level concavity.
+
+### Notebook TODO
+- Add the full empirical tables from Section 7.4.
+- Add confidence intervals or distribution plots.
+- Add model-specific stability diagnostics.
+- Add comparison with OFI.
+
+---
+
+## 7.6.3 The EigenLiquidity Model
+
+### Purpose
+This subsection summarizes the chapter’s central cross-impact model.
+
+### Setup / formulation
+The EigenLiquidity model captures the idea:
+
+- assets that trade together move together.
+
+For stocks $i,j$:
+
+- returns are $\Delta P_i$, $\Delta P_j$;
+- factor return is $\Delta \bar P$;
+- stock trades are $Q_i$, $Q_j$;
+- factor flow is $\bar Q$.
+
+Cross-impact travels through the factor:
+
+$$
+\bar Q \rightarrow \Delta \bar P \rightarrow \Delta P_i,\Delta P_j.
+$$
+
+### Main result
+Conditional on factor impact, stock-level price impacts are independent.
+
+### Interpretation
+The economically important object is not necessarily pairwise stock-to-stock impact. It is often the impact of trading common factors.
+
+### Notebook TODO
+- Add EigenLiquidity graph.
+- Add factor projection code.
+- Add factor transaction cost example.
+- Add optimal execution exercise for factor trades.
+
+---
+
+## 7.7 Exercises
+
+### Purpose
+This section provides technical exercises that extend and verify the chapter’s causal and cross-impact arguments.
+
+### Setup / formulation
+The exercises cover:
+
+- Exercise 22: identifiability under causal model $\mathcal{C}$.
+- Exercise 23: cross-impact with prediction bias.
+- Exercise 24: factor trading under EigenLiquidity.
+- Exercise 25: causal model for options impact.
+- Exercise 26: OW model with cross-impact.
+
+### Main result
+The exercises are an essential part of the chapter’s technical content, especially for cross-impact and causal interpretation.
+
+### Interpretation
+The exercises move the reader from high-level empirical claims to explicit causal formulas, optimal execution problems, and no-manipulation conditions.
+
+### Notebook TODO
+- Add Exercise 22 with full algebra.
+- Add Exercise 23 with causal graph and adjustment formulas.
+- Add Exercise 24 with factor-trading optimal execution.
+- Add Exercise 25 with options-level and skew-level causal graphs.
+- Add Exercise 26 with invertibility and no-price-manipulation conditions.
+
+---
+
+## Chapter-level summary
+
+- Price impact is a central liquidity measure and an economically large trading cost.
+- Public trading data can reproduce many empirical facts about impact, but causal interpretation remains limited.
+- OFI has strong short-horizon predictive power because it uses all order-book events.
+- OW is a simple linear transient model useful for tractable execution theory.
+- Bouchaud-style models capture local fill-level concavity and are useful for simulation.
+- Reduced-form models introduce dynamic liquidity through market activity $v_t$.
+- AFS captures global or order-level concavity through the latent accumulated state $J_t$.
+- Empirical performance declines as prediction horizon increases.
+- Time-of-day effects are substantial; impact is strongest near the open and close.
+- Universal models are often more stable than stock-specific models and are useful benchmarks.
+- Price impact magnitude is large enough to matter for transaction costs, P&L, and risk management.
+- Cross-impact is usually factor-mediated in equities, while pairwise cross-impact can matter more in bonds, derivatives, futures, and pairs trading.
+- Causal graphs are necessary to distinguish true cross-impact from correlated order flow.
+- EigenLiquidity provides a compact framework for factor-mediated cross-impact.
+
+---
+
+## Key formulas to preserve
+
+- Bin return:
+
+$$
+r_t = \frac{P_{t+\delta t}}{P_t} - 1.
+$$
+
+- Market activity state:
+
+$$
+v_{t+\delta t} - v_t = -\beta v_t \delta t + |q_t|.
+$$
+
+- Horizon return:
+
+$$
+\Delta_t^h P = \frac{P_{t+h}}{P_t} - 1.
+$$
+
+- Horizon impact increment:
+
+$$
+\Delta_t^h I = I_{t+h} - I_t.
+$$
+
+- Impact regression:
+
+$$
+\Delta^h P = \Delta^h I + \epsilon.
+$$
+
+- Alpha prediction of unperturbed price:
+
+$$
+\alpha_t^h =
+\mathbb{E}\left[
+\frac{S_{t+h}}{S_t} - 1
+\mid \mathcal{F}_t
+\right].
+$$
+
+- OFI model:
+
+$$
+I_{t+h} - I_t
+=
+\lambda \sigma
+\sum_{s=t}^{t+h-\delta t}
+\frac{\mathrm{ofi}_s}{ADV}.
+$$
+
+- OW model:
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\lambda \sigma \frac{q_t}{ADV}.
+$$
+
+- Locally concave Bouchaud model:
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\lambda \sigma \operatorname{sign}(q_t)
+\sqrt{\frac{|q_t|}{ADV}}.
+$$
+
+- Reduced-form model:
+
+$$
+I_{t+\delta t} - I_t
+=
+-\beta I_t \delta t
++
+\frac{\lambda \sigma q_t}{\sqrt{ADV \cdot v_t}}.
+$$
+
+- AFS latent state:
+
+$$
+J_{t+\delta t} - J_t
+=
+-\beta J_t \delta t
++
+\frac{q_t}{ADV}.
+$$
+
+- AFS impact:
+
+$$
+I_t
+=
+\lambda \sigma \operatorname{sign}(J_t)\sqrt{|J_t|}.
+$$
+
+- Model $t$-stat:
+
+$$
+\frac{\operatorname{mean}(\hat{\lambda})}{\operatorname{sd}(\hat{\lambda})}.
+$$
+
+- End-of-day imbalance proxy:
+
+$$
+\mathrm{imb}
+=
+\frac{\sum_t q_t}{\sum_t |q_t|}.
+$$
+
+- Transaction costs:
+
+$$
+TC
+=
+\int_0^T I_t \, dQ_t
++
+\frac{1}{2}[I,Q]_T.
+$$
+
+- Position inflation:
+
+$$
+F_T = I_T Q_T.
+$$
+
+- Pairwise cross-impact counterfactual:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(Q_i)].
+$$
+
+- Back-door adjustment under $\mathcal{C}$:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(Q_i)]
+=
+\int
+\mathbb{E}[\Delta P_j \mid Q_i,\bar S=s]
+p(\bar S=s)
+\, ds.
+$$
+
+- Factor-mediated stock-level cross-impact:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(\bar Q)].
+$$
+
+- Factor-level cross-impact:
+
+$$
+\mathbb{E}[\Delta \bar P \mid do(\bar Q)].
+$$
+
+- Factor model adjustment under flow confounding:
+
+$$
+\mathbb{E}[\Delta P_j \mid do(\Delta \bar P)]
+=
+\int
+\mathbb{E}[\Delta P_j \mid \Delta \bar P,\bar Q=q]
+p(\bar Q=q)
+\, dq.
+$$
+
+---
+
+## Later expansion checklist
+
+- [ ] Full derivations.
+- [ ] Proof details.
+- [ ] Numerical examples.
+- [ ] Code implementation.
+- [ ] Figures and tables.
+- [ ] Exercises.
+- [ ] Cross-references to earlier and later chapters.
+- [ ] LOBSTER preprocessing code.
+- [ ] OFI construction examples.
+- [ ] Model recursion utilities.
+- [ ] Walk-forward validation framework.
+- [ ] Universal versus stock-specific fitting.
+- [ ] Time-of-day fitting.
+- [ ] Regular-clock and volume-clock implementations.
+- [ ] Transaction cost and position inflation calculations.
+- [ ] Cross-impact causal graphs.
+- [ ] Factor projection and EigenLiquidity examples.
+- [ ] Sparse cross-impact regression.
+- [ ] No-price-manipulation checks for cross-impact models.
