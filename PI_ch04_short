@@ -1,0 +1,1374 @@
+# Chapter 4 — Further Applications of Price Impact Models
+
+This note is a compact, chapter-aligned replacement for the incomplete notebook. It follows the PDF structure and preserves the main notation, assumptions, formulas, and modeling interpretations. It is not a full derivation.
+
+---
+
+## 4.1 A Pedagogical Example
+
+### Purpose
+
+Show that price impact matters not only for execution costs but also for portfolio accounting, portfolio scale, and mark-to-market P&L.
+
+The section contrasts:
+
+- entering a position,
+- exiting a position,
+- and how price impact affects accounting P&L differently in the two cases.
+
+### Setup / formulation
+
+Consider the original OW-style impact model with constant liquidity parameters $\lambda,\beta>0$ and an execution horizon $[0,T]$.
+
+For an order of size $\Delta Q$, the implied alpha needed to justify the trade is
+
+$$
+\tilde{\alpha}
+=
+\frac{2\lambda}{2+\beta T}\Delta Q .
+$$
+
+For the optimal strategy, the target impact state is
+
+$$
+I_t^*
+=
+\frac{1}{2}\tilde{\alpha},
+\qquad t\in(0,T).
+$$
+
+The accounting P&L and fundamental P&L differ by the trading footprint:
+
+$$
+X_t - Y_t = I_t Q_t.
+$$
+
+Here:
+
+- $X_t$ is accounting or mark-to-market P&L,
+- $Y_t$ is fundamental P&L,
+- $I_t$ is the trader’s price impact state,
+- $Q_t$ is the trader’s position.
+
+### Main result
+
+Execution costs are symmetric between entering and exiting trades of the same size, but accounting P&L is not symmetric.
+
+For entering a position:
+
+$$
+I_t Q_t > 0.
+$$
+
+The trader’s own impact inflates accounting P&L.
+
+For exiting a position:
+
+$$
+I_t Q_t < 0
+$$
+
+during liquidation, and the accounting P&L deteriorates as the trader removes the impacted position.
+
+At the terminal time of a full liquidation,
+
+$$
+Q_T=0
+\quad\Rightarrow\quad
+X_T=Y_T.
+$$
+
+### Interpretation
+
+The trader’s impact can temporarily make a position look profitable on a mark-to-market basis. This apparent P&L is not fundamental alpha; it is a footprint created by the trader’s own activity.
+
+A portfolio manager must therefore distinguish:
+
+- realized or accounting P&L,
+- fundamental P&L,
+- price-impact footprint,
+- and liquidation-adjusted value.
+
+### Notebook TODO
+
+- Reproduce Figure 4.1 with a simple OW simulation.
+- Show entering and exiting examples side by side.
+- Add a short derivation of $X_t-Y_t=I_tQ_t$.
+- Connect the example explicitly to Chapter 2’s definitions of $X_t$ and $Y_t$.
+- Add a warning that mark-to-market gains from self-impact cannot be locked in without price manipulation.
+
+---
+
+## 4.2 Statistical Arbitrage
+
+### Purpose
+
+Explain how price impact models enter statistical arbitrage research and production portfolio construction.
+
+The section organizes statistical arbitrage into three phases:
+
+- generate features,
+- fit alpha signals,
+- simulate or deploy a trading strategy.
+
+Price impact affects all three.
+
+### Setup / formulation
+
+A statistical arbitrage strategy uses signals to predict unperturbed future returns:
+
+$$
+\alpha_t
+=
+\mathbb{E}[S_T-S_t\mid\mathcal{F}_t].
+$$
+
+The relevant price process is decomposed into:
+
+$$
+P_t = S_t + I_t,
+$$
+
+or, with external impact,
+
+$$
+P_t = S_t + I_t - \bar{\alpha}_t.
+$$
+
+Here:
+
+- $S_t$ is the unperturbed price,
+- $P_t$ is the observed or perturbed price,
+- $I_t$ is the trader’s own impact,
+- $\bar{\alpha}_t$ represents external impact from the rest of the market, viewed as an alpha signal for the trader.
+
+### Main result
+
+Price impact models enter statistical arbitrage in three ways:
+
+- external impact can be used as an alpha signal,
+- liquidity changes how alpha signals should be fit,
+- impact models allow counterfactual simulation of trading strategies.
+
+### Interpretation
+
+Statistical arbitrage should not treat transaction costs as a final-stage adjustment only. The price-impact model changes:
+
+- what is predictable,
+- how prediction errors should be weighted,
+- how signals map into trades,
+- and how backtests should simulate market response.
+
+### Notebook TODO
+
+- Add a diagram of the stat-arb workflow.
+- Separate feature generation, alpha fitting, and simulation as distinct research steps.
+- Add examples of external-impact features.
+- Add code showing how an alpha signal maps to an impact state and then to trades.
+
+---
+
+## 4.2.1 Using External Impact as an Alpha Signal
+
+### Purpose
+
+Show how the rest of the market’s trading can create predictable price dislocations that a strategy may treat as alpha.
+
+### Setup / formulation
+
+Let external market activity generate an external impact signal $\bar{\alpha}_t$.
+
+A useful decomposition is:
+
+$$
+P_t = S_t + I_t - \bar{\alpha}_t.
+$$
+
+The trader controls $I_t$ through their own trades. The external signal $\bar{\alpha}_t$ is caused by other market participants and can be used as an input to the strategy.
+
+In Cont, Cucuringu, and Zhang’s framework, order-flow imbalance and cross-impact are used to construct predictive signals.
+
+Typical ingredients include:
+
+- order-flow imbalance,
+- multi-level order-book imbalance,
+- integrated OFI,
+- cross-impact across related stocks,
+- time kernels for persistence and decay.
+
+### Main result
+
+External price impact can be interpreted as an alpha signal because it predicts price movement caused by other agents’ trading rather than by the trader’s own strategy.
+
+### Interpretation
+
+The market’s trades may contain information or create transient dislocations. A strategy can exploit these dislocations only if it separates:
+
+- own impact,
+- external impact,
+- and unperturbed price dynamics.
+
+This distinction is essential for avoiding prediction bias.
+
+### Notebook TODO
+
+- Add the precise CCZ feature architecture.
+- Add the OFI and integrated OFI formulas.
+- Add examples of cross-impact features.
+- Explain how external impact differs from ordinary return prediction.
+- Add a small synthetic example where another trader’s liquidation becomes the strategy’s alpha.
+
+---
+
+## 4.2.2 Adjusting Regression Techniques for Liquidity
+
+### Purpose
+
+Explain why alpha-signal fitting should account for liquidity and price impact.
+
+The goal is not simply to minimize prediction error in return space. The goal is to minimize trading regret after the alpha signal is mapped into a trading strategy.
+
+### Setup / formulation
+
+The alpha signal predicts unperturbed returns:
+
+$$
+\alpha_t
+=
+\mathbb{E}[S_T-S_t\mid\mathcal{F}_t].
+$$
+
+Use a generalized OW model with time-varying liquidity:
+
+$$
+\lambda_t = e^{\gamma_t}.
+$$
+
+The impact state $I_t$ is not the trading rate. It is the price-impact state targeted by the strategy. Trading is recovered from the impact dynamics.
+
+A candidate alpha signal $\alpha$ induces a candidate impact state:
+
+$$
+I_t(\alpha,\alpha').
+$$
+
+A look-ahead or realized benchmark alpha induces a benchmark impact state:
+
+$$
+I_t(\alpha^r,\mu^r).
+$$
+
+The relevant anticipated regret loss is an impact-space loss:
+
+$$
+\min_{\alpha}
+\mathbb{E}
+\left[
+\int_0^T
+\frac{2\beta_t+\gamma_t'}{2\lambda_t}
+\left(
+I_t(\alpha,\alpha')
+-
+I_t(\alpha^r,\mu^r)
+\right)^2
+dt
+\right].
+$$
+
+A key positivity condition is:
+
+$$
+2\beta_t+\gamma_t' > 0.
+$$
+
+### Main result
+
+Liquidity-aware alpha fitting penalizes errors in impact space, weighted by liquidity and resilience.
+
+The model does not ask only whether the predicted return is correct. It asks how much P&L is lost because the predicted alpha leads to a suboptimal impact state and therefore a suboptimal trading trajectory.
+
+### Interpretation
+
+Two alpha errors of the same return magnitude are not equally costly:
+
+- errors in illiquid names are more expensive,
+- errors at times of slow resilience are more expensive,
+- errors that induce excessive impact are more expensive,
+- errors in alpha decay matter because decay affects the optimal impact target.
+
+### Notebook TODO
+
+- Add the proof sketch for Proposition 4.2.2 and Corollary 4.2.3.
+- Define $I_t(\alpha,\alpha')$ explicitly from the generalized OW model.
+- Explain the role of the no-price-manipulation condition.
+- Implement the impact-space loss as a training objective.
+- Compare ordinary least squares vs liquidity-aware regression on simulated data.
+
+---
+
+## 4.2.3 Using Price Impact for Simulation
+
+### Purpose
+
+Show how price impact models enable counterfactual backtests by modifying historical prices to respond to hypothetical trades.
+
+### Setup / formulation
+
+Given realized prices $P_t^r$ and realized trades $Q_t^r$, estimate realized impact:
+
+$$
+I_t(Q^r).
+$$
+
+Recover an estimate of the unperturbed historical price:
+
+$$
+S_t
+=
+P_t^r - I_t(Q^r).
+$$
+
+For a hypothetical trading strategy $Q$, simulate its counterfactual impacted price:
+
+$$
+P_t(Q)
+=
+S_t + I_t(Q).
+$$
+
+Equivalently:
+
+$$
+P_t(Q)
+=
+P_t^r - I_t(Q^r) + I_t(Q).
+$$
+
+### Main result
+
+A market simulator creates counterfactual price paths by:
+
+- removing realized impact from historical prices,
+- adding simulated impact from a new strategy,
+- and comparing strategies on the same underlying market path.
+
+### Interpretation
+
+Backtests without market impact assume the trader can change their trades without changing prices. This violates the causality challenge.
+
+A price-impact simulator tries to answer:
+
+> What would the market price have been if this different trading strategy had been used?
+
+### Notebook TODO
+
+- Implement a minimal OW simulator.
+- Implement a generalized OW or AFS simulator.
+- Add a backtest comparing two execution schedules.
+- Reproduce the chapter’s simulation figures.
+- Add diagnostics comparing realized and simulated P&L.
+- Discuss model risk and simulation overfitting.
+
+---
+
+## 4.3 Portfolio and Risk Management
+
+### Purpose
+
+Extend price impact from trade-level execution to portfolio-level risk, accounting P&L, liquidity reports, and fire-sale stress tests.
+
+### Setup / formulation
+
+The accounting P&L $X_t$ and fundamental P&L $Y_t$ differ because observed prices include price impact.
+
+Define the internal trading footprint:
+
+$$
+F_t = I_t Q_t.
+$$
+
+Define the external trading footprint:
+
+$$
+\bar{F}_t = -\bar{\alpha}_t Q_t.
+$$
+
+Then:
+
+$$
+X_t - Y_t = F_t + \bar{F}_t.
+$$
+
+Here:
+
+- $F_t$ is the mark-to-market distortion due to the trader’s own impact,
+- $\bar{F}_t$ is the mark-to-market distortion due to external market impact.
+
+### Main result
+
+Accounting P&L can be biased by both internal and external impact. A portfolio’s apparent value may differ materially from its liquidation-adjusted value.
+
+### Interpretation
+
+Portfolio managers and risk managers should monitor not only current mark-to-market P&L but also:
+
+- how much of that P&L is footprint,
+- how expensive it would be to close the position,
+- and how vulnerable the position is to external crowding or fire sales.
+
+### Notebook TODO
+
+- Add a notation table for $X,Y,F,\bar{F},I,\bar{\alpha},Q$.
+- Add examples separating internal and external footprint.
+- Add a liquidity-report template.
+- Add numerical examples showing footprint as a percentage of accounting P&L.
+
+---
+
+## 4.3.1 How Price Impact Distorts Accounting P&L and Perceived Risk
+
+### Purpose
+
+Formalize the difference between accounting P&L and fundamental or liquidation-adjusted P&L.
+
+### Setup / formulation
+
+Accounting P&L marks the portfolio to observed prices. Fundamental P&L marks the portfolio to unperturbed prices.
+
+The difference is the trading footprint:
+
+$$
+X_t-Y_t = F_t+\bar{F}_t.
+$$
+
+Ignoring external impact for simplicity:
+
+$$
+X_t - Y_t = I_t Q_t.
+$$
+
+If $Q_T=0$, then:
+
+$$
+X_T=Y_T.
+$$
+
+### Main result
+
+Mark-to-market accounting can overstate or understate realizable portfolio value when price impact is present.
+
+### Interpretation
+
+A portfolio may appear profitable because its own buying pressure moved prices upward. But liquidation removes the position and forces the impact to be paid back.
+
+The relevant economic question is not only:
+
+> What is the current accounting P&L?
+
+but also:
+
+> What P&L remains after closing the position under a realistic impact model?
+
+### Notebook TODO
+
+- Add the full proof of the accounting/fundamental P&L relation.
+- Add examples with positive and negative footprint.
+- Add visualization of footprint through time.
+- Cross-reference Chapter 2’s self-financing equations.
+
+---
+
+## 4.3.1.1 Expected Closing P&L
+
+### Purpose
+
+Define expected closing P&L and connect it to current accounting P&L, footprint, alpha, and future transaction costs.
+
+### Setup / formulation
+
+Let $\tau$ be a stopping time representing the time at which the portfolio is closed.
+
+If the portfolio is fully closed at $\tau$, then:
+
+$$
+Q_\tau=0
+\quad\Rightarrow\quad
+X_\tau=Y_\tau.
+$$
+
+Starting from time $t$, expected closing P&L adjusts current accounting P&L by removing footprint and subtracting expected future execution costs.
+
+A schematic form is:
+
+$$
+\mathbb{E}[X_\tau\mid\mathcal{F}_t]
+=
+X_t
+-
+\text{current footprint}
++
+\text{expected future alpha}
+-
+\text{expected future transaction costs}.
+$$
+
+In simplified cases with no future alpha and a quadratic liquidation-cost approximation,
+
+$$
+\mathbb{E}[X_\tau\mid\mathcal{F}_t]
+\approx
+Y_t
+-
+\frac{\Lambda}{2}Q_t^2.
+$$
+
+### Main result
+
+Expected closing P&L is the relevant valuation metric for liquidation risk. It is not generally equal to accounting P&L.
+
+### Interpretation
+
+A large profitable-looking portfolio may have poor expected closing P&L if:
+
+- its mark-to-market value is inflated by its own impact,
+- its liquidation cost is large,
+- or external market pressure is expected to move against it.
+
+### Notebook TODO
+
+- State the exact proposition from the PDF.
+- Add all assumptions under which the simplified quadratic formula holds.
+- Add a liquidation-cost calculator.
+- Compare current accounting P&L vs expected closing P&L in examples.
+
+---
+
+## 4.3.1.2 P&L Bias Examples
+
+### Purpose
+
+Use round-trip examples to show how price impact biases perceived performance.
+
+### Setup / formulation
+
+Consider a round trip with three phases:
+
+- leverage into a position,
+- hold the position,
+- deleverage out of the position.
+
+Under the OW model, for a trade of size $Q$, expected fundamental P&L is:
+
+$$
+\mathbb{E}[Y_T]
+=
+-\frac{\lambda}{2+\beta T}Q^2.
+$$
+
+Expected accounting P&L is:
+
+$$
+\mathbb{E}[X_T]
+=
+\frac{2\lambda}{2+\beta T}Q_0Q
+-
+\mathbb{E}[Y_T].
+$$
+
+### Main result
+
+Entering a position can create positive mark-to-market P&L even though the fundamental P&L is negative.
+
+Exiting a position removes the inflated mark-to-market value and realizes the cost.
+
+### Interpretation
+
+A trader should not interpret footprint-driven accounting gains as alpha. If a strategy appears profitable only while increasing positions, but loses when closing them, the apparent profit is caused by impact and not by genuine prediction.
+
+### Notebook TODO
+
+- Reproduce the round-trip example numerically.
+- Plot accounting P&L, fundamental P&L, and footprint.
+- Add the no-price-manipulation interpretation.
+- Explain why footprint gains cannot be monetized by a round trip.
+
+---
+
+## 4.3.1.3 P&L Bias in Steady State
+
+### Purpose
+
+Analyze persistent P&L bias for stationary portfolios that continuously trade and maintain positions.
+
+### Setup / formulation
+
+Under the original OW model, define the trading footprint:
+
+$$
+F_t=I_tQ_t.
+$$
+
+For stationary or steady-state trading, the expected footprint and average transaction costs are linked.
+
+A key relation is:
+
+$$
+\mathbb{E}[F_t]
+=
+e^{-\beta t}F_0+\frac{1}{\lambda}I_0^2.
+$$
+
+The average transaction-cost rate satisfies:
+
+$$
+\frac{1}{T}
+\mathbb{E}
+\left[
+\int_0^T I_t\,dQ_t
++
+\frac{1}{2}[I,Q]_T
+\right]
+=
+\frac{\beta}{\lambda}I_0^2.
+$$
+
+If $F_t$ is weakly stationary, then:
+
+$$
+\mathbb{E}[F_t]=\frac{1}{\lambda}I_0^2.
+$$
+
+### Main result
+
+In steady state, trading footprint is not a temporary anomaly. It is structurally linked to the ongoing transaction costs required to maintain the strategy.
+
+### Interpretation
+
+A high-turnover portfolio can maintain a persistent mark-to-market footprint. Risk management should monitor this footprint because it measures accounting distortion and future liquidation exposure.
+
+### Notebook TODO
+
+- Add the proof of the steady-state proposition.
+- Simulate an Ornstein-Uhlenbeck position process:
+
+$$
+dQ_t=-\frac{1}{\tau}Q_tdt+\sigma dW_t.
+$$
+
+- Estimate footprint per dollar held.
+- Estimate transaction cost per dollar traded.
+- Reproduce the PDF’s stationary-portfolio simulation.
+
+---
+
+## 4.3.2 General Implications and Actions
+
+### Purpose
+
+Translate the P&L distortion results into actions for portfolio managers, risk managers, and senior management.
+
+### Setup / formulation
+
+Key metrics include:
+
+- trading footprint:
+
+$$
+F_t=I_tQ_t,
+$$
+
+- external footprint:
+
+$$
+\bar{F}_t=-\bar{\alpha}_tQ_t,
+$$
+
+- expected closing P&L:
+
+$$
+\mathbb{E}[X_\tau\mid\mathcal{F}_t],
+$$
+
+- liquidation cost,
+- footprint per dollar held,
+- transaction costs per dollar traded.
+
+### Main result
+
+Price impact provides a framework for:
+
+- adjusting reported P&L,
+- sizing portfolios,
+- measuring liquidity risk,
+- stress-testing liquidation,
+- and evaluating whether apparent alpha is sustainable.
+
+### Interpretation
+
+Practical actions include:
+
+- reduce positions with large positive internal footprint,
+- identify crowded positions with large external footprint,
+- adjust strategy capacity estimates for liquidation costs,
+- monitor whether P&L comes from alpha or from self-impact,
+- report liquidation-adjusted value to senior management.
+
+### Notebook TODO
+
+- Add a table mapping each metric to its formula and risk-management action.
+- Add a mock liquidity report.
+- Add examples for portfolio scaling and deleveraging.
+- Add cross-references to Chapter 6 biases and Chapter 7 empirical impact estimates.
+
+---
+
+## 4.3.3 Simulating Fire Sales
+
+### Purpose
+
+Model liquidity risk and external crowding during fire-sale liquidation.
+
+The section compares:
+
+- liquidation without a fire sale,
+- liquidation with external market crowding,
+- and the effect of hedging intensity on P&L.
+
+### Setup / formulation
+
+Use a globally concave impact model. Define the signed power convention:
+
+$$
+x^c=\operatorname{sign}(x)|x|^c.
+$$
+
+Let:
+
+- $Q$ be the portfolio position,
+- $\eta Q$ be the hedge or liquidation amount,
+- $\bar{Q}$ be external market flow,
+- $J_t$ be the impact-space state,
+- $\bar{\alpha}_t$ be external impact,
+- $c\in(0,1]$ be the concavity exponent.
+
+In a no-fire-sale liquidation, the expected fundamental P&L and footprint depend on the initial impact state and liquidation fraction.
+
+With fire-sale crowding, external trading modifies the impact state and introduces additional external footprint.
+
+### Main result
+
+Fire sales affect the portfolio in two ways:
+
+- directly, through the portfolio’s own hedging or liquidation trades,
+- indirectly, through external impact caused by other market participants.
+
+Even a portfolio that does not trade can lose mark-to-market value because external market flow dislocates prices.
+
+### Interpretation
+
+A fire-sale stress test should not only ask:
+
+> What does it cost us to liquidate?
+
+It should also ask:
+
+> What happens if everyone else liquidates at the same time?
+
+The second question is external impact and crowding risk.
+
+### Notebook TODO
+
+- Merge any duplicated fire-sale sections.
+- State Proposition 4.3.14 and Proposition 4.3.16 carefully with signs.
+- Reproduce Figures 4.9 and 4.10.
+- Implement a signed-power AFS impact function.
+- Add sensitivity analysis over $\eta$, $\bar{Q}$, $c$, $\beta$, and $\lambda$.
+- Explain the limitation: this section treats external fire-sale flow as exogenous, not strategic.
+
+---
+
+## 4.4 Combining Two Portfolios’ Trading
+
+### Purpose
+
+Analyze how two portfolios inside the same firm should trade when their activity overlaps.
+
+The section compares:
+
+- independent trading without mutual information,
+- competitive trading with mutual information,
+- and collaborative firm-level optimization.
+
+### Setup / formulation
+
+Let two portfolios have positions and trades:
+
+$$
+Q^0,\quad Q^1.
+$$
+
+Their separate impact states are:
+
+$$
+I^0,\quad I^1.
+$$
+
+The combined firm-level impact is compared to the collaborative optimum:
+
+$$
+I^*.
+$$
+
+The key object is the opportunity cost of trading separately instead of jointly.
+
+### Main result
+
+When two portfolios trade independently, the combined strategy is generally suboptimal. A typical regret form is:
+
+$$
+\mathbb{E}[Y_T(Q^0+Q^1)]
+=
+\mathbb{E}[Y_T(Q^*)]
+-
+\mathbb{E}
+\left[
+\int_0^T
+\frac{\beta}{\lambda}
+\left(
+I_t^* - I_t^0 - I_t^1
+\right)^2
+dt
+\right].
+$$
+
+This says that the cost of not consolidating is the weighted distance between the collaborative impact target and the sum of the separate impact targets.
+
+### Interpretation
+
+Two desks can destroy value by trading separately because:
+
+- one desk may buy while another sells,
+- both desks may pay spread and impact unnecessarily,
+- each desk may treat the other’s impact as alpha,
+- and local optima do not generally add up to a global optimum.
+
+### Notebook TODO
+
+- Add the formal assumptions for the no-mutual-information case.
+- Add a diagram comparing separate and combined trading.
+- Add examples showing internalization of opposite-sided trades.
+- Add simulation comparing $Q^0+Q^1$ with $Q^*$.
+
+---
+
+## 4.4.1 Theory in the Case Without Mutual Information
+
+### Purpose
+
+Study the case where the two portfolios do not observe or use each other’s signals or trades.
+
+### Setup / formulation
+
+Each portfolio optimizes using its own information set and own alpha signal.
+
+The combined firm-level outcome is compared to a hypothetical collaborative trader with access to both portfolios’ information.
+
+Let:
+
+- $I^0$ be the first portfolio’s impact state,
+- $I^1$ be the second portfolio’s impact state,
+- $I^*$ be the collaborative optimum.
+
+### Main result
+
+The cost of independent trading is the loss from failing to target the combined optimal impact state.
+
+A representative regret expression is:
+
+$$
+\mathbb{E}
+\left[
+\int_0^T
+\frac{\beta}{\lambda}
+\left(
+I_t^* - I_t^0 - I_t^1
+\right)^2
+dt
+\right].
+$$
+
+### Interpretation
+
+Without mutual information, the failure is informational and organizational:
+
+- portfolios solve local problems,
+- the firm cares about the global problem,
+- and the gap appears as excess impact cost or missed internalization.
+
+### Notebook TODO
+
+- Add the exact corollary statement.
+- State the information assumptions explicitly.
+- Add a two-alpha example.
+- Show when independent trading is harmless and when it is costly.
+
+---
+
+## 4.4.2 Theory in the Case With Mutual Information
+
+### Purpose
+
+Study the case where both portfolios know about each other and compete strategically.
+
+This creates a game-theoretic problem.
+
+### Setup / formulation
+
+In the competitive case, each trader accounts for the other trader’s impact but optimizes their own P&L.
+
+A representative Nash-equilibrium impact equation is:
+
+$$
+I_t'
+=
+\beta
+\left(
+3I_t-\tilde{\alpha}-\alpha_t+\beta^{-1}\alpha_t'
+\right),
+\qquad
+I_T=\frac{1}{2}\tilde{\alpha}.
+$$
+
+The collaborative solution instead optimizes the firm’s total P&L.
+
+### Main result
+
+With mutual information and competition, the desks may enter an impact arms race.
+
+The competitive Nash equilibrium generally differs from the collaborative optimum. The competitive traders overpay impact relative to the firm-level optimum.
+
+A key qualitative conclusion is that competitive impact mean-reverts around an excessive level, approximately proportional to the collaborative target.
+
+### Interpretation
+
+When desks know about each other’s trades but are not jointly optimized, each desk has an incentive to trade faster to avoid being disadvantaged by the other desk’s impact.
+
+This is a tragedy-of-the-commons effect in price impact:
+
+- individually rational,
+- collectively inefficient.
+
+### Notebook TODO
+
+- Add the precise Nash-equilibrium proposition.
+- Explain open-loop vs closed-loop control assumptions.
+- Reproduce Figures 4.11 to 4.14.
+- Compare independent, competitive, and collaborative impact trajectories.
+- Add a simple game-theoretic numerical example.
+
+---
+
+## 4.4.3 Empirical Simulation Approach
+
+### Purpose
+
+Explain how to evaluate portfolio consolidation empirically when the theoretical information regimes are too stylized.
+
+### Setup / formulation
+
+Historical data provides realized trades:
+
+$$
+Q^0,\quad Q^1.
+$$
+
+The realized separate activity is:
+
+$$
+Q^{\text{sep}}=Q^0+Q^1.
+$$
+
+A counterfactual combined strategy is:
+
+$$
+Q^*.
+$$
+
+The simulation procedure is:
+
+- estimate impact from realized separate trades,
+- remove realized impact from observed prices,
+- simulate the combined counterfactual strategy,
+- compare separate and combined P&L.
+
+The counterfactual price path is:
+
+$$
+P_t(Q^*)=
+P_t^r-I_t(Q^{\text{sep}})+I_t(Q^*).
+$$
+
+### Main result
+
+For real portfolio-consolidation analysis, the practical method is simulation rather than relying only on stylized game theory.
+
+### Interpretation
+
+A firm can use price-impact simulation to answer:
+
+- How much trading would net internally?
+- How much spread and fee cost would disappear?
+- How much impact would be reduced?
+- Would a combined strategy improve P&L?
+- Which desks impose costs on each other?
+
+### Notebook TODO
+
+- Implement a consolidation simulator.
+- Add a workflow for using real order data.
+- Add performance metrics: total P&L, spread costs, impact costs, turnover, and alpha capture.
+- Add a mock portfolio-consolidation report.
+- Include the Waelbroeck-style warning that single-trade TCA can mistake same-desk impact for alpha.
+
+---
+
+## 4.5 Summary of Results
+
+### Purpose
+
+Collect the chapter’s practical formulas and modeling implications.
+
+### Setup / formulation
+
+The chapter summarizes results for:
+
+- alpha research,
+- market simulation,
+- liquidity risk management,
+- combining two portfolios’ trading.
+
+### Main result
+
+Price impact models provide tools for:
+
+- constructing external-impact alpha signals,
+- fitting alpha signals with liquidity-aware losses,
+- simulating counterfactual trading strategies,
+- correcting mark-to-market P&L for trading footprint,
+- stress-testing fire sales,
+- and quantifying portfolio-consolidation benefits.
+
+### Interpretation
+
+Chapter 4 moves price impact from execution into portfolio construction and risk management.
+
+The key message is:
+
+> Price impact limits portfolio capacity and changes how P&L, risk, and alpha should be measured.
+
+### Notebook TODO
+
+- Add the PDF’s full summary formulas.
+- Add assumptions below each formula.
+- Add links back to the detailed sections.
+- Add a final formula table.
+- Add exercises and selected solutions.
+
+---
+
+## 4.6 Exercises
+
+### Purpose
+
+Provide practice problems testing the chapter’s formulas and modeling ideas.
+
+### Setup / formulation
+
+The exercises should cover:
+
+- external impact as alpha,
+- liquidity-aware regression,
+- market simulation,
+- trading footprint,
+- expected closing P&L,
+- fire-sale stress tests,
+- and portfolio consolidation.
+
+### Main result
+
+The exercises should verify that the reader can apply the formulas, not merely restate them.
+
+### Interpretation
+
+The chapter’s applications are practical. The final notebook should include exercises that force the reader to compute:
+
+- impact states,
+- liquidation costs,
+- P&L footprint,
+- counterfactual prices,
+- and consolidation benefits.
+
+### Notebook TODO
+
+- Add all Chapter 4 exercises from the PDF.
+- Add selected solutions from the appendix.
+- Add numerical versions of at least two exercises.
+- Add code-based exercises for simulation and portfolio consolidation.
+
+---
+
+## Chapter-level summary
+
+- Chapter 4 extends price impact from order execution to portfolio construction, alpha research, liquidity risk, and senior-management decisions.
+- The pedagogical example shows that self-impact can inflate accounting P&L when entering positions and deflate it when exiting positions.
+- Statistical arbitrage uses price impact in three ways: as external-impact alpha, as a liquidity-aware regression target, and as a market simulator.
+- Alpha signals should predict unperturbed returns, not impacted observed returns.
+- Liquidity-aware regression should minimize regret in impact space, not ordinary prediction error in return space.
+- Market simulation removes realized historical impact and adds counterfactual impact from a hypothetical strategy.
+- Portfolio accounting must distinguish accounting P&L $X_t$ from fundamental P&L $Y_t$.
+- Trading footprint $F_t=I_tQ_t$ measures mark-to-market distortion from internal impact.
+- Fire-sale stress tests require both own liquidation impact and external crowding impact.
+- Combining two portfolios can reduce costs through internalization and joint optimization, while competitive trading can create an impact arms race.
+
+---
+
+## Key formulas to preserve
+
+- Implied alpha for the pedagogical OW example:
+
+$$
+\tilde{\alpha}
+=
+\frac{2\lambda}{2+\beta T}\Delta Q.
+$$
+
+- Optimal impact target in the pedagogical example:
+
+$$
+I_t^*
+=
+\frac{1}{2}\tilde{\alpha}.
+$$
+
+- Alpha as unperturbed return prediction:
+
+$$
+\alpha_t
+=
+\mathbb{E}[S_T-S_t\mid\mathcal{F}_t].
+$$
+
+- Observed price decomposition:
+
+$$
+P_t=S_t+I_t.
+$$
+
+- External-impact decomposition:
+
+$$
+P_t=S_t+I_t-\bar{\alpha}_t.
+$$
+
+- Generalized OW liquidity:
+
+$$
+\lambda_t=e^{\gamma_t}.
+$$
+
+- Liquidity-aware impact-space loss:
+
+$$
+\min_{\alpha}
+\mathbb{E}
+\left[
+\int_0^T
+\frac{2\beta_t+\gamma_t'}{2\lambda_t}
+\left(
+I_t(\alpha,\alpha')
+-
+I_t(\alpha^r,\mu^r)
+\right)^2
+dt
+\right].
+$$
+
+- Positivity condition:
+
+$$
+2\beta_t+\gamma_t'>0.
+$$
+
+- Counterfactual simulation price:
+
+$$
+P_t(Q)
+=
+P_t^r-I_t(Q^r)+I_t(Q).
+$$
+
+- Trading footprint:
+
+$$
+F_t=I_tQ_t.
+$$
+
+- External trading footprint:
+
+$$
+\bar{F}_t=-\bar{\alpha}_tQ_t.
+$$
+
+- Accounting vs fundamental P&L:
+
+$$
+X_t-Y_t=F_t+\bar{F}_t.
+$$
+
+- Full liquidation identity:
+
+$$
+Q_T=0
+\quad\Rightarrow\quad
+X_T=Y_T.
+$$
+
+- OW expected fundamental P&L for a trade of size $Q$:
+
+$$
+\mathbb{E}[Y_T]
+=
+-\frac{\lambda}{2+\beta T}Q^2.
+$$
+
+- OW expected accounting P&L formula:
+
+$$
+\mathbb{E}[X_T]
+=
+\frac{2\lambda}{2+\beta T}Q_0Q
+-
+\mathbb{E}[Y_T].
+$$
+
+- Steady-state footprint relation:
+
+$$
+\mathbb{E}[F_t]
+=
+e^{-\beta t}F_0+\frac{1}{\lambda}I_0^2.
+$$
+
+- Steady-state average transaction-cost relation:
+
+$$
+\frac{1}{T}
+\mathbb{E}
+\left[
+\int_0^T I_t\,dQ_t
++
+\frac{1}{2}[I,Q]_T
+\right]
+=
+\frac{\beta}{\lambda}I_0^2.
+$$
+
+- Signed power convention for globally concave impact:
+
+$$
+x^c=\operatorname{sign}(x)|x|^c.
+$$
+
+- Independent-trading opportunity-cost form:
+
+$$
+\mathbb{E}[Y_T(Q^0+Q^1)]
+=
+\mathbb{E}[Y_T(Q^*)]
+-
+\mathbb{E}
+\left[
+\int_0^T
+\frac{\beta}{\lambda}
+\left(
+I_t^* - I_t^0 - I_t^1
+\right)^2
+dt
+\right].
+$$
+
+- Competitive Nash impact equation:
+
+$$
+I_t'
+=
+\beta
+\left(
+3I_t-\tilde{\alpha}-\alpha_t+\beta^{-1}\alpha_t'
+\right),
+\qquad
+I_T=\frac{1}{2}\tilde{\alpha}.
+$$
+
+---
+
+## Later expansion checklist
+
+- [ ] Full derivations
+  - [ ] Derive the accounting/fundamental P&L relation.
+  - [ ] Derive the liquidity-aware impact-space loss.
+  - [ ] Derive expected closing P&L.
+  - [ ] Derive steady-state footprint identities.
+  - [ ] Derive fire-sale P&L formulas.
+  - [ ] Derive independent and competitive two-portfolio results.
+
+- [ ] Proof details
+  - [ ] Proposition 4.2.2.
+  - [ ] Corollary 4.2.3.
+  - [ ] Proposition 4.3.3.
+  - [ ] Corollary 4.3.7.
+  - [ ] Proposition 4.3.8.
+  - [ ] Proposition 4.3.14.
+  - [ ] Proposition 4.3.16.
+  - [ ] Proposition 4.4.6.
+
+- [ ] Numerical examples
+  - [ ] Entering vs exiting position.
+  - [ ] Liquidity-aware vs ordinary regression.
+  - [ ] Counterfactual price simulation.
+  - [ ] Stationary OU portfolio.
+  - [ ] Fire-sale liquidation.
+  - [ ] Two-portfolio consolidation.
+
+- [ ] Code implementation
+  - [ ] OW impact recursion.
+  - [ ] Generalized OW with time-varying $\lambda_t$ and $\beta_t$.
+  - [ ] AFS signed-power impact model.
+  - [ ] P&L calculator for $X_t$, $Y_t$, $F_t$, and $\bar{F}_t$.
+  - [ ] Market simulator.
+  - [ ] Fire-sale simulator.
+  - [ ] Portfolio-consolidation simulator.
+
+- [ ] Figures/tables
+  - [ ] Figure 4.1 entering/exiting P&L.
+  - [ ] Figure 4.5 round-trip footprint.
+  - [ ] Figure 4.6 stationary portfolio example.
+  - [ ] Figure 4.9 liquidation without fire sale.
+  - [ ] Figure 4.10 liquidation with fire sale.
+  - [ ] Figures 4.11 to 4.14 portfolio-combination diagrams and paths.
+  - [ ] Formula table with assumptions.
+  - [ ] Liquidity report table.
+  - [ ] Portfolio-consolidation report table.
+
+- [ ] Exercises
+  - [ ] Add Chapter 4 exercises.
+  - [ ] Add selected appendix solutions.
+  - [ ] Add code-based exercises.
+  - [ ] Add short conceptual questions after each major section.
+
+- [ ] Cross-references to earlier/later chapters
+  - [ ] Chapter 2: generalized OW model, impact space, no-price-manipulation conditions.
+  - [ ] Chapter 3: optimal execution and TCA.
+  - [ ] Chapter 5: causal inference and counterfactuals.
+  - [ ] Chapter 6: prediction bias, synchronization bias, implementation bias, issuer bias.
+  - [ ] Chapter 7: empirical impact estimates, cross-impact, and model calibration.
