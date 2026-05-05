@@ -1,0 +1,1898 @@
+# Chapter 2 Mathematical Models of Price Impact
+
+This note is a compact, chapter-aligned replacement for an incomplete notebook. It follows the PDF chapter structure and preserves the main notation, definitions, assumptions, formulas, and modeling implications. It intentionally omits full derivations and proof details.
+
+---
+
+## 2.1 A Pedagogical Example
+
+### Purpose
+
+Introduce the chapter’s central idea in the simplest deterministic setting:
+
+- Price impact creates path-dependence in trade space $Q$.
+- Rewriting the problem in impact space $I$ makes the control problem pointwise, or myopic.
+- Optimal impact is a simple function of alpha and alpha decay.
+
+### Setup / formulation
+
+Let:
+
+- $Q_t$ be the trading position.
+- $\alpha_t$ be an alpha signal predicting the future price move.
+- $I_t$ be price impact.
+- $\lambda > 0$ be the liquidity parameter.
+- $\beta > 0$ be the impact decay rate.
+- $T$ be the trading horizon.
+
+Assume all quantities are deterministic and smooth.
+
+The expected P&L is modeled as:
+
+$$
+\int_0^T (\alpha_t - I_t)dQ_t.
+$$
+
+The OW exponential impact model is:
+
+$$
+I_t = \lambda \int_0^t e^{-\beta(t-s)}dQ_s.
+$$
+
+Equivalently,
+
+$$
+I_t' = -\beta I_t + \lambda Q_t',
+$$
+
+so one can invert the relation:
+
+$$
+Q_t' = \frac{\beta}{\lambda}I_t + \frac{1}{\lambda}I_t'.
+$$
+
+Thus, given the impact path $I$, one can recover the trading path $Q$.
+
+### Main result
+
+After integration by parts, the optimization over $Q$ becomes an optimization over $I$.
+
+For $t \in (0,T)$, the pointwise objective is:
+
+$$
+\beta\alpha_t I_t - \alpha_t'I_t - \beta I_t^2.
+$$
+
+The optimal impact is:
+
+$$
+I_t^* = \frac{1}{2}\left(\alpha_t - \beta^{-1}\alpha_t'\right).
+$$
+
+The terminal condition gives:
+
+$$
+I_T^* = \alpha_T = 0.
+$$
+
+The associated optimal trading speed is:
+
+$$
+Q_t^{*'} = \frac{\beta}{2\lambda}\left(\alpha_t - \beta^{-2}\alpha_t''\right).
+$$
+
+### Interpretation
+
+The optimal strategy targets an impact level rather than a trade rate directly.
+
+- If alpha decays slowly, optimal impact is approximately half of alpha.
+- If alpha decays quickly, alpha decay materially affects the target impact.
+- The relevant state variable is not the full past trading path but the current impact state.
+- This is the chapter’s core myopia principle: trading becomes simple after mapping from $Q$ to $I$.
+
+### Notebook TODO
+
+- Add the full integration-by-parts derivation.
+- Explain boundary terms carefully.
+- Add a plot of $\alpha_t$, $I_t^*$, and $Q_t^{*'}$ for sample alpha paths.
+- Add code verifying that the impact ODE recovers the same $I_t$ from $Q_t$.
+- Add examples for constant, exponentially decaying, and convex alpha signals.
+
+---
+
+## 2.2 Mathematical Setup
+
+### Purpose
+
+Build the formal stochastic framework for price impact models:
+
+- Define trading processes, price processes, impact, and transaction costs.
+- Establish accounting and fundamental P&L.
+- Derive self-financing equations in discrete time.
+- Show how reduced-form continuous-time models arise as limits of microstructure assumptions.
+
+### Setup / formulation
+
+Let $T > 0$ and let:
+
+$$
+(\Omega,\mathcal F,(\mathcal F_t)_{t\in[0,T]},\mathbb P)
+$$
+
+be a filtered probability space.
+
+Core spaces:
+
+- $D$: cadlag finite-variation functions taking values in $\mathbb R$.
+- $\mathcal E_t$: bounded $\mathcal F_t$-measurable random variables.
+- $\mathcal S_n(t)$: bounded semimartingales taking values in $\mathbb R^n$ on $[0,t]$.
+- $\mathcal S_n = \mathcal S_n(T)$.
+- $\mathcal S = \mathcal S_1$.
+- $\mathcal S_{m,n}$: causal functionals mapping $m$-dimensional semimartingales to $n$-dimensional semimartingales.
+
+Causality means no look-ahead bias: a functional at time $t$ only depends on information available up to $t$.
+
+Stochastic integral convention:
+
+- Integrands are interpreted at left limits.
+- Initial conditions at $t=0$ refer to the left limit unless explicitly stated otherwise.
+- The simplified integration-by-parts formula is:
+
+$$
+X_TY_T = X_0Y_0 + \int_0^T X_tdY_t + \int_0^T Y_tdX_t + [X,Y]_T.
+$$
+
+### Main result
+
+#### Trading process
+
+A trading process is $L \in \mathcal S_n$. Its variation $dL$ represents trades.
+
+The agent’s trading process is $Q \in \mathcal S$. If $L=Q$, only the agent’s trades are modeled. If $L$ has other components, they represent external market flow or other portfolios.
+
+#### Prices
+
+The chapter distinguishes three prices:
+
+- $S_t$: unperturbed price, the price without impact from $L$.
+- $P_t(\omega,L)$: perturbed observable price.
+- $\tilde P_t(\omega,L,Q)$: trade price paid by the agent.
+
+Price impact is:
+
+$$
+I = P - S.
+$$
+
+Instantaneous transaction cost, or spread cost, is:
+
+$$
+s_{t-} = \tilde P_{t-} - P_{t-}.
+$$
+
+A trade at time $t$ executes against the pre-trade state $t-$:
+
+$$
+\tilde P_{t-} = S_{t-} + I_{t-} + s_{t-}.
+$$
+
+The observed post-trade price is:
+
+$$
+P_t = S_t + I_t.
+$$
+
+#### Discrete-time P&L
+
+Discretize time by:
+
+$$
+t_n^N = \frac{n}{N}T = n\Delta t^N.
+$$
+
+Use:
+
+$$
+X_n^N = X_{t_n^N},
+$$
+
+and:
+
+$$
+\Delta_n Z = Z_n - Z_{n-1}.
+$$
+
+Cash evolves as:
+
+$$
+\Delta_n K^N = -\tilde P_{n-1}^N\Delta_n Q^N.
+$$
+
+Accounting P&L marks the inventory at the observed price $P$:
+
+$$
+X_n^N = P_n^NQ_n^N + K_n^N.
+$$
+
+Fundamental P&L marks the inventory at the unperturbed price $S$:
+
+$$
+Y_n^N = S_n^NQ_n^N + K_n^N.
+$$
+
+The discrete accounting self-financing equation is:
+
+$$
+\Delta_n X^N
+=
+Q_{n-1}^N\Delta_n P^N
+-
+s_{n-1}^N\Delta_n Q^N
++
+\Delta_n P^N\Delta_n Q^N.
+$$
+
+The discrete fundamental self-financing equation is:
+
+$$
+\Delta_n Y^N
+=
+Q_{n-1}^N\Delta_n S^N
+-
+I_{n-1}^N\Delta_n Q^N
+-
+s_{n-1}^N\Delta_n Q^N
++
+\Delta_n S^N\Delta_n Q^N.
+$$
+
+The additional terms represent:
+
+- Spread or instantaneous transaction costs.
+- Price impact costs.
+- Adverse selection terms.
+
+#### OW microstructure assumptions
+
+The OW microstructure model assumes:
+
+- Linear instantaneous transaction costs:
+
+$$
+s_n^N = \frac{\lambda}{2}\Delta_n Q^N.
+$$
+
+- Exponential decay of price impact:
+
+$$
+\Delta_n I^N = -\beta I_{n-1}^N\Delta t^N + \lambda \Delta_n Q^N.
+$$
+
+- No adverse selection:
+
+$$
+\Delta_n Q^N\Delta_n S^N \to 0.
+$$
+
+The continuous-time reduced-form OW model is:
+
+$$
+dI_t = -\beta I_tdt + \lambda dQ_t.
+$$
+
+The corresponding fundamental P&L equation is:
+
+$$
+dY_t = Q_tdS_t - I_tdQ_t - \frac{\lambda}{2}d[Q,Q]_t.
+$$
+
+Since $d[I,Q]_t = \lambda d[Q,Q]_t$, this can also be written as:
+
+$$
+dY_t = Q_tdS_t - I_tdQ_t - \frac{1}{2}d[I,Q]_t.
+$$
+
+### Interpretation
+
+The section separates three ideas that are often conflated:
+
+- The unperturbed price $S$ is the benchmark for fundamental value.
+- The perturbed price $P$ is what the market observes after impact.
+- The trade price $\tilde P$ is what the trader actually pays or receives.
+
+The accounting P&L can be distorted by temporary impact. The fundamental P&L removes this distortion and is therefore the correct objective for optimal trading.
+
+Discrete microstructure assumptions determine which friction terms survive in the continuous-time reduced-form model.
+
+### Notebook TODO
+
+- Add diagrams for $S$, $P$, $\tilde P$, $I$, and $s$.
+- Add full derivation of the discrete self-financing equations.
+- Add examples showing how spread, impact, and adverse selection affect P&L.
+- Add the continuous-time convergence proof sketches.
+- Add code simulating discrete OW impact and showing convergence to the SDE.
+- Add a warning box about left-limit conventions.
+
+---
+
+## 2.3 The Obizhaeva and Wang Propagator Model
+
+### Purpose
+
+Apply the OW reduced-form model to optimal execution and derive the closed-form optimal liquidation strategy.
+
+### Setup / formulation
+
+The OW impact model is:
+
+$$
+dI_t = -\beta I_tdt + \lambda dQ_t.
+$$
+
+Let the initial position be $Q_0$ and impose the terminal liquidation constraint:
+
+$$
+Q_T = 0.
+$$
+
+The OW optimal execution problem is:
+
+$$
+\sup_{Q\in D}
+\mathbb E\left[
+\int_0^T Q_tdS_t
+-
+\int_0^T I_tdQ_t
+-
+\frac{1}{2}[I,Q]_T
+\right].
+$$
+
+Define the alpha signal:
+
+$$
+\alpha_t = \mathbb E[S_T - S_t \mid \mathcal F_t].
+$$
+
+The alpha identity is:
+
+$$
+\mathbb E\left[\int_0^T Q_tdS_t\right]
+=
+\mathbb E\left[\int_0^T \alpha_tdQ_t + [\alpha,Q]_T\right].
+$$
+
+The one-to-one map from impact space to trade space is:
+
+$$
+dQ_t = \frac{1}{\lambda}(\beta I_tdt + dI_t).
+$$
+
+The liquidation constraint becomes:
+
+$$
+I_T + \int_0^T \beta I_tdt = -\lambda Q_0.
+$$
+
+### Main result
+
+The optimal execution problem is equivalent to an optimization over $I$:
+
+$$
+\sup_{I\in D}
+\frac{1}{\lambda}
+\mathbb E\left[
+\int_0^T (\beta\alpha_tI_t - \beta I_t^2)dt
+-
+\int_0^T I_td\alpha_t
+-
+\frac{1}{2}I_T^2
+\right],
+$$
+
+subject to:
+
+$$
+I_T + \int_0^T \beta I_tdt = -\lambda Q_0.
+$$
+
+If $S$ is a martingale, then $\alpha_t=0$, and the optimal impact satisfies:
+
+$$
+I_t^* = -\frac{\lambda}{2+\beta T}Q_0,
+\quad t\in(0,T),
+$$
+
+and:
+
+$$
+I_T^* = -\frac{2\lambda}{2+\beta T}Q_0.
+$$
+
+The interior optimal trading rate is:
+
+$$
+dQ_t^* = -\frac{\beta}{2+\beta T}Q_0dt,
+\quad t\in(0,T).
+$$
+
+The optimal strategy includes jumps at $t=0$ and $t=T$, each of size:
+
+$$
+-\frac{1}{2+\beta T}Q_0.
+$$
+
+### Interpretation
+
+In trade space, the liquidation problem is path-dependent because current trades affect future impact.
+
+In impact space, the problem becomes nearly pointwise. The Lagrange multiplier handles the terminal liquidation constraint, while the impact level itself is controlled myopically.
+
+The endpoint jumps are important. They explain why the quadratic variation correction term cannot be ignored.
+
+### Notebook TODO
+
+- Add proof of the alpha identity.
+- Add derivation of the impact-space objective.
+- Add the Lagrange multiplier solution.
+- Plot the optimal $Q_t^*$ and $I_t^*$.
+- Compare OW execution to TWAP and block liquidation.
+- Add numerical validation that the closed-form strategy satisfies the impact ODE.
+
+---
+
+## 2.4 Extensions Related to the Objective Function
+
+### Purpose
+
+Extend the OW model by changing the objective function rather than the impact dynamics.
+
+The section covers:
+
+- Alpha signals.
+- Deterministic and stochastic alpha.
+- Two-sided trading.
+- Bid-ask spread penalties and regularization.
+
+---
+
+## 2.4.1 Alpha Signal
+
+### Purpose
+
+Show how a trader should modify execution when the unperturbed price has predictable drift.
+
+### Setup / formulation
+
+The impact dynamics remain:
+
+$$
+dI_t = -\beta I_tdt + \lambda dQ_t.
+$$
+
+The alpha signal is:
+
+$$
+\alpha_t = \mathbb E[S_T - S_t \mid \mathcal F_t].
+$$
+
+For deterministic alpha, assume:
+
+- $\alpha_t$ is deterministic.
+- $\alpha_t$ is $C^2$.
+- $\alpha_t'$ and $\alpha_t''$ exist.
+
+For the liquidation problem, impose:
+
+$$
+Q_T = 0.
+$$
+
+### Main result
+
+With deterministic alpha, the optimal impact is:
+
+$$
+I_t^*
+=
+\frac{1}{2}\left(\alpha_t - \beta^{-1}\alpha_t' + \nu\right),
+\quad t\in(0,T),
+$$
+
+and:
+
+$$
+I_T^* = \nu,
+$$
+
+where:
+
+$$
+\nu
+=
+-\frac{1}{2+\beta T}
+\left(
+2\lambda Q_0
++
+\alpha_0
++
+\beta\int_0^T\alpha_tdt
+\right).
+$$
+
+The optimal trading trajectory satisfies:
+
+$$
+dQ_t^*
+=
+\frac{1}{2\lambda}
+\left(
+\beta\alpha_t
+-
+\beta^{-1}\alpha_t''
++
+\beta\nu
+\right)dt.
+$$
+
+For stochastic alpha in an unconstrained trading problem, assume:
+
+$$
+dS_t = \mu_tdt + \sigma_tdW_t.
+$$
+
+Then:
+
+$$
+I_t^*
+=
+\frac{1}{2}\left(\alpha_t + \beta^{-1}\mu_t\right),
+\quad t\in(0,T),
+$$
+
+and:
+
+$$
+I_T^* = 0.
+$$
+
+### Interpretation
+
+Alpha changes the target impact.
+
+- A persistent positive alpha encourages more aggressive buying.
+- Alpha decay matters because impact decays too.
+- The comparison between alpha decay and impact decay determines whether trading should accelerate or slow down.
+- In unconstrained statistical-arbitrage-style control, there is no terminal liquidation multiplier.
+
+### Notebook TODO
+
+- Add derivation from impact-space objective.
+- Add examples for constant alpha drift and exponentially decaying alpha.
+- Add a comparison of constrained execution versus unconstrained statistical arbitrage.
+- Add discussion of when stochastic alpha violates the no-adverse-selection assumption.
+- Add implementation of optimal $I_t^*$ and $Q_t^*$ for deterministic alpha.
+
+---
+
+## 2.4.2 Two-Sided Trading
+
+### Purpose
+
+Extend the OW model from one-sided trading at the ask to two-sided trading around the midprice.
+
+### Setup / formulation
+
+The original OW model effectively studies one-sided trading. For two-sided trading, the relevant reference price is the midprice, and bid-ask spread costs enter explicitly.
+
+The discrete fundamental self-financing equation remains:
+
+$$
+\Delta_n Y^N
+=
+Q_{n-1}^N\Delta_n S^N
+-
+I_{n-1}^N\Delta_n Q^N
+-
+s_{n-1}^N\Delta_n Q^N
++
+\Delta_n S^N\Delta_n Q^N.
+$$
+
+The transaction cost term now includes spread:
+
+$$
+\pm \frac{\bar s_{n-1}^N}{2}\operatorname{sign}(\Delta_n Q^N),
+$$
+
+where:
+
+- $+$ corresponds to taking liquidity.
+- $-$ corresponds to providing liquidity.
+- $\bar s^N$ is the bid-ask spread.
+
+### Main result
+
+In the low-frequency finite-variation regime, assume:
+
+$$
+s_n^N
+=
+\frac{\bar s}{2}\operatorname{sign}(\Delta_n Q^N)
++
+\frac{\lambda}{2}\Delta_n Q^N.
+$$
+
+Then:
+
+$$
+dY_t
+=
+Q_tdS_t
+-
+\frac{\bar s}{2}|dQ_t|
+-
+I_tdQ_t
+-
+\frac{1}{2}d[I,Q]_t.
+$$
+
+In the high-frequency vanishing-spread regime, assume:
+
+$$
+dQ_t = a_tdt + l_tdW_t,
+$$
+
+and the spread scales like $\sqrt{\Delta t^N}$. Then the limiting cost contains a penalty proportional to $l_t$:
+
+$$
+dY_t
+=
+Q_tdS_t
+-
+I_tdQ_t
+\mp
+\frac{\bar s}{\sqrt{2\pi}}l_tdt
+\mp
+\frac{\lambda}{2}l_t^2dt
++
+d[Q,S]_t.
+$$
+
+### Interpretation
+
+Bid-ask spread acts as a regularization term.
+
+- In low-frequency trading, spread penalizes turnover.
+- In high-frequency trading, spread penalizes the volatility of the trading strategy.
+- Spread costs usually destroy the exact myopic closed form and require numerical methods.
+- The no-spread closed-form solution remains a useful target that the spread-regularized solution tracks.
+
+### Notebook TODO
+
+- Add a table comparing low-frequency and high-frequency regimes.
+- Add derivation of spread limit terms.
+- Add examples showing no-trade regions.
+- Add numerical dynamic programming example with spread.
+- Add discussion of liquidity taking versus liquidity providing.
+
+---
+
+## 2.4.2.1 Bid-Ask Spread as a Regularization Term
+
+### Purpose
+
+Explain how bid-ask spread modifies the control problem.
+
+### Setup / formulation
+
+Two common spread penalties are:
+
+$$
+\frac{\bar s}{2}|dQ_t|
+$$
+
+and:
+
+$$
+\frac{\bar s}{\sqrt{2\pi}}l_tdt,
+$$
+
+where $l_t$ is the volatility of the trading process $Q$.
+
+### Main result
+
+Spread regularization generally produces non-myopic problems.
+
+Typical effects:
+
+- Reduced turnover.
+- No-trade regions.
+- Smoother strategies.
+- Tracking of the frictionless closed-form optimizer.
+
+### Interpretation
+
+The closed-form OW strategy provides the frictionless target. Spread costs prevent the strategy from reacting too aggressively to small signals.
+
+### Notebook TODO
+
+- Add a numerical example of spread-induced no-trade zones.
+- Add comparison with quadratic transaction-cost regularization.
+- Add references to numerical methods for optimal execution with spread.
+
+---
+
+## 2.5 Extensions Related to Time
+
+### Purpose
+
+Relax the assumption that price impact decays at a constant exponential rate in wall-clock time.
+
+This section covers:
+
+- Time changes.
+- Stochastic resilience.
+- Stochastic liquidity or stochastic push.
+- Sensitivity analysis in impact space.
+- General linear propagator models.
+
+---
+
+## 2.5.1 Time Change
+
+### Purpose
+
+Model the empirical fact that price impact tends to decay faster when market activity is higher.
+
+### Setup / formulation
+
+A time change $\tau$ is an increasing stochastic process with:
+
+$$
+\tau_0 = 0.
+$$
+
+For a process $Z$, define the time-changed process:
+
+$$
+\widehat Z_s = Z_{\tau_s^{-1}}.
+$$
+
+Common clocks include:
+
+- Wall-clock time.
+- Volume clock.
+- Trade clock.
+- Tick clock.
+
+If impact follows OW dynamics in the changed clock:
+
+$$
+d\widehat I_s = -\beta\widehat I_sds + \lambda d\widehat Q_s,
+$$
+
+then in wall-clock time:
+
+$$
+dI_t = -\beta\tau_t'I_tdt + \lambda dQ_t.
+$$
+
+Thus the effective wall-clock decay rate is:
+
+$$
+\beta_t = \beta\tau_t'.
+$$
+
+### Main result
+
+A constant decay rate in an activity clock becomes a stochastic decay rate in wall-clock time.
+
+The generalized impact model is:
+
+$$
+dI_t = -\beta_t I_tdt + \lambda dQ_t.
+$$
+
+### Interpretation
+
+Market activity accelerates impact decay.
+
+- When volume is high, impact decays faster.
+- When volume is low, impact decays more slowly.
+- This explains why volume, trade, and tick clocks can improve empirical impact models.
+
+### Notebook TODO
+
+- Add examples of volume, trade, and tick clocks.
+- Add code computing a volume clock from binned trading volume.
+- Add simulation comparing wall-clock OW and volume-clock OW.
+- Add discussion of time-of-day seasonality.
+
+---
+
+## 2.5.2 Stochastic Push
+
+### Purpose
+
+Allow the liquidity parameter $\lambda$ to vary over time.
+
+### Setup / formulation
+
+Let:
+
+$$
+\lambda_t = e^{\gamma_t},
+$$
+
+where $\gamma_t$ is a smooth deterministic or stochastic process.
+
+The generalized OW impact model is:
+
+$$
+dI_t = -\beta_t I_tdt + \lambda_t dQ_t.
+$$
+
+Equivalently, the inverse map is:
+
+$$
+dQ_t
+=
+\lambda_t^{-1}
+\left(
+\beta_t I_tdt + dI_t
+\right).
+$$
+
+Because $\lambda_t=e^{\gamma_t}$, integration by parts introduces the derivative $\gamma_t'$.
+
+### Main result
+
+For the generalized OW model, the impact-space objective includes the effective curvature term:
+
+$$
+2\beta_t + \gamma_t'.
+$$
+
+The model is well-behaved when:
+
+$$
+2\beta_t + \gamma_t' > 0.
+$$
+
+For robust well-posedness, the PDF uses the stronger assumption that this expression is bounded away from zero.
+
+### Interpretation
+
+Liquidity can improve or deteriorate over time.
+
+- If liquidity improves too quickly, manipulation-type effects may appear.
+- If liquidity deteriorates, trading becomes more expensive but does not create the same round-trip profit issue.
+- The quantity $2\beta_t+\gamma_t'$ balances impact decay against liquidity changes.
+
+### Notebook TODO
+
+- Add derivation of the impact-space objective with $\lambda_t=e^{\gamma_t}$.
+- Add examples of increasing and decreasing liquidity.
+- Add numerical sensitivity of optimal impact to $\gamma_t'$.
+- Add clear statement of the bounded-away-from-zero condition.
+
+---
+
+## 2.5.2.1 Sensitivity Analysis in Impact Space
+
+### Purpose
+
+Show that impact-space formulas make sensitivity analysis tractable.
+
+### Setup / formulation
+
+A generic impact-space objective depends on:
+
+- Alpha $\alpha_t$.
+- Impact decay $\beta_t$.
+- Liquidity scale $\lambda_t=e^{\gamma_t}$.
+- The effective curvature $2\beta_t+\gamma_t'$.
+
+### Main result
+
+The target impact changes predictably when alpha, decay, or liquidity change.
+
+Typical comparative statics:
+
+- Higher alpha increases target impact.
+- Faster alpha decay lowers target impact.
+- Faster impact decay allows more aggressive trading.
+- Higher liquidity, meaning lower effective $\lambda_t$, allows more trading for the same impact.
+
+### Interpretation
+
+Impact space separates the strategic target from the implementation.
+
+- The trader first decides a target impact.
+- The trading rate is then recovered from the impact dynamics.
+- Sensitivity analysis is easier for $I_t^*$ than directly for $Q_t^*$.
+
+### Notebook TODO
+
+- Add explicit sensitivity formulas from the PDF.
+- Add plots of optimal impact under shocks to $\alpha$, $\beta$, and $\lambda$.
+- Add code that perturbs parameters and recomputes $I_t^*$.
+- Add discussion of stability under noisy liquidity forecasts.
+
+---
+
+## 2.5.3 Linear Propagator Models
+
+### Purpose
+
+Place the OW model inside the broader class of linear propagator models.
+
+### Setup / formulation
+
+A general linear propagator model has impact:
+
+$$
+I_t = \int_0^t G(t,s)dQ_s,
+$$
+
+where $G(t,s)$ is a decay kernel.
+
+The OW model is the special case:
+
+$$
+G(t,s) = \lambda e^{-\beta(t-s)}.
+$$
+
+### Main result
+
+General propagator kernels capture richer empirical decay patterns but often lose the simple Markovian and myopic structure of OW.
+
+### Interpretation
+
+The OW model is tractable because exponential decay makes $I_t$ a state variable satisfying a one-dimensional SDE.
+
+More general kernels may fit data better but usually require:
+
+- Higher-dimensional state representations.
+- Numerical methods.
+- Approximation by sums of exponentials.
+- Additional no-manipulation checks.
+
+### Notebook TODO
+
+- Add examples of power-law and multi-exponential kernels.
+- Add numerical implementation using exponential-kernel approximations.
+- Add discussion of when myopia fails.
+- Add relation to empirical propagator models in later chapters.
+
+---
+
+## 2.6 Extensions Related to External Impact
+
+### Purpose
+
+Extend the model so that the agent’s trades interact with external market flow.
+
+The key idea is:
+
+- The market’s impact on prices becomes an alpha signal for the trader.
+- The trader’s impact is only one component of total impact.
+
+---
+
+## 2.6.1 Microstructure Assumptions
+
+### Purpose
+
+Define how the agent’s trades and the rest of the market jointly affect prices.
+
+### Setup / formulation
+
+Let:
+
+- $Q$ be the agent’s trading process.
+- $M$ be external market flow.
+- $\bar I$ be total impact from both $Q$ and $M$.
+- $I$ be the agent’s own impact.
+
+The total impact follows:
+
+$$
+d\bar I_t = -\beta\bar I_tdt + \lambda(dQ_t+dM_t).
+$$
+
+The agent’s own impact follows:
+
+$$
+dI_t = -\beta I_tdt + \lambda dQ_t.
+$$
+
+The external impact is:
+
+$$
+\bar I_t - I_t.
+$$
+
+The model requires assumptions about execution ordering. In particular, the PDF uses a no-front-running convention: the agent is not systematically placed immediately before the external market flow.
+
+### Main result
+
+External trades affect the observable perturbed price and therefore affect the agent’s execution costs and signals.
+
+The reduced-form P&L can be written using total impact and own impact, depending on whether one is measuring:
+
+- Price dislocation caused by all flow.
+- Price impact caused by the agent alone.
+- Trading costs borne by the agent.
+
+### Interpretation
+
+A trader does not trade in isolation.
+
+- Other traders’ flow moves prices.
+- Their impact can either help or hurt the agent.
+- External impact can be interpreted as an alpha signal because it predicts future price dislocations and reversals.
+- The agent must separate own impact from market impact.
+
+### Notebook TODO
+
+- Add diagrams showing $Q$, $M$, $I$, and $\bar I$.
+- Add derivation of the external-impact self-financing equation.
+- Add discussion of execution ordering and no-front-running.
+- Add simulation with correlated and anti-correlated market flow.
+- Add examples linking external impact to synchronization bias.
+
+---
+
+## 2.6.2 Optimal Trading Strategy with External Impact
+
+### Purpose
+
+Solve the trading problem when external market flow contributes to price impact.
+
+### Setup / formulation
+
+Let total impact be:
+
+$$
+\bar I_t = I_t + I_t^M,
+$$
+
+where $I_t^M$ is impact from external flow.
+
+The external-impact alpha is typically represented as:
+
+$$
+\bar\alpha_t
+=
+\mathbb E\left[
+\int_t^T \beta I_s^Mds
+\mid \mathcal F_t
+\right],
+$$
+
+or equivalently through the future decay of market-generated dislocation.
+
+The trader’s own impact still satisfies:
+
+$$
+dI_t = -\beta I_tdt + \lambda dQ_t.
+$$
+
+### Main result
+
+The agent’s optimal strategy has the same structure as the alpha-signal problem, but the alpha now includes external impact.
+
+Informally:
+
+$$
+\text{external impact} \quad \Longleftrightarrow \quad \text{alpha signal}.
+$$
+
+### Interpretation
+
+One trader’s impact is another trader’s alpha.
+
+If the rest of the market pushes the price away from its unperturbed value, the agent may trade to benefit from the expected reversion of that dislocation.
+
+External impact is central for:
+
+- Trading with order-flow imbalance.
+- Liquidity provision.
+- Fire-sale modeling.
+- Portfolio consolidation.
+- Cross-impact applications.
+
+### Notebook TODO
+
+- Add exact proposition statement from the PDF.
+- Add derivation mapping external impact into the alpha term.
+- Add examples with deterministic external flow.
+- Add simulations where $M$ is correlated with $Q$.
+- Add links to Chapters 3 and 4 applications.
+
+---
+
+## 2.6.3 Local Concavity
+
+### Purpose
+
+Introduce locally concave price impact at the microstructure level and show how it leads to stochastic liquidity in the reduced-form model.
+
+### Setup / formulation
+
+Instead of linear microscopic impact, local concavity uses a nonlinear function $g$.
+
+A representative scaled discrete model is:
+
+$$
+\Delta_n\bar I^N
+=
+-\beta\bar I_n^N\Delta t^N
++
+\sqrt{\Delta t^N}
+g\left(
+\frac{\Delta_nM^N+\Delta_nQ^N}{\sqrt{\Delta t^N}}
+\right).
+$$
+
+The function $g$ is locally concave and captures nonlinear instantaneous impact at the fill level.
+
+The external flow $M$ is modeled as a semimartingale, often with diffusion component.
+
+### Main result
+
+Under suitable assumptions, the locally concave microstructure model converges to a generalized OW model with stochastic liquidity.
+
+Important technical point:
+
+- The convergence in the PDF is stable in law, not u.c.p.
+- The limiting model introduces additional Brownian noise generated by aggregation of nonlinear microscopic impact increments.
+
+The reduced-form impact model has the form:
+
+$$
+dI_t
+=
+-\beta I_tdt
++
+\lambda_t dQ_t
++
+\text{additional noise terms}.
+$$
+
+### Interpretation
+
+Local concavity means that the marginal impact of a small trade depends on the local market flow environment.
+
+After aggregation, this behaves like stochastic liquidity or stochastic push.
+
+The trader can still use generalized OW tools, but the liquidity process $\lambda_t$ is now driven by market activity.
+
+### Notebook TODO
+
+- Correctly state stable-in-law convergence.
+- Add assumptions on $g$ and the external market flow.
+- Add explanation of why additional Brownian noise appears.
+- Add comparison between local concavity and simple deterministic $\lambda_t$.
+- Add code simulation showing nonlinear microscopic increments converging to stochastic liquidity.
+
+---
+
+## 2.6.4 Global Concavity
+
+### Purpose
+
+Discuss globally concave impact models, especially the AFS model, and contrast them with local concavity.
+
+### Setup / formulation
+
+Global concavity applies at the aggregate impact level, not just the microscopic fill level.
+
+The AFS-style model uses a nonlinear mapping between cumulative impact and trades.
+
+A reduced-form representation uses a transformed impact variable, often denoted through a function of the impact state.
+
+### Main result
+
+Globally concave models can capture empirical concavity of metaorder impact, but they are structurally different from locally concave OW extensions.
+
+The PDF treats global concavity as a reduced-form model rather than deriving it fully from the same microscopic assumptions as local concavity.
+
+### Interpretation
+
+Local and global concavity should not be confused.
+
+- Local concavity concerns individual microscopic trades or short-time increments.
+- Global concavity concerns aggregate impact over a larger order.
+- The two lead to different mathematics and different control problems.
+
+Global concavity is useful empirically but can be less tractable than generalized OW.
+
+### Notebook TODO
+
+- Add precise AFS model equations from the PDF.
+- Add comparison table: linear OW, locally concave OW, globally concave AFS.
+- Add examples showing local versus global concavity.
+- Add discussion of when each model is empirically appropriate.
+- Add references to Chapter 7 empirical model comparisons.
+
+---
+
+## 2.7 Price Manipulation Paradoxes
+
+### Purpose
+
+State constraints that price impact models must satisfy to avoid artificial profit opportunities from round-trip trades.
+
+The section connects:
+
+- Price manipulation.
+- Impact decay.
+- Liquidity changes.
+- Volume predictions.
+
+---
+
+## 2.7.1 Constraints on Price Impact Models
+
+### Purpose
+
+Derive no-price-manipulation conditions for generalized OW models.
+
+### Setup / formulation
+
+Use the generalized OW model:
+
+$$
+dI_t = -\beta_tI_tdt + \lambda_tdQ_t,
+$$
+
+with:
+
+$$
+\lambda_t = e^{\gamma_t}.
+$$
+
+The key curvature term is:
+
+$$
+2\beta_t+\gamma_t'.
+$$
+
+### Main result
+
+A sufficient structural condition for avoiding price manipulation is:
+
+$$
+2\beta_t+\gamma_t' > 0.
+$$
+
+For robust well-posedness, require this quantity to be bounded away from zero.
+
+### Interpretation
+
+Round-trip profits become possible if liquidity improves too quickly relative to impact decay.
+
+Economic intuition:
+
+- If a trader can buy when liquidity is low and sell when liquidity is high, the model may reward a round trip.
+- Impact decay must be fast enough, or liquidity improvement slow enough, to prevent this.
+
+### Notebook TODO
+
+- Add the explicit round-trip construction from the PDF.
+- Distinguish price manipulation from transaction-triggered price manipulation.
+- Add examples of safe and unsafe $\lambda_t$ paths.
+- Add numerical test checking $2\beta_t+\gamma_t'$.
+
+---
+
+## 2.7.2 Extension to Locally Concave Models
+
+### Purpose
+
+Extend the no-manipulation logic to locally concave models by mapping them into generalized OW models with stochastic liquidity.
+
+### Setup / formulation
+
+Locally concave microstructure models produce reduced-form dynamics with stochastic $\lambda_t$.
+
+The same structural condition applies:
+
+$$
+2\beta_t+\gamma_t' > 0.
+$$
+
+### Main result
+
+Local concavity is admissible only if the induced stochastic liquidity process does not violate the no-manipulation bound.
+
+### Interpretation
+
+Concavity alone is not enough. The way concavity interacts with market activity and liquidity changes matters.
+
+The trader must check that the reduced-form stochastic liquidity path does not imply artificial round-trip profits.
+
+### Notebook TODO
+
+- Add the exact locally concave model-to-$\lambda_t$ mapping.
+- Add examples where local concavity is safe versus unsafe.
+- Add simulation of round-trip costs under locally concave impact.
+- Add explanation of stable-in-law convergence relevance.
+
+---
+
+## 2.7.3 Constraints on Volume Predictions
+
+### Purpose
+
+Translate price-manipulation constraints into practical restrictions on predicted market volume.
+
+### Setup / formulation
+
+Suppose liquidity scales with predicted volume $v_t$.
+
+For a square-root-style scaling:
+
+$$
+\lambda_t \propto v_t^{-1/2}.
+$$
+
+Then:
+
+$$
+\gamma_t' = -\frac{1}{2}\frac{v_t'}{v_t}.
+$$
+
+The no-manipulation condition becomes:
+
+$$
+2\beta_t - \frac{1}{2}\frac{v_t'}{v_t} > 0.
+$$
+
+Equivalently:
+
+$$
+\frac{v_t'}{v_t} < 4\beta_t.
+$$
+
+If $\beta$ is constant, the minimum volume doubling time implied by this inequality is:
+
+$$
+\Delta t > \frac{\log 2}{4\beta}.
+$$
+
+Since the impact half-life is:
+
+$$
+\frac{\log 2}{\beta},
+$$
+
+the volume doubling time must exceed one quarter of the impact half-life.
+
+### Main result
+
+Volume predictions cannot increase too quickly relative to impact decay.
+
+Rapidly increasing volume forecasts can create manipulation opportunities in the model.
+
+### Interpretation
+
+This is the chapter’s most practical no-manipulation takeaway.
+
+A volume curve used in an execution algorithm is not harmless. If the predicted market activity rises too sharply, the implied liquidity improvement may let the model generate artificial profits through round trips.
+
+Negative liquidity shocks are asymmetric: they make trading expensive but do not create the same manipulation mechanism.
+
+### Notebook TODO
+
+- Add derivation of the volume-growth bound.
+- Add examples using intraday volume curves.
+- Add a code function checking whether a volume forecast violates the bound.
+- Add plots of $v_t'/v_t$ against $4\beta_t$.
+- Add practical discussion for VWAP and participation algorithms.
+
+---
+
+## 2.8 Summary of Results
+
+### Purpose
+
+Collect the chapter’s main model definitions, control identities, and no-manipulation constraints.
+
+---
+
+## 2.8.1 Generalized OW Impact Model
+
+### Purpose
+
+State the generalized OW model in a compact reference form.
+
+### Setup / formulation
+
+Let:
+
+$$
+\lambda_t = e^{\gamma_t}.
+$$
+
+The generalized OW impact model is:
+
+$$
+dI_t = -\beta_tI_tdt + \lambda_tdQ_t.
+$$
+
+The inverse map is:
+
+$$
+dQ_t
+=
+\lambda_t^{-1}
+(\beta_tI_tdt+dI_t).
+$$
+
+The fundamental P&L is:
+
+$$
+dY_t
+=
+Q_tdS_t
+-
+I_tdQ_t
+-
+\frac{1}{2}d[I,Q]_t.
+$$
+
+### Main result
+
+Under suitable assumptions, the control problem can be translated from trade space $Q$ into impact space $I$, often producing myopic optimality conditions.
+
+The key well-posedness condition is:
+
+$$
+2\beta_t+\gamma_t' > 0.
+$$
+
+### Interpretation
+
+The generalized OW model is the chapter’s central tractable class.
+
+It is rich enough to incorporate:
+
+- Time-varying decay.
+- Stochastic liquidity.
+- Alpha signals.
+- External impact.
+- Manipulation bounds.
+
+### Notebook TODO
+
+- Add a boxed “generalized OW assumptions” cell.
+- Add proof of inverse mapping.
+- Add implementation-ready class or function for generalized OW dynamics.
+
+---
+
+## 2.8.2 Generalized OW Impact Model with External Impact
+
+### Purpose
+
+Summarize the external-impact extension.
+
+### Setup / formulation
+
+Let total impact satisfy:
+
+$$
+d\bar I_t
+=
+-\beta_t\bar I_tdt
++
+\lambda_t(dQ_t+dM_t).
+$$
+
+Own impact satisfies:
+
+$$
+dI_t
+=
+-\beta_tI_tdt
++
+\lambda_tdQ_t.
+$$
+
+External impact is:
+
+$$
+\bar I_t-I_t.
+$$
+
+### Main result
+
+External impact enters the trader’s control problem as a signal.
+
+The central modeling implication is:
+
+$$
+\text{external flow impact} = \text{alpha-like input for the agent}.
+$$
+
+### Interpretation
+
+The trader should respond not only to their own impact but also to market-generated dislocations.
+
+This is crucial for:
+
+- Trading with order-flow imbalance.
+- Liquidity risk.
+- Fire sales.
+- Portfolio consolidation.
+- Cross-impact.
+
+### Notebook TODO
+
+- Add exact PDF statement of the external-impact control result.
+- Add simulation with external flow $M$.
+- Add empirical examples from later chapters.
+
+---
+
+## 2.8.3 Control Problems
+
+### Purpose
+
+Summarize the control-problem templates developed in the chapter.
+
+### Setup / formulation
+
+The core objective is expected fundamental P&L:
+
+$$
+\mathbb E[Y_T].
+$$
+
+The constrained execution problem imposes:
+
+$$
+Q_T=0.
+$$
+
+The unconstrained trading problem does not impose a terminal unwind and is closer to statistical arbitrage.
+
+In impact space, the generic structure is quadratic in $I$.
+
+### Main result
+
+Many optimal trading problems become myopic in impact space.
+
+Typical optimal impact targets depend on:
+
+- Alpha level.
+- Alpha decay.
+- Impact decay.
+- Liquidity.
+- External impact.
+- Terminal constraints.
+
+### Interpretation
+
+The trader should think in two stages:
+
+- Determine target impact $I_t^*$.
+- Recover trades $Q_t^*$ from the impact dynamics.
+
+This separation is the main computational advantage of the OW framework.
+
+### Notebook TODO
+
+- Add side-by-side comparison of constrained and unconstrained problems.
+- Add implementation of target-impact-to-trade conversion.
+- Add numerical examples for deterministic and stochastic alpha.
+- Add exercises solving simple controls.
+
+---
+
+## 2.8.4 Price Manipulation Bounds
+
+### Purpose
+
+Summarize the chapter’s no-price-manipulation results.
+
+### Setup / formulation
+
+For:
+
+$$
+dI_t = -\beta_tI_tdt + e^{\gamma_t}dQ_t,
+$$
+
+the key condition is:
+
+$$
+2\beta_t+\gamma_t' > 0.
+$$
+
+For volume-based liquidity with:
+
+$$
+\lambda_t \propto v_t^{-1/2},
+$$
+
+the corresponding volume bound is:
+
+$$
+\frac{v_t'}{v_t} < 4\beta_t.
+$$
+
+### Main result
+
+The model avoids price manipulation only when liquidity does not improve too quickly relative to impact decay.
+
+### Interpretation
+
+Price-impact models impose constraints on other forecasts, especially volume forecasts.
+
+An execution model that combines impact decay with a volume curve must check this bound.
+
+### Notebook TODO
+
+- Add code for no-manipulation checks.
+- Add examples with realistic intraday volume curves.
+- Add round-trip trade simulations.
+- Add warning boxes for model calibration.
+
+---
+
+## 2.9 Exercises
+
+### Purpose
+
+Provide practice problems that reinforce the chapter’s main mathematical and modeling ideas.
+
+### Setup / formulation
+
+The PDF includes exercises and Appendix C includes solutions.
+
+The temporary notebook should at least include placeholders for exercises covering:
+
+- OW execution with constant alpha.
+- Impact-space mapping.
+- Stochastic liquidity.
+- External impact as alpha.
+- Local concavity.
+- Volume-growth manipulation bounds.
+
+### Main result
+
+Exercises should test whether the reader can move between:
+
+- Trade space $Q$.
+- Impact space $I$.
+- P&L formulas.
+- Microstructure assumptions.
+- No-manipulation constraints.
+
+### Interpretation
+
+The exercises are important because many formulas look simple only after the impact-space transformation. Practice is required to understand when the transformation is valid and which assumptions are being used.
+
+### Notebook TODO
+
+- Add all Chapter 2 exercises.
+- Add links to Appendix C.1 solutions.
+- Add worked solutions for the most important exercises.
+- Add coding exercises for simulation and bound checking.
+- Add conceptual questions on assumptions and model risk.
+
+---
+
+## Chapter-level summary
+
+- Chapter 2 builds price impact models from microstructure assumptions and then studies their control implications.
+- The central model is the Obizhaeva-Wang propagator model.
+- The OW model uses exponentially decaying transient impact:
+  $$dI_t=-\beta I_tdt+\lambda dQ_t.$$
+- Fundamental P&L, not accounting P&L, is the correct objective for optimal trading because accounting P&L is distorted by temporary price impact.
+- The main mathematical trick is to invert the impact dynamics and optimize in impact space $I$ instead of trade space $Q$.
+- In impact space, many control problems become myopic and admit closed-form solutions.
+- Alpha signals shift the target impact according to alpha level and alpha decay.
+- Bid-ask spread acts as a regularization term and typically destroys exact myopia.
+- Time changes and stochastic liquidity extend OW to account for market activity and changing liquidity.
+- External market flow enters the trader’s problem as an alpha-like signal.
+- Local concavity can produce stochastic liquidity in the reduced-form limit.
+- Global concavity, such as AFS-type models, is conceptually distinct from local concavity.
+- No-price-manipulation conditions impose concrete constraints on impact decay, liquidity changes, and volume predictions.
+- A key practical bound is:
+  $$\frac{v_t'}{v_t}<4\beta_t.$$
+
+---
+
+## Key formulas to preserve
+
+- Price impact:
+  $$I=P-S.$$
+
+- Trade price:
+  $$\tilde P_{t-}=S_{t-}+I_{t-}+s_{t-}.$$
+
+- Cash update:
+  $$\Delta_nK^N=-\tilde P_{n-1}^N\Delta_nQ^N.$$
+
+- Accounting P&L:
+  $$X_n^N=P_n^NQ_n^N+K_n^N.$$
+
+- Fundamental P&L:
+  $$Y_n^N=S_n^NQ_n^N+K_n^N.$$
+
+- Discrete accounting self-financing equation:
+  $$\Delta_n X^N
+  =
+  Q_{n-1}^N\Delta_n P^N
+  -
+  s_{n-1}^N\Delta_n Q^N
+  +
+  \Delta_n P^N\Delta_n Q^N.$$
+
+- Discrete fundamental self-financing equation:
+  $$\Delta_n Y^N
+  =
+  Q_{n-1}^N\Delta_n S^N
+  -
+  I_{n-1}^N\Delta_n Q^N
+  -
+  s_{n-1}^N\Delta_n Q^N
+  +
+  \Delta_n S^N\Delta_n Q^N.$$
+
+- OW microstructure impact:
+  $$\Delta_nI^N=-\beta I_{n-1}^N\Delta t^N+\lambda\Delta_nQ^N.$$
+
+- OW reduced-form impact:
+  $$dI_t=-\beta I_tdt+\lambda dQ_t.$$
+
+- OW fundamental P&L:
+  $$dY_t=Q_tdS_t-I_tdQ_t-\frac{1}{2}d[I,Q]_t.$$
+
+- Alpha signal:
+  $$\alpha_t=\mathbb E[S_T-S_t\mid\mathcal F_t].$$
+
+- Alpha identity:
+  $$\mathbb E\left[\int_0^T Q_tdS_t\right]
+  =
+  \mathbb E\left[\int_0^T\alpha_tdQ_t+[\alpha,Q]_T\right].$$
+
+- Impact-space inverse map:
+  $$dQ_t=\frac{1}{\lambda}(\beta I_tdt+dI_t).$$
+
+- Liquidation constraint in impact space:
+  $$I_T+\int_0^T\beta I_tdt=-\lambda Q_0.$$
+
+- OW martingale-price optimal impact:
+  $$I_t^*=-\frac{\lambda}{2+\beta T}Q_0,
+  \quad t\in(0,T).$$
+
+- OW martingale-price optimal trading:
+  $$dQ_t^*=-\frac{\beta}{2+\beta T}Q_0dt.$$
+
+- Deterministic-alpha optimal impact:
+  $$I_t^*
+  =
+  \frac{1}{2}
+  \left(
+  \alpha_t-\beta^{-1}\alpha_t'+\nu
+  \right).$$
+
+- Deterministic-alpha multiplier:
+  $$\nu
+  =
+  -\frac{1}{2+\beta T}
+  \left(
+  2\lambda Q_0
+  +
+  \alpha_0
+  +
+  \beta\int_0^T\alpha_tdt
+  \right).$$
+
+- Stochastic-alpha unconstrained optimal impact:
+  $$I_t^*
+  =
+  \frac{1}{2}
+  \left(
+  \alpha_t+\beta^{-1}\mu_t
+  \right).$$
+
+- Time-changed OW:
+  $$dI_t=-\beta\tau_t'I_tdt+\lambda dQ_t.$$
+
+- Generalized OW:
+  $$dI_t=-\beta_tI_tdt+\lambda_tdQ_t.$$
+
+- Stochastic liquidity:
+  $$\lambda_t=e^{\gamma_t}.$$
+
+- No-manipulation condition:
+  $$2\beta_t+\gamma_t'>0.$$
+
+- External total impact:
+  $$d\bar I_t=-\beta_t\bar I_tdt+\lambda_t(dQ_t+dM_t).$$
+
+- Own impact:
+  $$dI_t=-\beta_tI_tdt+\lambda_tdQ_t.$$
+
+- Square-root volume-liquidity scaling:
+  $$\lambda_t\propto v_t^{-1/2}.$$
+
+- Volume-growth no-manipulation bound:
+  $$\frac{v_t'}{v_t}<4\beta_t.$$
+
+---
+
+## Later expansion checklist
+
+- [ ] Full derivations
+  - [ ] Discrete self-financing equations.
+  - [ ] Continuous-time reduced-form limits.
+  - [ ] Alpha identity.
+  - [ ] Impact-space transformation.
+  - [ ] OW closed-form solution.
+  - [ ] Deterministic-alpha solution.
+  - [ ] Stochastic-alpha solution.
+  - [ ] Time-change transformation.
+  - [ ] Stochastic-push objective.
+  - [ ] External-impact control problem.
+  - [ ] Local-concavity limiting argument.
+  - [ ] No-manipulation bounds.
+
+- [ ] Proof details
+  - [ ] Left-limit stochastic integral conventions.
+  - [ ] Quadratic variation terms.
+  - [ ] u.c.p. convergence where applicable.
+  - [ ] Stable-in-law convergence for local concavity.
+  - [ ] Lagrange multiplier arguments.
+  - [ ] Strict concavity and bounded-away-from-zero assumptions.
+
+- [ ] Numerical examples
+  - [ ] Deterministic alpha paths.
+  - [ ] OW liquidation strategy.
+  - [ ] Time-varying liquidity.
+  - [ ] External market flow.
+  - [ ] Round-trip manipulation examples.
+  - [ ] Volume-curve bound checks.
+
+- [ ] Code implementation
+  - [ ] Discrete OW impact simulator.
+  - [ ] Continuous OW impact solver.
+  - [ ] Impact-to-trade inversion.
+  - [ ] Optimal OW liquidation schedule.
+  - [ ] Deterministic-alpha optimal strategy.
+  - [ ] Generalized OW strategy with $\lambda_t$ and $\beta_t$.
+  - [ ] External-impact simulator.
+  - [ ] No-manipulation diagnostic.
+  - [ ] Volume-growth bound diagnostic.
+
+- [ ] Figures/tables
+  - [ ] Price taxonomy: $S$, $P$, $\tilde P$, $I$, $s$.
+  - [ ] OW limit order book schematic.
+  - [ ] Optimal impact and trading path.
+  - [ ] Alpha versus impact decay comparison.
+  - [ ] Time-change clock comparison.
+  - [ ] External-impact flow diagram.
+  - [ ] Local versus global concavity table.
+  - [ ] Manipulation-bound plot.
+
+- [ ] Exercises
+  - [ ] Add all Chapter 2 exercises.
+  - [ ] Add Appendix C.1 solution references.
+  - [ ] Add worked examples.
+  - [ ] Add coding exercises.
+  - [ ] Add conceptual assumption-check questions.
+
+- [ ] Cross-references to earlier/later chapters
+  - [ ] Chapter 1: trading terminology, alpha slippage, price impact, order slippage.
+  - [ ] Chapter 3: optimal execution and TCA applications.
+  - [ ] Chapter 4: statistical arbitrage, liquidity risk, portfolio consolidation.
+  - [ ] Chapter 6: causal biases when measuring impact.
+  - [ ] Chapter 7: empirical comparison of OW, locally concave, reduced-form, and AFS models.
