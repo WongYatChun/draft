@@ -1,0 +1,1588 @@
+# Chapter 3 — Applications of Price Impact Models
+
+Temporary chapter-aligned note based on the PDF chapter structure. This note is intended to replace the incomplete notebook until a full derivation-and-code notebook is built.
+
+Source: uploaded `pi_ch3.pdf`.
+
+---
+
+## 3 Applications of Price Impact Models
+
+### Purpose
+
+This chapter applies the price impact models from Chapter 2 to practical trading problems. It focuses on order-centric applications:
+
+- pre-trade cost modeling,
+- optimal execution,
+- transaction cost analysis,
+- clean-up costs,
+- consecutive-order bias,
+- simulation-based evaluation of trading decisions.
+
+The chapter’s central modeling idea is that price impact allows traders to normalize, compare, and diagnose orders in the same way that implied volatility normalizes option prices.
+
+### Setup / formulation
+
+The chapter assumes a price impact model is already available. The main objects are:
+
+- $Q_t$: cumulative position or cumulative trading process.
+- $dQ_t$: trade increment.
+- $I_t$: price impact state.
+- $S_t$: unperturbed price.
+- $\tilde{\alpha}$: overnight or terminal alpha used to size an order.
+- $\alpha_t$: intraday alpha signal.
+- $\lambda_t$: liquidity scale.
+- $\beta_t$: impact decay or resilience.
+- $\gamma_t = \log \lambda_t$: log-liquidity process.
+
+The generalized OW-style model is the principal reference model:
+
+$$
+dI_t = -\beta_t I_t dt + \lambda_t dQ_t.
+$$
+
+The no-price-manipulation condition used in the generalized formulas is:
+
+$$
+2\beta_t + \gamma_t' > 0.
+$$
+
+### Main result
+
+Price impact models turn qualitative execution questions into quantitative comparisons between:
+
+- alpha captured,
+- impact paid,
+- order slippage,
+- clean-up cost,
+- tactical deviation cost,
+- overlapping-order attribution.
+
+### Interpretation
+
+The chapter treats execution as a control problem and TCA as an experimental diagnostic layer. Execution asks: “What should I trade now?” TCA asks: “Was the order sized, routed, and executed correctly?”
+
+### Notebook TODO
+
+- Add links back to Chapter 2’s generalized OW model.
+- Add notation table.
+- Add code implementation for impact dynamics and cost calculations.
+- Reproduce chapter figures and tables.
+- Add exercises and solution sketches.
+
+---
+
+## 3.1 A Pedagogical Example
+
+### Purpose
+
+This section introduces the chapter’s core intuition: optimal execution depends on the relationship between alpha and price impact. A trader should trade until the marginal value of alpha balances the marginal cost of price impact.
+
+### Setup / formulation
+
+Assume deterministic smooth processes and the linear OW model:
+
+$$
+I_t' = -\beta I_t + \lambda Q_t',
+$$
+
+with $\beta,\lambda > 0$.
+
+The myopic optimal impact formula from Chapter 2 is:
+
+$$
+I_t^* = \frac{1}{2}\left(\alpha_t - \beta^{-1}\alpha_t'\right).
+$$
+
+The corresponding optimal trading speed is:
+
+$$
+Q_t^{*\prime}
+=
+\frac{\beta}{2\lambda}
+\left(
+\alpha_t - \beta^{-2}\alpha_t''
+\right).
+$$
+
+If alpha is constant, $\alpha_t=\alpha$, then:
+
+$$
+I_t^* = \frac{\alpha}{2},
+$$
+
+and:
+
+$$
+Q_t^{*\prime} = \frac{\beta\alpha}{2\lambda}.
+$$
+
+### Main result
+
+Under the linear OW model with constant alpha, optimal impact is half the alpha. Trading speed increases with:
+
+- higher alpha,
+- faster resilience $\beta$,
+- lower liquidity cost $\lambda$.
+
+### Interpretation
+
+For a constant opportunity, the trader should not spend all alpha on impact. The optimal strategy leaves roughly half the alpha as expected profit and spends half as trading cost. This “half-alpha” rule becomes a benchmark for later TCA diagnostics.
+
+The section also illustrates three common questions:
+
+- If order size doubles, linear impact implies total costs scale quadratically.
+- If the trader wants to trade faster, the alpha path must justify front-loading.
+- If a second order arrives, residual impact and future alpha must be included in the new schedule.
+
+### Notebook TODO
+
+- Add a figure showing constant-alpha execution.
+- Add numerical example for $I_t^*=\alpha/2$.
+- Add example where $\alpha_t$ decays and front-loading is optimal.
+- Add a short comparison between linear cost and square-root cost.
+- Add code that maps an alpha path into $I_t^*$ and $Q_t'$.
+
+---
+
+## 3.2 Optimal Execution
+
+### Purpose
+
+This section applies the price impact model to pre-trade execution. The goal is to decide how much to trade and how to schedule the trade given alpha, liquidity, and price impact.
+
+### Setup / formulation
+
+The execution problem is written in terms of expected fundamental P&L. The trader chooses $Q$ to trade against alpha while paying impact.
+
+The key workflow is:
+
+- estimate a cost model,
+- infer or receive alpha,
+- compute a target order size,
+- compute an execution schedule,
+- allow tactical deviations only if they improve expected P&L after impact costs.
+
+### Main result
+
+The generalized OW model collapses a complex intraday execution problem into a compact pre-trade cost curve and a target impact path.
+
+### Interpretation
+
+Execution desks can communicate a simple liquidity or cost parameter to portfolio teams, while keeping the full intraday impact model internal.
+
+### Notebook TODO
+
+- Add detailed derivation from Chapter 2 impact-space optimization.
+- Add code that computes schedules from $\beta_t,\lambda_t,\alpha_t$.
+- Add examples for constant and time-varying liquidity.
+- Add plots of $Q_t$, $Q_t'$, and $I_t$.
+
+---
+
+## 3.2.1 Pre-trade cost model
+
+### Purpose
+
+This section derives a pre-trade cost model that tells a portfolio team how large an order should be given an expected alpha.
+
+### Setup / formulation
+
+Assume:
+
+- an overnight or terminal alpha $\tilde{\alpha}$,
+- generalized OW impact,
+- no intraday alpha at first,
+- initial position $Q_0=0$,
+- terminal position $Q_T$ chosen optimally.
+
+The idealized optimal execution problem is:
+
+$$
+\sup_Q
+\mathbb{E}
+\left[
+\tilde{\alpha}^r Q_T
++
+\int_0^T Q_t dS_t
+-
+\int_0^T I_t dQ_t
+-
+\frac{1}{2}[I,Q]_T
+\right].
+$$
+
+Here:
+
+- $\tilde{\alpha}^r$ is the realized overnight alpha,
+- $\tilde{\alpha}$ is the predicted alpha,
+- $Q_T$ is the order size selected by the model.
+
+### Main result
+
+The optimal terminal order size is:
+
+$$
+Q_T = \frac{\tilde{\alpha}}{\Lambda_T}.
+$$
+
+The effective daily liquidity parameter satisfies:
+
+$$
+\frac{1}{\Lambda_T}
+=
+\frac{1}{\lambda_T}
++
+\int_0^T
+\frac{(\beta_t+\gamma_t')^2}
+{\lambda_t(2\beta_t+\gamma_t')}
+dt.
+$$
+
+If $\gamma_t'$ is negligible relative to $\beta_t$, this is approximated by:
+
+$$
+\frac{1}{\Lambda_T}
+\approx
+\frac{1}{\lambda_T}
++
+\int_0^T
+\frac{\beta_t}{2\lambda_t}
+dt.
+$$
+
+### Interpretation
+
+The execution model induces a one-period quadratic cost curve. The portfolio team can use $\Lambda_T$ to size trades without knowing the full intraday liquidity model.
+
+### Notebook TODO
+
+- Add derivation of $\Lambda_T$ from the impact-space objective.
+- Add example with constant $\lambda,\beta$.
+- Add sensitivity plots for $\Lambda_T$ versus $\beta$ and $\lambda$.
+- Add test showing the difference between exact and approximate formulas.
+
+---
+
+## 3.2.1.1 Idealized optimal execution problem
+
+### Purpose
+
+This subsection formalizes the trading objective used to derive the pre-trade cost model.
+
+### Setup / formulation
+
+The trader maximizes expected fundamental P&L plus terminal alpha:
+
+$$
+\sup_Q
+\mathbb{E}
+\left[
+\tilde{\alpha}^r Q_T
++
+\int_0^T Q_t dS_t
+-
+\int_0^T I_t dQ_t
+-
+\frac{1}{2}[I,Q]_T
+\right].
+$$
+
+The impact process follows the generalized OW model:
+
+$$
+dI_t = -\beta_t I_t dt + \lambda_t dQ_t.
+$$
+
+### Main result
+
+The objective decomposes trading value into:
+
+- alpha payoff,
+- unperturbed price exposure,
+- impact cost,
+- quadratic variation correction.
+
+### Interpretation
+
+The use of fundamental P&L avoids rewarding a strategy for mechanically inflating accounting P&L through its own impact.
+
+### Notebook TODO
+
+- Add explanation of fundamental versus accounting P&L.
+- Cross-reference Chapter 2 self-financing equations.
+- Add assumptions needed for stochastic integrals.
+
+---
+
+## 3.2.1.2 Communication with the portfolio team
+
+### Purpose
+
+This subsection explains how execution teams can communicate price impact costs to portfolio teams.
+
+### Setup / formulation
+
+The execution team provides the portfolio team with a pre-trade liquidity parameter $\Lambda_T$ such that:
+
+$$
+Q_T = \frac{\tilde{\alpha}}{\Lambda_T}.
+$$
+
+Equivalently, the pre-trade cost curve is approximately quadratic:
+
+$$
+\text{Cost}(Q_T) \approx \frac{1}{2}\Lambda_T Q_T^2.
+$$
+
+### Main result
+
+The execution desk can expose a simple scalar cost model while maintaining a richer intraday execution model internally.
+
+### Interpretation
+
+This is analogous to implied volatility in options. A complex market object is compressed into a useful trading parameter.
+
+### Notebook TODO
+
+- Add example of portfolio optimization using $\Lambda_T$.
+- Add table showing what the portfolio team sees versus what the execution team models.
+- Add warning about stale or regime-dependent $\Lambda_T$.
+
+---
+
+## 3.2.1.3 Implied alpha
+
+### Purpose
+
+This subsection defines implied alpha, which is the alpha level implied by a given order size under the pre-trade cost model.
+
+### Setup / formulation
+
+Given an observed or intended order size $Q_T$, implied alpha is:
+
+$$
+\tilde{\alpha} = \Lambda_T Q_T.
+$$
+
+### Main result
+
+Implied alpha lets the trader infer what alpha assumption would rationalize an order of size $Q_T$.
+
+### Interpretation
+
+If an order is too large relative to realized alpha, it may have been oversized. If it is too small relative to realized alpha, it may have left opportunity untraded.
+
+Under the no-intraday-alpha OW benchmark:
+
+$$
+\text{realized alpha} \approx \tilde{\alpha},
+$$
+
+while target impact is approximately:
+
+$$
+I_t^* \approx \frac{1}{2}\tilde{\alpha}.
+$$
+
+Thus, implied alpha and realized alpha are compared to each other; optimal impact is not generally equal to alpha.
+
+### Notebook TODO
+
+- Add TCA example comparing implied alpha and realized alpha.
+- Add regression diagnostic for realized alpha versus implied alpha.
+- Add plot with order bins by implied alpha.
+
+---
+
+## 3.2.1.4 The square-root law
+
+### Purpose
+
+This subsection explains how the pre-trade cost model changes for sizable orders when impact is globally concave.
+
+### Setup / formulation
+
+For large orders, linear impact may overstate or misrepresent the cost curve. The chapter refers to globally concave impact models such as the Alfonsi-Fruth-Schied model.
+
+A generic globally concave impact form is:
+
+$$
+I_t = \operatorname{sign}(J_t)|J_t|^c,
+\qquad 0<c<1.
+$$
+
+The square-root case corresponds to:
+
+$$
+c=\frac{1}{2}.
+$$
+
+### Main result
+
+For sizable orders, impact grows sublinearly in size. A square-root law gives:
+
+$$
+I \propto \operatorname{sign}(Q)\sqrt{|Q|}.
+$$
+
+### Interpretation
+
+Large orders still become more expensive as size increases, but the impact state does not grow linearly with order size. This changes order sizing and clean-up cost calculations.
+
+### Notebook TODO
+
+- Correctly label AFS as Alfonsi-Fruth-Schied.
+- Add comparison of linear and square-root impact.
+- Add code plotting cost curves for $c=1$ and $c=1/2$.
+- Add discussion of where square-root impact is empirical versus structural.
+
+---
+
+## 3.2.2 Including alpha signals in the execution strategy
+
+### Purpose
+
+This section extends the execution model to include intraday alpha signals.
+
+### Setup / formulation
+
+Let:
+
+- $\tilde{\alpha}$ be the terminal or overnight alpha,
+- $\alpha_t$ be an intraday alpha signal,
+- $\alpha_t'$ be its time derivative,
+- $\lambda_t=e^{\gamma_t}$,
+- $\beta_t$ be impact resilience.
+
+The target impact path is:
+
+$$
+I_t^*
+=
+\frac{\beta_t+\gamma_t'}{2\beta_t+\gamma_t'}
+(\tilde{\alpha}+\alpha_t)
+-
+\frac{1}{2\beta_t+\gamma_t'}\alpha_t',
+$$
+
+with terminal condition:
+
+$$
+I_T^*=\tilde{\alpha}.
+$$
+
+The terminal order size decomposes as:
+
+$$
+Q_T
+=
+\frac{\tilde{\alpha}}{\Lambda_T}
++
+Q_T(\alpha).
+$$
+
+A simplified approximation when $\gamma_t'$ is negligible is:
+
+$$
+I_t^*
+\approx
+\frac{1}{2}
+\left(
+\tilde{\alpha}
++
+\alpha_t
+-
+\beta_t^{-1}\alpha_t'
+\right).
+$$
+
+### Main result
+
+Intraday alpha changes both the trading schedule and the final order size. The alpha level and alpha decay both matter.
+
+### Interpretation
+
+An alpha signal with fast decay should be traded more urgently than a persistent alpha. A high alpha level pushes the trader to buy more, but a rapidly decaying alpha also changes the timing.
+
+### Notebook TODO
+
+- Add examples for persistent, decaying, and mean-reverting alpha.
+- Add numerical schedules for different $\alpha_t$ paths.
+- Add implementation note on smoothing $\alpha_t'$.
+- Add comparison between exact and approximate formulas.
+
+---
+
+## 3.2.2.1 Alpha latency
+
+### Purpose
+
+This subsection distinguishes slow execution alphas from low-latency microstructure alphas.
+
+### Setup / formulation
+
+Signals differ by latency and implementation layer:
+
+- Slow intraday alpha can be included directly in the strategic execution schedule.
+- Low-latency alpha is handled by tactical execution logic.
+
+### Main result
+
+Not all alpha belongs in the same optimization problem. Strategic alpha and tactical alpha should be modeled separately.
+
+### Interpretation
+
+A central optimizer can handle slowly evolving alpha. A low-latency router or smart order logic handles micro-alpha such as queue position, spread capture, or short-term order-book imbalance.
+
+### Notebook TODO
+
+- Add table separating strategic alpha and tactical alpha.
+- Add examples of each signal type.
+- Add discussion of latency, infrastructure, and model ownership.
+
+---
+
+## 3.2.2.2 Reactive execution schedule
+
+### Purpose
+
+This subsection describes how the optimal schedule reacts to changes in alpha and liquidity.
+
+### Setup / formulation
+
+The target impact path is updated as alpha and liquidity forecasts update:
+
+$$
+I_t^*
+=
+\frac{\beta_t+\gamma_t'}{2\beta_t+\gamma_t'}
+(\tilde{\alpha}+\alpha_t)
+-
+\frac{1}{2\beta_t+\gamma_t'}\alpha_t'.
+$$
+
+The trade path is recovered from impact dynamics:
+
+$$
+dI_t = -\beta_t I_t dt + \lambda_t dQ_t.
+$$
+
+### Main result
+
+The schedule is reactive because the optimal target impact changes with $\alpha_t$, $\alpha_t'$, $\beta_t$, and $\lambda_t$.
+
+### Interpretation
+
+A practical optimizer should not just follow a static curve. It should update as alpha and liquidity forecasts evolve.
+
+### Notebook TODO
+
+- Add recursive implementation of $I_t$ and $Q_t$.
+- Add simulated alpha path and resulting schedule.
+- Add stability warning for estimating $\alpha_t'$ from noisy data.
+
+---
+
+## 3.2.2.3 How trading alphas affect order size
+
+### Purpose
+
+This subsection explains how intraday alpha affects the total order quantity.
+
+### Setup / formulation
+
+The optimal terminal order size is:
+
+$$
+Q_T
+=
+\frac{\tilde{\alpha}}{\Lambda_T}
++
+Q_T(\alpha).
+$$
+
+Here $Q_T(\alpha)$ is the incremental order induced by intraday alpha.
+
+In simplified form, when $\gamma_t'$ is negligible:
+
+$$
+Q_T(\alpha)
+\approx
+\int_0^T
+\frac{1}{2\lambda_t}
+\left(
+\beta_t\alpha_t-\alpha_t'
+\right)
+dt.
+$$
+
+### Main result
+
+Intraday alpha can increase or decrease the final order size relative to the baseline pre-trade order.
+
+### Interpretation
+
+For best-effort execution, the model can adapt order size to intraday information. For must-complete execution, order size is fixed externally and the optimizer should instead adjust the schedule or implied alpha.
+
+### Notebook TODO
+
+- Add example comparing best-effort and must-complete orders.
+- Add Lagrange multiplier formulation for fixed terminal quantity.
+- Add code that computes $Q_T(\alpha)$.
+
+---
+
+## 3.2.3 Allowing for tactical deviations at the microstructure level
+
+### Purpose
+
+This section quantifies the cost of deviating from the optimal strategic schedule.
+
+### Setup / formulation
+
+Let:
+
+- $Q$ be the strategic optimal trading process,
+- $Q^r$ be the realized trading process,
+- $\delta Q = Q^r - Q$ be the trade deviation,
+- $\delta I = I(Q^r)-I(Q)$ be the impact deviation.
+
+The deviation impact follows:
+
+$$
+d\delta I_t
+=
+-\beta_t\delta I_t dt
++
+\lambda_t d\delta Q_t.
+$$
+
+### Main result
+
+The realized strategy loses expected fundamental P&L relative to the optimal strategy by:
+
+$$
+-
+\mathbb{E}
+\left[
+\int_0^T
+\frac{2\beta_t+\gamma_t'}{2\lambda_t}
+(\delta I_t)^2dt
++
+\frac{1}{2\lambda_T}
+(\delta I_T)^2
+\right].
+$$
+
+If $\gamma_t'$ is negligible, the running penalty is approximately:
+
+$$
+-
+\mathbb{E}
+\left[
+\int_0^T
+\frac{\beta_t}{\lambda_t}
+(\delta I_t)^2dt
++
+\frac{1}{2\lambda_T}
+(\delta I_T)^2
+\right].
+$$
+
+### Interpretation
+
+Tactical deviations are not free. A low-latency tactic must generate enough incremental alpha or spread capture to overcome its additional impact cost.
+
+### Notebook TODO
+
+- Add example tactical deviation and compute cost.
+- Add code for $\delta I_t$ and deviation penalty.
+- Add discussion of tactical overlays and router constraints.
+- Add connection to implementation bias.
+
+---
+
+## 3.2.3.1 Quantifying deviation’s impact
+
+### Purpose
+
+This subsection shows how to measure the impact cost caused by deviations from the optimal schedule.
+
+### Setup / formulation
+
+Use the deviation state:
+
+$$
+\delta I_t = I_t(Q^r)-I_t(Q).
+$$
+
+The deviation evolves as:
+
+$$
+d\delta I_t
+=
+-\beta_t\delta I_t dt
++
+\lambda_t d\delta Q_t.
+$$
+
+The expected P&L penalty is quadratic in $\delta I_t$.
+
+### Main result
+
+Impact-space deviation, not raw trade-space deviation, is the correct object to penalize.
+
+### Interpretation
+
+Two trade deviations can have very different costs if one creates persistent impact and the other quickly mean-reverts.
+
+### Notebook TODO
+
+- Add worked example with a temporary speed-up.
+- Add plot of $\delta Q_t$ and $\delta I_t$.
+- Add exercise computing steady-state deviation cost.
+
+---
+
+## 3.2.3.2 Block trades and auctions
+
+### Purpose
+
+This subsection explains how idealized jumps in the optimal strategy relate to real execution mechanisms.
+
+### Setup / formulation
+
+OW-style optimizers can prescribe jumps at boundary times, especially at the start or end of the interval.
+
+In practice, jumps may be approximated through:
+
+- opening auction,
+- closing auction,
+- block trade,
+- dark pool liquidity,
+- accelerated schedule over a short interval.
+
+### Main result
+
+The mathematical optimizer may produce boundary trades that are idealized. Real implementation must respect venue liquidity and market microstructure.
+
+### Interpretation
+
+A prescribed jump is not necessarily an instruction to immediately sweep the book. It is a target impact adjustment that must be implemented using available liquidity mechanisms.
+
+### Notebook TODO
+
+- Add examples of opening and closing auction usage.
+- Add constrained version with no jumps.
+- Add comparison of ideal and feasible schedules.
+
+---
+
+## 3.2.4 Changing the execution strategy when new orders arrive
+
+### Purpose
+
+This section handles the case where a trader receives additional orders while an execution program is already active or after it has left residual impact.
+
+### Setup / formulation
+
+Important state variables:
+
+- current position,
+- remaining intended quantity,
+- current impact state $I_t$,
+- new order alpha,
+- new terminal constraint,
+- overlap with previous orders,
+- correlation between orders.
+
+The general principle is to re-optimize using the current impact state as an initial condition.
+
+### Main result
+
+New orders should not be treated as independent if they overlap in time or impact. The trader should combine orders or correct for residual impact.
+
+### Interpretation
+
+If two orders trade the same stock close together, the second order inherits the price dislocation created by the first. Ignoring this leads to incorrect cost attribution and potentially bad scheduling.
+
+### Notebook TODO
+
+- Add formal setup for sequential orders.
+- Add formal setup for overlapping orders.
+- Add examples with and without residual impact.
+- Add code that recomputes the target path after a new order arrives.
+- Add cross-reference to issuer bias in Section 3.3.4.
+
+---
+
+## 3.2.5 A simulation example
+
+### Purpose
+
+This section illustrates optimal execution through simulation and compares different execution rules.
+
+### Setup / formulation
+
+A simulation should include:
+
+- an alpha process,
+- a volume or liquidity curve,
+- an impact model,
+- candidate execution strategies,
+- realized slippage and impact metrics.
+
+A typical empirical scaling may express liquidity through volatility, volume, and participation units. A simplified impact update can be implemented as:
+
+$$
+I_{k+1}
+=
+I_k
+-
+\beta_k I_k \Delta t
++
+\lambda_k \Delta Q_k.
+$$
+
+### Main result
+
+A simulation compares:
+
+- naive schedules such as TWAP,
+- schedules without intraday alpha,
+- schedules using full alpha information,
+- heuristic or implementable approximations.
+
+### Interpretation
+
+The simulation demonstrates the value of incorporating alpha and liquidity into execution. It also makes clear which parts of the model are assumptions.
+
+### Notebook TODO
+
+- Add executable simulation.
+- Reproduce the chapter’s figure and table.
+- Implement TWAP, no-alpha optimal, full-alpha optimal, and heuristic schedules.
+- Compute slippage, realized alpha, impact, and P&L.
+- Add unit tests for constant-parameter cases.
+
+---
+
+## 3.2.6 Summary
+
+### Purpose
+
+This section summarizes the optimal execution workflow.
+
+### Setup / formulation
+
+The main objects are:
+
+- pre-trade liquidity $\Lambda_T$,
+- implied alpha $\tilde{\alpha}$,
+- target impact $I_t^*$,
+- tactical deviation $\delta I_t$,
+- residual impact after previous orders.
+
+### Main result
+
+Optimal execution uses price impact models to:
+
+- size orders,
+- communicate costs,
+- compute schedules,
+- evaluate tactical deviations,
+- adjust when new orders arrive.
+
+### Interpretation
+
+The chapter turns price impact from a descriptive empirical object into a practical execution-control tool.
+
+### Notebook TODO
+
+- Add one consolidated formula table.
+- Add one workflow diagram.
+- Add code references to each formula.
+
+---
+
+## 3.3 Transaction Cost Analysis
+
+### Purpose
+
+This section applies price impact models to post-trade evaluation. TCA diagnoses whether past orders were sized, scheduled, and implemented correctly.
+
+### Setup / formulation
+
+TCA compares realized execution outcomes against model predictions. Key quantities include:
+
+- arrival slippage,
+- realized alpha,
+- implied alpha,
+- realized impact,
+- predicted impact,
+- clean-up cost,
+- order completion,
+- consecutive-order effects.
+
+### Main result
+
+TCA is an experimental and diagnostic framework. It should control for order size, speed, market conditions, volatility, spread, and other trading parameters.
+
+### Interpretation
+
+A TCA report should not merely report slippage. It should explain why slippage occurred and suggest what action should change.
+
+### Notebook TODO
+
+- Add TCA data schema.
+- Add example order table.
+- Add code computing slippage and implied alpha.
+- Add examples of biased and unbiased comparisons.
+
+---
+
+## 3.3.1 TCA best practices
+
+### Purpose
+
+This subsection states best practices for using TCA to improve trading strategies.
+
+### Setup / formulation
+
+TCA should follow an experimental workflow:
+
+- state the assumption,
+- generate a model prediction,
+- observe realized data,
+- compare prediction and realization,
+- take action.
+
+TCA must control for basic trading parameters such as:
+
+- order size,
+- participation rate or speed,
+- volatility,
+- liquidity,
+- spread,
+- time of day,
+- market correlation,
+- order type,
+- limit price constraints.
+
+### Main result
+
+Valid TCA requires controls. Without controls, slippage differences may reflect sample composition rather than algorithm quality.
+
+### Interpretation
+
+Comparing two algorithms is not meaningful if one received larger, more volatile, or more urgent orders.
+
+### Notebook TODO
+
+- Add examples of confounded TCA.
+- Add stratification or regression controls.
+- Add A/B test design notes.
+- Add links to Chapter 5 and Chapter 6 on causal bias.
+
+---
+
+## 3.3.1.1 Control for basic trading parameters
+
+### Purpose
+
+This subsection explains why TCA comparisons must control for trade characteristics.
+
+### Setup / formulation
+
+A TCA comparison should condition on or stratify by:
+
+- notional size,
+- percentage of ADV,
+- volatility,
+- spread,
+- market capitalization,
+- participation rate,
+- side,
+- time of day,
+- order duration,
+- market conditions.
+
+### Main result
+
+Controlling for basic trading parameters reduces misleading comparisons.
+
+### Interpretation
+
+Higher slippage is not necessarily evidence of worse execution. It may simply reflect larger or harder orders.
+
+### Notebook TODO
+
+- Add mock dataset with confounding.
+- Add grouped TCA report.
+- Add regression example with controls.
+
+---
+
+## 3.3.1.2 TCA predictions
+
+### Purpose
+
+This subsection explains how model predictions give TCA a benchmark.
+
+### Setup / formulation
+
+For each order, TCA should compare:
+
+- predicted alpha,
+- realized alpha,
+- predicted impact,
+- realized impact,
+- implied alpha,
+- arrival slippage.
+
+Under no intraday alpha and correct sizing:
+
+$$
+\tilde{\alpha}
+\approx
+\text{realized alpha}.
+$$
+
+Under the OW half-alpha benchmark:
+
+$$
+\text{target impact}
+\approx
+\frac{1}{2}\tilde{\alpha}.
+$$
+
+### Main result
+
+TCA predictions turn post-trade analysis into a model validation exercise.
+
+### Interpretation
+
+If realized alpha is systematically below implied alpha, the order was likely oversized or the alpha model was too optimistic. If realized impact exceeds predicted impact, the impact model or execution schedule may be wrong.
+
+### Notebook TODO
+
+- Add order-level prediction table.
+- Add scatter plot of realized alpha versus implied alpha.
+- Add residual diagnostics.
+
+---
+
+## 3.3.2 An experiment to size orders correctly
+
+### Purpose
+
+This section shows how TCA can test whether orders were sized correctly.
+
+### Setup / formulation
+
+Assume no intraday trading alpha beyond the pre-trade signal. Then the pre-trade model implies:
+
+$$
+\tilde{\alpha} = \Lambda_T Q_T.
+$$
+
+The realized alpha should match implied alpha in expectation:
+
+$$
+\mathbb{E}[\text{realized alpha} \mid \tilde{\alpha}]
+\approx
+\tilde{\alpha}.
+$$
+
+The target impact should be approximately:
+
+$$
+I_t^* \approx \frac{1}{2}\tilde{\alpha}.
+$$
+
+### Main result
+
+A TCA report can compare realized alpha and implied alpha to determine whether order sizes were too large, too small, or correctly calibrated.
+
+### Interpretation
+
+If realized alpha is lower than implied alpha, the portfolio team may be over-sizing orders. If realized alpha is higher, the portfolio may be under-trading opportunities.
+
+### Notebook TODO
+
+- Add mock TCA report.
+- Add bins by implied alpha.
+- Add confidence intervals.
+- Add action rules for over-sizing and under-sizing.
+
+---
+
+## 3.3.3 Clean-up costs for partial executions
+
+### Purpose
+
+This section adjusts TCA for partial executions. If an order is not fully completed, the remaining quantity still has a cost.
+
+### Setup / formulation
+
+Let:
+
+- $Q_T^i$ be the intended terminal quantity,
+- $Q_T^r$ be the realized terminal quantity,
+- $\tilde{Q}=Q_T^i-Q_T^r$ be the unexecuted remainder,
+- $I_T$ be the impact state at the end of the original execution window,
+- $\lambda_T$ be terminal liquidity,
+- $\tilde{\Lambda}$ be the liquidity parameter for the clean-up horizon.
+
+### Main result
+
+The expected clean-up cost is:
+
+$$
+C
+=
+\mathbb{E}
+\left[
+\frac{1}{2}\tilde{\Lambda}\tilde{Q}^2
++
+\frac{\tilde{\Lambda}}{\lambda_T}I_T\tilde{Q}
++
+\frac{1}{2\lambda_T}
+\left(
+\frac{\tilde{\Lambda}}{\lambda_T}
+-
+1
+\right)
+I_T^2
+\mid
+\mathcal{F}_T
+\right].
+$$
+
+### Interpretation
+
+The clean-up cost has three parts:
+
+- the cost of trading the remaining quantity,
+- the interaction between the remaining quantity and current impact,
+- the cost or benefit of starting from a nonzero impact state.
+
+Partial fills should not be treated as free just because they were not executed during the original window.
+
+### Notebook TODO
+
+- Add derivation from the shifted initial impact state.
+- Add example with positive and negative $I_T$.
+- Add code function for clean-up cost.
+- Add TCA report with and without clean-up adjustment.
+
+---
+
+## 3.3.4 An experiment for consecutive orders
+
+### Purpose
+
+This section studies consecutive orders and issuer bias. If a trader submits dependent orders on the same stock, treating them independently can bias TCA.
+
+### Setup / formulation
+
+Suppose two orders arrive in sequence. Their costs can be attributed using different methods:
+
+- basic method,
+- stitching,
+- impact-state adjustment,
+- expected future flow adjustment.
+
+Important variables:
+
+- first order quantity,
+- second order quantity,
+- time gap,
+- residual impact,
+- alpha correlation,
+- expected future flow.
+
+### Main result
+
+Consecutive orders should be analyzed jointly or adjusted for residual impact and expected future orders.
+
+Under no trading alpha, different methods may estimate the same total cost but attribute that cost differently across orders.
+
+### Interpretation
+
+If the first order causes impact that affects the second order, the second order may appear expensive even though the cost was caused by the first. Conversely, if a trader knows more orders are coming, the first order should account for that future flow.
+
+### Notebook TODO
+
+- Add two-order numerical example.
+- Add stitching method.
+- Add impact-state adjustment method.
+- Add expected future flow method.
+- Add comparison table of attribution differences.
+
+---
+
+## 3.3.5 A simulation to improve high-touch trading
+
+### Purpose
+
+This section explains how simulation can evaluate high-touch trader decisions.
+
+### Setup / formulation
+
+High-touch trading involves human discretion. A simulation can compare:
+
+- the realized high-touch trade,
+- a benchmark algorithm,
+- a counterfactual automated execution,
+- the market response under modeled impact.
+
+A neutral border condition is often assumed:
+
+$$
+I_0=0,
+$$
+
+with zero expected future flow at submission time.
+
+### Main result
+
+Simulation provides a reproducible benchmark for high-touch trading decisions.
+
+### Interpretation
+
+High-touch traders may add value through discretion, but that value should be measured against a systematic benchmark. A price impact model allows the desk to replay trades under alternative execution decisions.
+
+### Notebook TODO
+
+- Add simulated replay methodology.
+- Add benchmark algorithm.
+- Add code replacing realized trades with benchmark trades.
+- Add comparison metrics.
+- Add discussion of model risk and trader discretion.
+
+---
+
+## 3.4 Summary of Results
+
+### Purpose
+
+This section summarizes the chapter’s practitioner formulas and modeling implications.
+
+### Setup / formulation
+
+Important objects:
+
+- $\Lambda_T$: pre-trade liquidity parameter,
+- $\tilde{\alpha}$: implied or predicted terminal alpha,
+- $\alpha_t$: intraday alpha,
+- $I_t^*$: target impact,
+- $\delta I_t$: tactical impact deviation,
+- $C$: clean-up cost.
+
+### Main result
+
+The chapter’s core formulas are:
+
+$$
+Q_T = \frac{\tilde{\alpha}}{\Lambda_T}.
+$$
+
+$$
+\tilde{\alpha} = \Lambda_T Q_T.
+$$
+
+$$
+\frac{1}{\Lambda_T}
+=
+\frac{1}{\lambda_T}
++
+\int_0^T
+\frac{(\beta_t+\gamma_t')^2}
+{\lambda_t(2\beta_t+\gamma_t')}
+dt.
+$$
+
+$$
+I_t^*
+=
+\frac{\beta_t+\gamma_t'}{2\beta_t+\gamma_t'}
+(\tilde{\alpha}+\alpha_t)
+-
+\frac{1}{2\beta_t+\gamma_t'}\alpha_t'.
+$$
+
+$$
+d\delta I_t
+=
+-\beta_t\delta I_t dt
++
+\lambda_t d\delta Q_t.
+$$
+
+$$
+\text{Deviation penalty}
+=
+-
+\mathbb{E}
+\left[
+\int_0^T
+\frac{2\beta_t+\gamma_t'}{2\lambda_t}
+(\delta I_t)^2dt
++
+\frac{1}{2\lambda_T}
+(\delta I_T)^2
+\right].
+$$
+
+$$
+C
+=
+\mathbb{E}
+\left[
+\frac{1}{2}\tilde{\Lambda}\tilde{Q}^2
++
+\frac{\tilde{\Lambda}}{\lambda_T}I_T\tilde{Q}
++
+\frac{1}{2\lambda_T}
+\left(
+\frac{\tilde{\Lambda}}{\lambda_T}
+-
+1
+\right)
+I_T^2
+\mid
+\mathcal{F}_T
+\right].
+$$
+
+### Interpretation
+
+The chapter gives an integrated execution and TCA toolkit:
+
+- pre-trade models size orders,
+- optimal impact paths schedule orders,
+- tactical deviation penalties constrain microstructure discretion,
+- clean-up costs correct partial-fill analysis,
+- consecutive-order methods address issuer bias,
+- simulations benchmark high-touch trading.
+
+### Notebook TODO
+
+- Convert formulas into reusable code.
+- Add examples for each formula.
+- Add table separating exact formulas from approximations.
+- Add links to Chapter 2 assumptions and Chapter 6 biases.
+
+---
+
+## 3.5 Exercises
+
+### Purpose
+
+The exercises test whether the reader can apply the chapter’s formulas to tactical deviations, post-trade reversion, clean-up costs, and large-order extensions.
+
+### Setup / formulation
+
+Relevant exercise topics include:
+
+- profitability of tactical deviations,
+- post-trade reversion in TCA,
+- clean-up costs for partial executions,
+- clean-up costs under globally concave impact.
+
+### Main result
+
+The exercises force the formulas to become operational.
+
+### Interpretation
+
+Without exercises or code, the notebook remains a summary rather than a technical reconstruction.
+
+### Notebook TODO
+
+- Add all Chapter 3 exercise prompts.
+- Add solution sketches.
+- Add code-based checks.
+- Add numerical examples for each exercise.
+- Add optional simulations for tactical deviations and clean-up costs.
+
+---
+
+## Chapter-level summary
+
+- Chapter 3 applies the price impact models from Chapter 2 to real execution and TCA problems.
+- The first major application is optimal execution: choose order size and schedule to balance alpha against impact.
+- The pre-trade model compresses intraday liquidity and resilience into an effective liquidity parameter $\Lambda_T$.
+- Implied alpha is defined by $\tilde{\alpha}=\Lambda_TQ_T$ and is used to evaluate whether order sizes are justified.
+- Under the linear OW no-intraday-alpha benchmark, optimal impact is approximately half of alpha, not equal to alpha.
+- Intraday alpha modifies both target impact and terminal order size.
+- Tactical deviations from the strategic schedule create a quadratic impact-space penalty.
+- Partial executions require clean-up cost adjustments because unexecuted shares still carry future trading cost.
+- Consecutive orders create issuer bias unless orders are stitched or adjusted for residual impact and expected future flow.
+- Simulation provides a way to benchmark high-touch trading and compare realized execution against systematic alternatives.
+
+---
+
+## Key formulas to preserve
+
+- Generalized OW impact dynamics:
+
+$$
+dI_t = -\beta_t I_t dt + \lambda_t dQ_t.
+$$
+
+- No-price-manipulation condition:
+
+$$
+2\beta_t+\gamma_t'>0.
+$$
+
+- Pre-trade order size:
+
+$$
+Q_T = \frac{\tilde{\alpha}}{\Lambda_T}.
+$$
+
+- Effective liquidity:
+
+$$
+\frac{1}{\Lambda_T}
+=
+\frac{1}{\lambda_T}
++
+\int_0^T
+\frac{(\beta_t+\gamma_t')^2}
+{\lambda_t(2\beta_t+\gamma_t')}
+dt.
+$$
+
+- Implied alpha:
+
+$$
+\tilde{\alpha}=\Lambda_TQ_T.
+$$
+
+- Target impact with intraday alpha:
+
+$$
+I_t^*
+=
+\frac{\beta_t+\gamma_t'}{2\beta_t+\gamma_t'}
+(\tilde{\alpha}+\alpha_t)
+-
+\frac{1}{2\beta_t+\gamma_t'}\alpha_t'.
+$$
+
+- Simplified target impact when $\gamma_t'$ is negligible:
+
+$$
+I_t^*
+\approx
+\frac{1}{2}
+\left(
+\tilde{\alpha}
++
+\alpha_t
+-
+\beta_t^{-1}\alpha_t'
+\right).
+$$
+
+- Constant-alpha half-impact benchmark:
+
+$$
+I_t^*=\frac{\alpha}{2}.
+$$
+
+- Tactical impact deviation:
+
+$$
+d\delta I_t
+=
+-\beta_t\delta I_tdt
++
+\lambda_t d\delta Q_t.
+$$
+
+- Tactical deviation penalty:
+
+$$
+-
+\mathbb{E}
+\left[
+\int_0^T
+\frac{2\beta_t+\gamma_t'}{2\lambda_t}
+(\delta I_t)^2dt
++
+\frac{1}{2\lambda_T}
+(\delta I_T)^2
+\right].
+$$
+
+- Clean-up quantity:
+
+$$
+\tilde{Q}=Q_T^i-Q_T^r.
+$$
+
+- Clean-up cost:
+
+$$
+C
+=
+\mathbb{E}
+\left[
+\frac{1}{2}\tilde{\Lambda}\tilde{Q}^2
++
+\frac{\tilde{\Lambda}}{\lambda_T}I_T\tilde{Q}
++
+\frac{1}{2\lambda_T}
+\left(
+\frac{\tilde{\Lambda}}{\lambda_T}
+-
+1
+\right)
+I_T^2
+\mid
+\mathcal{F}_T
+\right].
+$$
+
+- Globally concave impact family:
+
+$$
+I_t=\operatorname{sign}(J_t)|J_t|^c,
+\qquad 0<c<1.
+$$
+
+- Square-root impact case:
+
+$$
+I \propto \operatorname{sign}(Q)\sqrt{|Q|}.
+$$
+
+---
+
+## Later expansion checklist
+
+- [ ] Full derivations
+- [ ] Proof details
+- [ ] Numerical examples
+- [ ] Code implementation
+- [ ] Figures/tables
+- [ ] Exercises
+- [ ] Cross-references to earlier/later chapters
+- [ ] Derive $\Lambda_T$ from the generalized OW model
+- [ ] Implement constant-parameter OW execution
+- [ ] Implement time-varying $\lambda_t,\beta_t$
+- [ ] Implement intraday alpha schedules
+- [ ] Implement tactical deviation cost
+- [ ] Implement clean-up cost calculator
+- [ ] Implement consecutive-order attribution methods
+- [ ] Reproduce the chapter simulation example
+- [ ] Recreate all chapter figures locally
+- [ ] Add TCA diagnostics with mock order data
+- [ ] Add links to Chapter 2 for model assumptions
+- [ ] Add links to Chapter 5 and Chapter 6 for causal and trading biases
