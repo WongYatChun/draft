@@ -1,0 +1,445 @@
+# Plan: Mathpix Chapter Verification and Editorial Pipeline
+
+## 1. Objective
+
+Build a pipeline that converts one Mathpix Markdown chapter and its associated images into a concise, readable, technically reliable Markdown chapter.
+
+The final output should:
+
+* correct Mathpix OCR and extraction errors;
+* identify clear author typos and internal inconsistencies;
+* flag suspected author misclaims rather than silently rewriting them;
+* preserve equations, numbers, conditions, examples, and technical conclusions;
+* reorganize the chapter using clear headings, bullets, nested bullets, and useful tables;
+* avoid unnecessary multi-agent calls and repeated full-chapter rewrites.
+
+Claude Code will inspect the actual project environment and implement the simplest design compatible with the existing files, APIs, and conventions.
+
+---
+
+## 2. Input assumptions
+
+Each processing job contains:
+
+* one `.mmd` file representing one complete chapter;
+* associated Mathpix images or source-page images;
+* access to a general LLM API with text and multimodal models.
+
+The chapter remains the top-level unit.
+
+Claude Code may process it as:
+
+* one complete chapter;
+* several sections;
+* smaller local regions for difficult visual verification.
+
+The choice should depend on the actual chapter size and source layout.
+
+---
+
+## 3. Core workflow
+
+```text
+Mathpix chapter + images
+            ↓
+1. Source verification
+            ↓
+Verified working chapter
++ correction and issue notes
+            ↓
+2. Editorial transformation
+            ↓
+Readable final Markdown
+            ↓
+3. Quality control
+       ├── pass → accept
+       └── fail → targeted revision
+                         ↓
+                  accept or manual review
+```
+
+These are fixed workflow stages, not autonomous agents negotiating with each other.
+
+---
+
+# 4. Stage 1: Source Verification
+
+## Purpose
+
+Determine what the chapter should say before changing how it is presented.
+
+## Responsibilities
+
+The verification stage examines the Mathpix text, associated images, and internal chapter context.
+
+It should distinguish four cases.
+
+### A. Mathpix error
+
+Examples:
+
+* incorrect OCR character;
+* missing mathematical sign;
+* malformed equation;
+* missing or duplicated text;
+* shifted table cells;
+* incorrect reading order;
+* damaged caption or reference.
+
+When the source image clearly establishes the intended text, correct it.
+
+### B. Clear author typo
+
+Examples:
+
+* inconsistent notation;
+* incorrect equation reference;
+* obvious arithmetic slip;
+* printed value contradicted unambiguously by the displayed calculation.
+
+Correct it only when the intended form is sufficiently clear.
+
+Record the correction separately from ordinary OCR corrections.
+
+### C. Suspected author misclaim
+
+Examples:
+
+* a conclusion does not follow from the stated assumptions;
+* a mathematical statement appears false;
+* a factual statement conflicts with reliable evidence;
+* a definition is inconsistent with later use.
+
+Do not silently rewrite the claim.
+
+Record it as an unresolved or investigated source issue. Resolve it only when supported by adequate mathematical, internal, or external evidence.
+
+### D. Unresolved ambiguity
+
+When the correct reading cannot be established:
+
+* retain the ambiguity;
+* record it clearly;
+* route it to manual review when it materially affects understanding.
+
+## Output
+
+The stage produces:
+
+1. a verified working chapter;
+2. a concise issue report.
+
+The issue report should distinguish:
+
+* Mathpix corrections;
+* author typos corrected;
+* suspected author errors;
+* unresolved ambiguities.
+
+## Boundary
+
+Source verification does not:
+
+* convert prose into bullets;
+* shorten explanations;
+* reorganize the chapter;
+* create editorial summary tables;
+* optimize writing style.
+
+---
+
+# 5. Stage 2: Editorial Transformation
+
+## Purpose
+
+Convert the verified source into concise, readable, organized Markdown.
+
+## Responsibilities
+
+The editorial stage should:
+
+* preserve the chapter’s logical sequence;
+* improve headings where appropriate;
+* convert dense paragraphs into bullets;
+* use one principal claim per bullet;
+* use nested bullets for assumptions, qualifications, evidence, examples, and exceptions;
+* shorten unnecessarily verbose wording;
+* remove duplication caused by OCR or poor exposition;
+* preserve technically meaningful derivation steps;
+* improve the presentation of existing tables;
+* create qualitative comparison or summary tables when useful;
+* preserve unresolved source issues.
+
+The central instruction is:
+
+> Restructure and condense the verified content without summarizing away substantive information.
+
+## Table policy
+
+### Original source tables
+
+* Preserve their meaning and quantitative values.
+* Improve formatting and labels where useful.
+* Do not change values unless Stage 1 verified the correction.
+
+### Editorial summary tables
+
+* May be synthesized from verified prose.
+* Should improve comparison or organization.
+* Must not introduce unsupported claims or numbers.
+* Every entry must be derivable from the verified source.
+
+## Boundary
+
+The editorial stage does not:
+
+* independently fact-check the author;
+* reconsider resolved OCR corrections;
+* silently repair equations;
+* remove conditions or qualifications;
+* alter the strength of claims;
+* resolve outstanding source issues without evidence.
+
+---
+
+# 6. Stage 3: Quality Control
+
+## Purpose
+
+Check that the editorial transformation remained faithful to the verified source and produced usable Markdown.
+
+## Fidelity checks
+
+Quality control should identify:
+
+* missing equations, tables, figures, or captions;
+* changed numbers or mathematical notation;
+* dropped conditions, exceptions, or negations;
+* changed claim strength;
+* omitted substantive examples or derivation steps;
+* unsupported additions;
+* missing unresolved-issue markers.
+
+## Editorial checks
+
+It should also identify:
+
+* invalid Markdown;
+* disordered headings;
+* poorly structured bullets;
+* unnecessarily long prose blocks;
+* confusing or redundant tables;
+* duplicated or missing sections;
+* weak chapter-level readability.
+
+## Output
+
+Quality control should return:
+
+* pass; or
+* a concise list of concrete problems and their locations.
+
+It should not automatically rewrite the entire chapter.
+
+---
+
+# 7. Revision policy
+
+Failures return to the responsible stage.
+
+| Problem                              | Responsible stage                                |
+| ------------------------------------ | ------------------------------------------------ |
+| Incorrect Mathpix transcription      | Source verification                              |
+| Apparent author typo or misclaim     | Source verification                              |
+| Missing condition or changed meaning | Editorial transformation                         |
+| Poor bullets or table organization   | Editorial transformation                         |
+| Broken Markdown                      | Editorial transformation or deterministic repair |
+| Unresolved source disagreement       | Manual review                                    |
+
+Revisions should be targeted where practical.
+
+Avoid:
+
+* repeatedly regenerating the whole chapter;
+* open-ended retries;
+* agents debating each other;
+* full source verification after a purely editorial correction.
+
+The workflow should have a bounded retry policy. After the allowed revision attempts, unresolved material moves to manual review.
+
+---
+
+# 8. LLM call strategy
+
+The architecture requires three logical call types.
+
+## Call 1: Source verification
+
+Use a strong reasoning and multimodal model.
+
+It examines:
+
+* Mathpix text;
+* relevant images;
+* local or chapter context.
+
+It produces:
+
+* verified source content;
+* explicit corrections and issues.
+
+Claude Code decides whether this is best performed by chapter, section, page group, or targeted region.
+
+## Call 2: Editorial transformation
+
+Use a model with strong instruction following and technical writing ability.
+
+It receives:
+
+* the verified source;
+* unresolved issue markers;
+* the house style.
+
+It produces the reader-facing Markdown.
+
+## Call 3: Quality control or targeted revision
+
+Use deterministic checks where they are reliable.
+
+Use an LLM where semantic comparison is required.
+
+A stronger model may be used for:
+
+* disputed mathematical corrections;
+* ambiguous page images;
+* suspected substantive errors;
+* failed editorial revisions.
+
+The same underlying model may perform more than one logical role. Separate agents or providers are not required.
+
+---
+
+# 9. Cost-control principles
+
+The normal path should avoid unnecessary model duplication.
+
+```text
+One verification pass
+→ one editorial pass
+→ lightweight quality control
+```
+
+Cost should be reduced by:
+
+* using cheaper models for editorial work when benchmark results permit;
+* reserving strong multimodal models for source verification and difficult cases;
+* processing only the relevant source region when resolving a local problem;
+* avoiding mandatory second opinions on every section;
+* avoiding repeated full-chapter rewrites;
+* reusing completed intermediate results when rerunning later stages.
+
+The goal is not to minimize calls at all costs. The goal is to avoid calls that duplicate work without materially improving correctness.
+
+---
+
+# 10. Claude Code implementation brief
+
+Claude Code should first inspect:
+
+* representative `.mmd` chapters;
+* the relationship between Markdown and images;
+* chapter and section sizes;
+* existing project conventions;
+* the general LLM API interface;
+* available model capabilities;
+* current scripts and dependencies.
+
+It should then implement the simplest maintainable workflow that satisfies the three stages.
+
+Claude Code owns decisions such as:
+
+* exact chunking strategy;
+* whether corrections are represented as patches or revised text;
+* how technical objects are preserved during editing;
+* how images are associated with text;
+* which checks are deterministic;
+* which checks require an LLM;
+* model selection;
+* retry handling;
+* intermediate artifact formats;
+* resumability and call reuse.
+
+It should prefer existing repository conventions and avoid introducing abstractions that are not justified by observed failures.
+
+---
+
+# 11. Required invariants
+
+Regardless of implementation:
+
+## Source verification
+
+* OCR corrections and author corrections remain distinguishable.
+* Suspected misclaims are not silently rewritten.
+* Material ambiguity remains visible until resolved.
+* Corrections have identifiable supporting evidence.
+
+## Editorial transformation
+
+* Editing begins from the verified source.
+* Condensation does not remove substantive content.
+* Equations, numbers, conditions, and conclusions retain their meaning.
+* Source-table values remain faithful.
+* Editorial tables remain grounded in the verified content.
+
+## Quality control
+
+* The final Markdown is compared against the verified source.
+* Concrete failures are returned to the responsible stage.
+* The workflow stops after bounded revision attempts.
+* Unresolved cases are clearly surfaced for manual review.
+
+---
+
+# 12. Initial implementation scope
+
+The first version should implement only:
+
+1. load one Mathpix chapter and its images;
+2. run source verification;
+3. save the verified source and issue report;
+4. run editorial transformation;
+5. perform basic structural and fidelity checks;
+6. permit targeted revision;
+7. save the final Markdown and unresolved issues.
+
+Do not initially build:
+
+* a general multi-agent framework;
+* model-generated risk scores;
+* importance classifications;
+* multiple specialist auditors;
+* complex document ledgers;
+* autonomous routing;
+* recursive repair loops.
+
+Additional complexity should be added only after concrete failures demonstrate that it is necessary.
+
+---
+
+# 13. Final architecture
+
+```text
+Source Verifier
+Determine what the chapter should say
+
+Editorial Writer
+Present that verified content clearly
+
+Quality Controller
+Check that presentation remained faithful and readable
+```
+
+The governing rule is:
+
+> Verify first, edit second, and validate the transformation against the verified source.
